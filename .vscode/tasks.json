@@ -1,0 +1,230 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Python: Create venv",
+      "type": "shell",
+      "command": "cmd",
+      "args": [
+        "/d",
+        "/c",
+        "python -m venv .venv"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Install dependencies",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "install"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Clean",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "clean"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Compile",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "compile"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Run LearningClock",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-m",
+        "learningclock"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}\\src"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Run Diavgeia LearningPath",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "${workspaceFolder}\\src\\learningclock\\learning-clock.py",
+        "--learning-path",
+        "Diavgeia LearningPath",
+        "--log-dir",
+        "D:\\DiavgeiaVault\\Engineering\\LearningClock\\LearningPath"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}\\src"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Test",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "test"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Unit Test CSV",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "unittest-csv"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Regression Test CSV File",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "unittest-csv-file",
+        "--csv",
+        "${input:learningClockCsvFile}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Lint",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Package",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "package"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Diavgeia: Export vault content",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "deploy"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Maven-style all",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "all"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Launcher: Run Learning Clock VBS",
+      "type": "shell",
+      "command": "wscript.exe",
+      "args": [
+        "//nologo",
+        "${workspaceFolder}\\launcher\\Learning-clock.vbs",
+        "${workspaceFolder}\\launcher\\dev.properties"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\launcher"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Launcher: Debug Learning Clock VBS",
+      "type": "shell",
+      "command": "cscript.exe",
+      "args": [
+        "//nologo",
+        "//D",
+        "//X",
+        "${workspaceFolder}\\launcher\\Learning-clock.vbs",
+        "${workspaceFolder}\\launcher\\vbs-debug.properties"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\launcher"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "learningClockCsvFile",
+      "type": "promptString",
+      "description": "Path to the Learning Clock CSV file to test",
+      "default": "D:\\DiavgeiaVault\\Engineering\\LearningClock\\LearningPath\\learning_time_log.csv"
+    }
+  ]
+}

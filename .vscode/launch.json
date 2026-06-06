@@ -1,0 +1,123 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: LearningClock module",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "learningclock",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Python: Current file",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Launcher: Learning Clock VBS",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "wscript.exe //nologo \"${workspaceFolder}\\launcher\\Learning-clock.vbs\" \"${workspaceFolder}\\launcher\\dev.properties\"",
+      "cwd": "${workspaceFolder}\\launcher"
+    },
+    {
+      "name": "Launcher: Debug VBS Only",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "cscript.exe //nologo //D //X \"${workspaceFolder}\\launcher\\Learning-clock.vbs\" \"${workspaceFolder}\\launcher\\vbs-debug.properties\"",
+      "cwd": "${workspaceFolder}\\launcher"
+    },
+    {
+      "name": "Python: Learning Clock GUI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\src\\learningclock\\learning-clock.py",
+      "args": [
+        "--learning-path",
+        "LearningClock",
+        "--log-dir",
+        "${workspaceFolder}\\build\\learning-clock-logs",
+        "--debug-break-on-click",
+        "--debug-break-on-close"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Python: Diavgeia LearningPath GUI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\src\\learningclock\\learning-clock.py",
+      "args": [
+        "--learning-path",
+        "Diavgeia LearningPath",
+        "--log-dir",
+        "D:\\DiavgeiaVault\\Engineering\\LearningClock\\LearningPath",
+        "--debug-break-on-close"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Tests: Run CSV Regression File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\tests\\test_learning_clock_csv_regression.py",
+      "args": [
+        "--csv",
+        "${input:learningClockCsvFile}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\tests;${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "noDebug": true
+    },
+    {
+      "name": "Tests: Debug CSV Regression File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\tests\\test_learning_clock_csv_regression.py",
+      "args": [
+        "--csv",
+        "${input:learningClockCsvFile}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\tests;${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ],
+  "inputs": [
+    {
+      "id": "learningClockCsvFile",
+      "type": "promptString",
+      "description": "Path to the Learning Clock CSV file to test",
+      "default": "D:\\GitHub\\LearningClock\\tests\\fixtures\\MAGPAI-learning_time_log.csv"
+    }
+  ]
+}
