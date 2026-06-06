@@ -54,6 +54,6 @@ Lifecycle mapping:
 - `clean`: remove generated build, cache, coverage, and bytecode artifacts.
 - `compile`: byte-compile `src` and `tests`.
 - `test`: run `pytest`.
-- `package`: build package artifacts into `build\dist`.
-- `install`: install requirements and the editable project with development tools into `.venv`.
+- `package`: build package artifacts into `build\dist` and remove source-tree package metadata.
+- `install`: install runtime and development requirements into `.venv` without installing the local project in editable mode.
 - `deploy`: export Diavgeia content to the local vault.

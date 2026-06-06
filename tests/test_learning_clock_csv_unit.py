@@ -15,6 +15,7 @@ import unittest
 from datetime import datetime
 
 from learning_clock_csv_test_support import LearningClockCsvHarness, learning_clock
+from learningclock.app import LearningClock
 
 
 class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
@@ -38,7 +39,12 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
 
     def test_create_total_row_sums_activities_pages_and_total(self):
         rows = [
-            self.row(reading="00:10:00", experimenting="00:05:00", pages_read="3", total="00:15:00"),
+            self.row(
+                reading="00:10:00",
+                experimenting="00:05:00",
+                pages_read="3",
+                total="00:15:00",
+            ),
             self.row(reading="00:20:00", audiobook="00:07:30", pages_read="4", total="00:27:30"),
         ]
 
@@ -143,7 +149,9 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
 
         self.assertTrue(saved)
         self.assertFalse(emergency_file.exists())
-        self.assertTrue((self.log_dir / "learning_time_log_emergency_20260605_100000.csv.merged").exists())
+        self.assertTrue(
+            (self.log_dir / "learning_time_log_emergency_20260605_100000.csv.merged").exists()
+        )
 
         rows = self.read_log_rows()
         self.assertEqual(3, len(rows))
@@ -180,14 +188,14 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("01:02:03", self.clock.format_seconds(3723))
 
     def test_manual_input_accepts_supported_formats_and_rejects_bad_values(self):
-        self.assertEqual(300, self.clock.parse_manual_input("5"))
-        self.assertEqual(5400, self.clock.parse_manual_input("01:30"))
-        self.assertEqual(5445, self.clock.parse_manual_input("01:30:45"))
+        self.assertEqual(300, LearningClock.parse_manual_input("5"))
+        self.assertEqual(5400, LearningClock.parse_manual_input("01:30"))
+        self.assertEqual(5445, LearningClock.parse_manual_input("01:30:45"))
 
         with self.assertRaises(ValueError):
-            self.clock.parse_manual_input("")
+            LearningClock.parse_manual_input("")
         with self.assertRaises(ValueError):
-            self.clock.parse_manual_input("1:xx")
+            LearningClock.parse_manual_input("1:xx")
 
 
 if __name__ == "__main__":

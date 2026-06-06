@@ -11,25 +11,41 @@
 from __future__ import annotations
 
 import csv
-import importlib.util
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = REPO_ROOT / "src" / "learningclock" / "learning-clock.py"
-
-
-def load_learning_clock_module():
-    spec = importlib.util.spec_from_file_location("learning_clock_app", MODULE_PATH)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+from learningclock import csv_store as learning_clock
+from learningclock.csv_store import ACTIVITIES, CsvStore
 
 
-learning_clock = load_learning_clock_module()
+class TestCsvStore(CsvStore):
+    def __init__(self, log_dir: Path):
+        super().__init__(log_dir, "UnitTestPath")
+        self.session_start = datetime(2026, 6, 5, 9, 0, 0)
+        self.session_saved = False
+        self.totals = {activity: 0 for activity in ACTIVITIES}
+        self.pages_read = 0
+
+    def create_session_row(self, session_end):
+        return super().create_session_row(
+            self.session_start,
+            session_end,
+            self.totals,
+            self.pages_read,
+        )
+
+    def save_session_summary(self, session_end):
+        saved = super().save_session_summary(self.create_session_row(session_end))
+        self.session_saved = saved
+        return saved
+
+    def save_emergency_session_file(self, session_end, error):
+        return super().save_emergency_session_file(
+            self.create_session_row(session_end),
+            session_end,
+            error,
+        )
 
 
 class LearningClockCsvHarness:
@@ -42,18 +58,7 @@ class LearningClockCsvHarness:
         self.temp_dir.cleanup()
 
     def make_clock(self):
-        clock = learning_clock.LearningClock.__new__(learning_clock.LearningClock)
-        clock.learning_path_name = "UnitTestPath"
-        clock.log_dir = self.log_dir
-        clock.log_file = self.log_dir / learning_clock.LOG_FILE_NAME
-        clock.diagnostic_log_file = self.log_dir / learning_clock.DIAGNOSTIC_LOG_FILE_NAME
-        clock.session_start = datetime(2026, 6, 5, 9, 0, 0)
-        clock.session_saved = False
-        clock.active_activity = None
-        clock.active_start = None
-        clock.totals = {activity: 0 for activity in learning_clock.ACTIVITIES}
-        clock.pages_read = 0
-        return clock
+        return TestCsvStore(self.log_dir)
 
     def read_log_rows(self):
         with self.clock.log_file.open("r", newline="", encoding="utf-8") as handle:

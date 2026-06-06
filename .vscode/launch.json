@@ -92,8 +92,7 @@
         "PYTHONPATH": "${workspaceFolder}\\tests;${workspaceFolder}\\src"
       },
       "console": "integratedTerminal",
-      "justMyCode": true,
-      "noDebug": true
+      "justMyCode": true
     },
     {
       "name": "Tests: Debug CSV Regression File",

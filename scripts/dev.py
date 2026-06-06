@@ -15,6 +15,7 @@ import compileall
 import os
 import shutil
 import subprocess
+import tomllib
 import sys
 from pathlib import Path
 
@@ -71,6 +72,21 @@ def clean(_args: list[str] | None = None) -> None:
             safe_remove(path)
 
 
+def remove_python_metadata() -> None:
+    for path in ROOT.rglob("*.egg-info"):
+        safe_remove(path)
+
+
+def dependency_requirements() -> list[str]:
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        config = tomllib.load(handle)
+
+    project = config.get("project", {})
+    requirements = list(project.get("dependencies", []))
+    requirements.extend(project.get("optional-dependencies", {}).get("dev", []))
+    return requirements
+
+
 def compile_sources(_args: list[str] | None = None) -> None:
     BUILD_DIR.mkdir(exist_ok=True)
     ok = compileall.compile_dir(ROOT / "src", quiet=1)
@@ -94,12 +110,16 @@ def unittest_csv_file(args: list[str] | None = None) -> None:
 def package(_args: list[str] | None = None) -> None:
     (BUILD_DIR / "dist").mkdir(parents=True, exist_ok=True)
     run([require_venv(), "-m", "build", "--outdir", str(BUILD_DIR / "dist")])
+    remove_python_metadata()
 
 
 def install(_args: list[str] | None = None) -> None:
     py = require_venv()
     run([py, "-m", "pip", "install", "--upgrade", "pip"])
-    run([py, "-m", "pip", "install", "-e", ".[dev]"])
+    requirements = dependency_requirements()
+    if requirements:
+        run([py, "-m", "pip", "install", *requirements])
+    remove_python_metadata()
 
 
 def deploy(_args: list[str] | None = None) -> None:
