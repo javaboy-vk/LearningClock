@@ -55,6 +55,19 @@
       "problemMatcher": []
     },
     {
+      "label": "Python: Validate config",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "validate-config"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Python: Run LearningClock",
       "type": "shell",
       "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
@@ -124,8 +137,40 @@
       "args": [
         "scripts\\dev.py",
         "unittest-csv-file",
-        "--csv",
-        "${input:learningClockCsvFile}"
+        "--properties",
+        "${input:learningClockRegressionProperties}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Regression Test CSV Index",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "unittest-csv-file",
+        "--properties",
+        "${input:learningClockRegressionProperties}",
+        "${input:learningClockCsvTestSelector}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Regression Test CSV Test1",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "csv-test",
+        "test1"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -221,10 +266,16 @@
   ],
   "inputs": [
     {
-      "id": "learningClockCsvFile",
+      "id": "learningClockRegressionProperties",
       "type": "promptString",
-      "description": "Path to the Learning Clock CSV file to test",
-      "default": "D:\\DiavgeiaVault\\Engineering\\LearningClock\\LearningPath\\learning_time_log.csv"
+      "description": "Path to the Learning Clock regression properties file",
+      "default": "D:\\GitHub\\LearningClock\\tests\\fixtures\\MAGPAI-regression.properties"
+    },
+    {
+      "id": "learningClockCsvTestSelector",
+      "type": "promptString",
+      "description": "CSV regression test index to run, such as test1, test2, test3, or test4",
+      "default": "test1"
     }
   ]
 }

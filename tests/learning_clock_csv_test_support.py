@@ -20,8 +20,16 @@ from learningclock.csv_store import ACTIVITIES, CsvStore
 
 
 class TestCsvStore(CsvStore):
-    def __init__(self, log_dir: Path):
-        super().__init__(log_dir, "UnitTestPath")
+    def __init__(
+        self,
+        log_dir: Path,
+        learning_path_name: str = "UnitTestPath",
+        diagnostic_log_file: Path | None = None,
+    ):
+        super().__init__(log_dir, learning_path_name)
+        if diagnostic_log_file is not None:
+            self.diagnostic_log_file = Path(diagnostic_log_file)
+            self.diagnostic_log_file.parent.mkdir(parents=True, exist_ok=True)
         self.session_start = datetime(2026, 6, 5, 9, 0, 0)
         self.session_saved = False
         self.totals = {activity: 0 for activity in ACTIVITIES}

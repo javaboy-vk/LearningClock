@@ -2,42 +2,15 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: LearningClock module",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "learningclock",
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}\\src"
-      },
-      "console": "integratedTerminal",
-      "justMyCode": true
-    },
-    {
-      "name": "Python: Current file",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${file}",
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}\\src"
-      },
-      "console": "integratedTerminal",
-      "justMyCode": true
-    },
-    {
       "name": "Launcher: Learning Clock VBS",
       "type": "node-terminal",
       "request": "launch",
       "command": "wscript.exe //nologo \"${workspaceFolder}\\launcher\\Learning-clock.vbs\" \"${workspaceFolder}\\launcher\\dev.properties\"",
-      "cwd": "${workspaceFolder}\\launcher"
-    },
-    {
-      "name": "Launcher: Debug VBS Only",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "cscript.exe //nologo //D //X \"${workspaceFolder}\\launcher\\Learning-clock.vbs\" \"${workspaceFolder}\\launcher\\vbs-debug.properties\"",
-      "cwd": "${workspaceFolder}\\launcher"
+      "cwd": "${workspaceFolder}\\launcher",
+      "presentation": {
+        "group": "01-app",
+        "order": 1
+      }
     },
     {
       "name": "Python: Learning Clock GUI",
@@ -57,7 +30,55 @@
         "PYTHONPATH": "${workspaceFolder}\\src"
       },
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "presentation": {
+        "group": "01-app",
+        "order": 2
+      }
+    },
+    {
+      "name": "Python: LearningClock module",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "learningclock",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "presentation": {
+        "group": "01-app",
+        "order": 3
+      }
+    },
+    {
+      "name": "Python: Current file",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "presentation": {
+        "group": "02-tools",
+        "order": 1
+      }
+    },
+    {
+      "name": "Launcher: Debug VBS Only",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "cscript.exe //nologo //D //X \"${workspaceFolder}\\launcher\\Learning-clock.vbs\" \"${workspaceFolder}\\launcher\\vbs-debug.properties\"",
+      "cwd": "${workspaceFolder}\\launcher",
+      "presentation": {
+        "group": "02-tools",
+        "order": 2
+      },
+      "internalConsoleOptions": "neverOpen"
     },
     {
       "name": "Python: Diavgeia LearningPath GUI",
@@ -76,47 +97,107 @@
         "PYTHONPATH": "${workspaceFolder}\\src"
       },
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "presentation": {
+        "group": "01-app",
+        "order": 4
+      }
     },
     {
-      "name": "Tests: Run CSV Regression File",
+      "name": "Tests: Run CSV Regression File (prompts for CSV)",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}\\tests\\test_learning_clock_csv_regression.py",
       "args": [
-        "--csv",
-        "${input:learningClockCsvFile}"
+        "--properties",
+        "${input:learningClockRegressionProperties}"
       ],
       "cwd": "${workspaceFolder}",
       "env": {
         "PYTHONPATH": "${workspaceFolder}\\tests;${workspaceFolder}\\src"
       },
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "presentation": {
+        "group": "03-tests",
+        "order": 1
+      }
     },
     {
-      "name": "Tests: Debug CSV Regression File",
+      "name": "Tests: Run CSV Regression Test Index",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}\\tests\\test_learning_clock_csv_regression.py",
       "args": [
-        "--csv",
-        "${input:learningClockCsvFile}"
+        "--properties",
+        "${input:learningClockRegressionProperties}",
+        "${input:learningClockCsvTestSelector}"
       ],
       "cwd": "${workspaceFolder}",
       "env": {
         "PYTHONPATH": "${workspaceFolder}\\tests;${workspaceFolder}\\src"
       },
       "console": "integratedTerminal",
-      "justMyCode": false
+      "justMyCode": true,
+      "presentation": {
+        "group": "03-tests",
+        "order": 2
+      }
+    },
+    {
+      "name": "Tests: Debug CSV Regression Test1",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\tests\\test_learning_clock_csv_regression.py",
+      "args": [
+        "--properties",
+        "${workspaceFolder}\\tests\\fixtures\\MAGPAI-regression.properties",
+        "test1"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\tests;${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "presentation": {
+        "group": "03-tests",
+        "order": 3
+      }
+    },
+    {
+      "name": "Tests: Debug CSV Regression File (prompts for CSV)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}\\tests\\test_learning_clock_csv_regression.py",
+      "args": [
+        "--properties",
+        "${input:learningClockRegressionProperties}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\tests;${workspaceFolder}\\src"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "presentation": {
+        "group": "03-tests",
+        "order": 4
+      }
     }
   ],
   "inputs": [
     {
-      "id": "learningClockCsvFile",
+      "id": "learningClockRegressionProperties",
       "type": "promptString",
-      "description": "Path to the Learning Clock CSV file to test",
-      "default": "D:\\GitHub\\LearningClock\\tests\\fixtures\\MAGPAI-learning_time_log.csv"
+      "description": "Path to the Learning Clock regression properties file",
+      "default": "D:\\GitHub\\LearningClock\\tests\\fixtures\\MAGPAI-regression.properties"
+    },
+    {
+      "id": "learningClockCsvTestSelector",
+      "type": "promptString",
+      "description": "CSV regression test index to run, such as test1, test2, test3, or test4",
+      "default": "test1"
     }
   ]
 }

@@ -8,6 +8,10 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}\\src"
   ],
+  "ruff.exclude": [
+    "P:/Python/**",
+    "p:/Python/**"
+  ],
   "terminal.integrated.defaultProfile.windows": "LearningClock venv",
   "terminal.integrated.profiles.windows": {
     "LearningClock venv": {

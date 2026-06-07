@@ -54,3 +54,4 @@ cache-dir = "build/.ruff_cache"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]

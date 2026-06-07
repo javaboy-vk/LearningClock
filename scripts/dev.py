@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import compileall
+import json
 import os
 import shutil
 import subprocess
@@ -23,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = ROOT / "build"
 VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
+REGRESSION_PROPERTIES = ROOT / "tests" / "fixtures" / "MAGPAI-regression.properties"
 
 
 def safe_remove(path: Path) -> None:
@@ -95,6 +97,25 @@ def compile_sources(_args: list[str] | None = None) -> None:
         raise SystemExit(1)
 
 
+def validate_config(_args: list[str] | None = None) -> None:
+    config_files = [
+        ROOT / ".vscode" / "launch.json",
+        ROOT / ".vscode" / "tasks.json",
+        ROOT / "LearningClock.code-workspace",
+    ]
+
+    for path in config_files:
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                json.load(handle)
+        except json.JSONDecodeError as exc:
+            relative_path = path.relative_to(ROOT)
+            raise SystemExit(
+                f"{relative_path}:{exc.lineno}:{exc.colno}: invalid JSON: {exc.msg}"
+            ) from exc
+        print(f"valid JSON: {path.relative_to(ROOT)}")
+
+
 def test(_args: list[str] | None = None) -> None:
     run([require_venv(), "-m", "pytest"])
 
@@ -105,6 +126,24 @@ def unittest_csv(args: list[str] | None = None) -> None:
 
 def unittest_csv_file(args: list[str] | None = None) -> None:
     run([require_venv(), "tests/test_learning_clock_csv_regression.py", *(args or [])])
+
+
+def csv_test(args: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="dev.py csv-test")
+    parser.add_argument("selector", nargs="?", default="test1")
+    parser.add_argument("--properties", default=str(REGRESSION_PROPERTIES))
+    parser.add_argument("--csv", default=None)
+    parsed_args = parser.parse_args(args or [])
+    command = [
+        require_venv(),
+        "tests/test_learning_clock_csv_regression.py",
+        "--properties",
+        parsed_args.properties,
+    ]
+    if parsed_args.csv:
+        command.extend(["--csv", parsed_args.csv])
+    command.append(parsed_args.selector)
+    run(command)
 
 
 def package(_args: list[str] | None = None) -> None:
@@ -145,9 +184,11 @@ def all_targets(_args: list[str] | None = None) -> None:
 TARGETS = {
     "clean": clean,
     "compile": compile_sources,
+    "validate-config": validate_config,
     "test": test,
     "unittest-csv": unittest_csv,
     "unittest-csv-file": unittest_csv_file,
+    "csv-test": csv_test,
     "package": package,
     "install": install,
     "deploy": deploy,

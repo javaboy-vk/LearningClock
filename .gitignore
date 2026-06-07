@@ -34,6 +34,7 @@ dist/
 pip-wheel-metadata/
 
 # Runtime and generated project artifacts
+*.log
 logs/
 runs/
 reports/
