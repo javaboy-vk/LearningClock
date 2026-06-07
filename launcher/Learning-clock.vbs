@@ -3,11 +3,13 @@
 ' Artifact  : LearningClock - Silent Launcher
 ' Author    : javaboy-vk
 ' Date      : 2026-06-05
-' Version   : v3.1
+' Version   : v3.2
 ' Purpose:
 '   Starts the Learning Clock app without a visible CLI window.
 '   Accepts one argument: path to a .properties file.
 ' Change Log:
+'   v3.2 - Set PYTHONPATH from pyScriptPath so refactored package modules load
+'          when launching src\learningclock\app.py directly.
 '   v3.1 - Add optional launchPython property so VBS-only debugging can stop
 '          before starting the Python process.
 '   v3.0 - Add optional windowStyle and waitForExit properties so debug
@@ -22,8 +24,9 @@ Option Explicit
 
 Dim shell, fso
 Dim propertiesPath, propertiesFolder, properties
-Dim learningPathName, pythonExe, pythonArgs, pyScriptPath, logDir, windowStyle, waitForExit
+Dim learningPathName, pythonExe, pythonArgs, pyScriptPath, pythonPathRoot, logDir, windowStyle, waitForExit
 Dim launchPython
+Dim processEnv, existingPythonPath
 Dim cmd
 
 Set shell = CreateObject("WScript.Shell")
@@ -70,6 +73,15 @@ End If
 
 If Not fso.FolderExists(logDir) Then
     EnsureFolder logDir
+End If
+
+pythonPathRoot = fso.GetParentFolderName(fso.GetParentFolderName(pyScriptPath))
+Set processEnv = shell.Environment("PROCESS")
+existingPythonPath = processEnv("PYTHONPATH")
+If Len(existingPythonPath) > 0 Then
+    processEnv("PYTHONPATH") = pythonPathRoot & ";" & existingPythonPath
+Else
+    processEnv("PYTHONPATH") = pythonPathRoot
 End If
 
 shell.CurrentDirectory = propertiesFolder

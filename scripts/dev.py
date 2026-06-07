@@ -16,15 +16,15 @@ import json
 import os
 import shutil
 import subprocess
-import tomllib
 import sys
+import tomllib
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = ROOT / "build"
 VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
 REGRESSION_PROPERTIES = ROOT / "tests" / "fixtures" / "MAGPAI-regression.properties"
+PRODUCTION_APP_DIR = Path(r"D:\LearningPath\Tools\LearningClock")
 
 
 def safe_remove(path: Path) -> None:
@@ -174,6 +174,46 @@ def deploy(_args: list[str] | None = None) -> None:
     )
 
 
+def release(args: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="dev.py release")
+    parser.add_argument("--production-dir", default=str(PRODUCTION_APP_DIR))
+    parser.add_argument("--dry-run", action="store_true")
+    parsed_args = parser.parse_args(args or [])
+    production_dir = Path(parsed_args.production_dir)
+    release_files = [
+        (
+            ROOT / "launcher" / "Learning-Clock.ico",
+            production_dir / "Learning-Clock.ico",
+        ),
+        (
+            ROOT / "launcher" / "Learning-clock.vbs",
+            production_dir / "Learning-clock.vbs",
+        ),
+        (
+            ROOT / "src" / "learningclock" / "__init__.py",
+            production_dir / "__init__.py",
+        ),
+        (
+            ROOT / "src" / "learningclock" / "app.py",
+            production_dir / "app.py",
+        ),
+        (
+            ROOT / "src" / "learningclock" / "csv_store.py",
+            production_dir / "csv_store.py",
+        ),
+    ]
+
+    for source, target in release_files:
+        if not source.exists():
+            raise SystemExit(f"Release source file was not found: {source}")
+        if parsed_args.dry_run:
+            print(f"would release: {source.relative_to(ROOT)} -> {target}")
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        print(f"released: {source.relative_to(ROOT)} -> {target}")
+
+
 def all_targets(_args: list[str] | None = None) -> None:
     clean()
     compile_sources()
@@ -192,6 +232,7 @@ TARGETS = {
     "package": package,
     "install": install,
     "deploy": deploy,
+    "release": release,
     "all": all_targets,
 }
 
