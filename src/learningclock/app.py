@@ -94,11 +94,25 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox
 
+# Operational algorithm:
+#   What this block does:
+#     Makes direct script execution resolve package modules like an installed entry point.
+#   Success:
+#     Running src/learningclock/app.py directly can still import learningclock.csv_store.
+#   Error handling:
+#     If the package import cannot resolve, the fallback import block handles local module loading.
 if __package__ in (None, ""):
     script_dir = Path(__file__).resolve().parent
     sys.path.insert(0, str(script_dir))
     sys.path.insert(0, str(script_dir.parent))
 
+# Operational algorithm:
+#   What this block does:
+#     Imports CSV persistence contracts from the package first, then from the local module fallback.
+#   Success:
+#     The app can run from package entry points, direct Python execution, and launcher scripts.
+#   Error handling:
+#     ModuleNotFoundError switches to the direct local import used when the package name is unavailable.
 try:
     from learningclock.csv_store import (
         ACTIVITIES,
@@ -114,9 +128,23 @@ except ModuleNotFoundError:
         format_seconds,
     )
 
+# Operational algorithm:
+#   What this constant group does:
+#     Defines the visible app identity used by the window title and about dialog.
+#   Success:
+#     UI identity text stays centralized and consistent across app surfaces.
+#   Error handling:
+#     No special error handling is needed because the values are static strings.
 APP_TITLE = "Learning Clock"
 APP_VERSION = "v3.3"
 
+# Operational algorithm:
+#   What this constant group does:
+#     Defines fixed Tkinter window sizes for normal, manual-time, and page-count modes.
+#   Success:
+#     Mode changes resize the app predictably without recalculating geometry at runtime.
+#   Error handling:
+#     Tkinter reports invalid geometry strings when the window applies them.
 NORMAL_GEOMETRY = "420x345"
 ADD_TIME_GEOMETRY = "580x345"
 ADD_PAGE_COUNT_GEOMETRY = "530x345"
@@ -137,15 +165,15 @@ def parse_args(argv: list[str] | None = None):
     parser.add_argument("--debug-break-on-close", action="store_true")   # Developer breakpoint on close.
     return parser.parse_args(argv)                                       # Return parsed launch settings.
 
-
+# Operational algorithm:
+#   What this class does:
+#     Tracks activity timers in a Tkinter UI and persists one session summary on shutdown.
+#   Success:
+#     The user can switch timers, add manual time/pages, see live totals, and close to save CSV.
+#   Error handling:
+#     Save failures are logged and routed through emergency CSV persistence during shutdown.
 class LearningClock:
-    # Operational algorithm:
-    #   What this class does:
-    #     Tracks activity timers in a Tkinter UI and persists one session summary on shutdown.
-    #   Success:
-    #     The user can switch timers, add manual time/pages, see live totals, and close to save CSV.
-    #   Error handling:
-    #     Save failures are logged and routed through emergency CSV persistence during shutdown.
+
 
     # Operational algorithm:
     #   What this method does:

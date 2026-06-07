@@ -63,36 +63,40 @@ from pathlib import Path
 
 from learning_clock_csv_test_support import LearningClockCsvHarness, TestCsvStore, learning_clock
 
-REGRESSION_CONFIG = None
-DURATION_PATTERN = r"^\d{1,}:\d{2}:\d{2}$"
-CANONICAL_DURATION_PATTERN = r"^\d{2,}:\d{2}:\d{2}$"
-LOG_FILE_NAME = "learning_time_log.csv"
-DIAGNOSTIC_LOG_FILE_NAME = "learning_clock_debug.log"
-TEST_ALIASES = {
-    "test1": "LearningClockCsvRegressionTestCase.test1_csv_can_be_read_and_normalized",
-    "test2": "LearningClockCsvRegressionTestCase.test2_csv_row_totals_match_activity_sums",
-    "test3": "LearningClockCsvRegressionTestCase.test3_csv_rewrite_has_clean_total_row",
-    "test4": "LearningClockCsvRegressionTestCase.test4_csv_total_row_matches_session_rows",
+REGRESSION_CONFIG = None                                           # Filled by __main__ after parsing properties; tests skip until configured.
+DURATION_PATTERN = r"^\d{1,}:\d{2}:\d{2}$"                         # Regex: start, 1+ hour digits, colon, 2 minute digits, colon, 2 second digits, end.
+CANONICAL_DURATION_PATTERN = r"^\d{2,}:\d{2}:\d{2}$"               # Regex: canonical totals require 2+ hour digits, then exactly mm:ss digit pairs.
+LOG_FILE_NAME = "learning_time_log.csv"                            # Default app CSV filename when properties do not override csvFile.
+DIAGNOSTIC_LOG_FILE_NAME = "learning_clock_debug.log"              # Default diagnostic log filename when properties do not override diagnosticLogFile.
+TEST_ALIASES = {                                                   # Map short command-line selectors to unittest's fully qualified test names.
+    "test1": "LearningClockCsvRegressionTestCase.test1_csv_can_be_read_and_normalized",        # Import/normalization regression.
+    "test2": "LearningClockCsvRegressionTestCase.test2_csv_row_totals_match_activity_sums",    # Per-row total math regression.
+    "test3": "LearningClockCsvRegressionTestCase.test3_csv_rewrite_has_clean_total_row",       # Rewrite/blank-line/TOTAL-row regression.
+    "test4": "LearningClockCsvRegressionTestCase.test4_csv_total_row_matches_session_rows",    # Recalculated TOTAL values regression.
 }
 
-
+# Testing algorithm:
+#   What we test:
+#     The regression suite must use one resolved configuration object for all path decisions.
+#   Success:
+#     Every test sees the same properties path, learning path name, CSV path, and log path.
+#   Error checks:
+#     Downstream setup fails early if the resolved CSV path does not exist.
 @dataclass(frozen=True)
 class RegressionConfig:
-    # Testing algorithm:
-    #   What we test:
-    #     The regression suite must use one resolved configuration object for all path decisions.
-    #   Success:
-    #     Every test sees the same properties path, learning path name, CSV path, and log path.
-    #   Error checks:
-    #     Downstream setup fails early if the resolved CSV path does not exist.
     properties_path: Path | None       # Full path to the properties file that configured the run.
     learning_path_name: str            # App learning-path name passed into CsvStore.
     log_dir: Path                      # Directory that owns the configured CSV and log files.
     csv_path: Path                     # Full path to the real CSV used as test input.
     diagnostic_log_path: Path          # Full path to the shared diagnostic log for the run.
 
-
-# Regression fixture that copies a real CSV into a temporary log directory before each test.
+# Testing algorithm:
+#   What we test:
+#     Regression tests run against a properties-selected real CSV through an isolated harness copy.
+#   Success:
+#     The suite validates import, per-row totals, clean rewrite behavior, and recalculated TOTAL rows.
+#   Error checks:
+#     Missing configuration, missing CSV inputs, malformed rows, and summary drift fail with focused assertions.
 class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestCase):
 
     # Testing algorithm:
@@ -114,14 +118,14 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
 
         shutil.copy2(self.source_csv, self.clock.log_file)  # Test copy protects the original CSV.
 
+    # Testing algorithm:
+    #   What we test:
+    #     The harness-created CsvStore must use the configured learning path and log file.
+    #   Success:
+    #     CsvStore reads/writes the temporary CSV copy while diagnostics go to the app log.
+    #   Error checks:
+    #     If REGRESSION_CONFIG is missing, setUp skips before this helper is meaningfully used.
     def make_clock(self):
-        # Testing algorithm:
-        #   What we test:
-        #     The harness-created CsvStore must use the configured learning path and log file.
-        #   Success:
-        #     CsvStore reads/writes the temporary CSV copy while diagnostics go to the app log.
-        #   Error checks:
-        #     If REGRESSION_CONFIG is missing, setUp skips before this helper is meaningfully used.
         return TestCsvStore(
             self.log_dir,                         # Temporary CSV directory protects the source CSV.
             REGRESSION_CONFIG.learning_path_name,  # Match the app learning path from properties.
@@ -250,14 +254,14 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
 
 
 # Split custom regression-suite arguments from unittest arguments before starting the test runner.
+# Testing algorithm:
+#   What we test:
+#     Regression-specific arguments must be separated from standard unittest arguments.
+#   Success:
+#     --properties and --csv configure this suite, while test1/test2 still reach unittest.
+#   Error checks:
+#     argparse reports malformed regression arguments before unittest starts.
 def parse_test_args(argv):
-    # Testing algorithm:
-    #   What we test:
-    #     Regression-specific arguments must be separated from standard unittest arguments.
-    #   Success:
-    #     --properties and --csv configure this suite, while test1/test2 still reach unittest.
-    #   Error checks:
-    #     argparse reports malformed regression arguments before unittest starts.
     parser = argparse.ArgumentParser(description="Learning Clock CSV regression suite")  # Suite parser.
     parser.add_argument(
         "--properties",                                                              # App-style config.
@@ -273,14 +277,14 @@ def parse_test_args(argv):
     return args, unittest_args                                                        # Return suite and unittest args.
 
 
+# Testing algorithm:
+#   What we test:
+#     A Java/VBS-style .properties file can drive the regression suite configuration.
+#   Success:
+#     Non-comment key=value lines become a dictionary and the source path is absolute.
+#   Error checks:
+#     Missing properties file stops the run before any test can use the wrong CSV or log.
 def load_properties(path):
-    # Testing algorithm:
-    #   What we test:
-    #     A Java/VBS-style .properties file can drive the regression suite configuration.
-    #   Success:
-    #     Non-comment key=value lines become a dictionary and the source path is absolute.
-    #   Error checks:
-    #     Missing properties file stops the run before any test can use the wrong CSV or log.
     properties_path = Path(path).resolve()                                            # Normalize for logging.
     if not properties_path.exists():                                                  # Error check: config file exists.
         raise SystemExit(f"Properties file does not exist: {properties_path}")
@@ -297,28 +301,28 @@ def load_properties(path):
     return properties_path, values                                                     # Return source path and settings.
 
 
+# Testing algorithm:
+#   What we test:
+#     Relative paths from properties resolve like launcher paths: relative to a base folder.
+#   Success:
+#     Absolute paths stay absolute; relative paths become full paths for logs and diagnostics.
+#   Error checks:
+#     Callers validate existence when the resolved path must already exist.
 def resolve_config_path(value, base_dir):
-    # Testing algorithm:
-    #   What we test:
-    #     Relative paths from properties resolve like launcher paths: relative to a base folder.
-    #   Success:
-    #     Absolute paths stay absolute; relative paths become full paths for logs and diagnostics.
-    #   Error checks:
-    #     Callers validate existence when the resolved path must already exist.
     path = Path(value)                         # Convert property text to a path object.
     if path.is_absolute():                     # Absolute paths are already fully specified.
         return path
     return (base_dir / path).resolve()         # Resolve relative to the properties/log base directory.
 
 
+# Testing algorithm:
+#   What we test:
+#     The suite can initialize from app-style properties and produce exact resolved paths.
+#   Success:
+#     logDir, csvFile, diagnosticLogFile, and learning-path-name become one immutable config.
+#   Error checks:
+#     Missing properties file fails in load_properties; missing CSV fails in setUp.
 def load_regression_config(args):
-    # Testing algorithm:
-    #   What we test:
-    #     The suite can initialize from app-style properties and produce exact resolved paths.
-    #   Success:
-    #     logDir, csvFile, diagnosticLogFile, and learning-path-name become one immutable config.
-    #   Error checks:
-    #     Missing properties file fails in load_properties; missing CSV fails in setUp.
     properties_path, properties = load_properties(args.properties)                    # Load app settings.
     log_dir = resolve_config_path(properties.get("logDir", "."), properties_path.parent)  # Resolve log dir.
     csv_path = (
@@ -340,26 +344,26 @@ def load_regression_config(args):
     )
 
 
+# Testing algorithm:
+#   What we test:
+#     Each regression run starts with a clean diagnostic log for unambiguous evidence.
+#   Success:
+#     The configured log directory exists and the configured log file starts empty.
+#   Error checks:
+#     Filesystem errors should stop the run because logs are part of the regression evidence.
 def reset_regression_log(config):
-    # Testing algorithm:
-    #   What we test:
-    #     Each regression run starts with a clean diagnostic log for unambiguous evidence.
-    #   Success:
-    #     The configured log directory exists and the configured log file starts empty.
-    #   Error checks:
-    #     Filesystem errors should stop the run because logs are part of the regression evidence.
     config.diagnostic_log_path.parent.mkdir(parents=True, exist_ok=True)       # Ensure log directory exists.
     config.diagnostic_log_path.write_text("", encoding="utf-8")                # Clear stale evidence.
 
 
+# Testing algorithm:
+#   What we test:
+#     The first diagnostic log lines must prove which inputs the test actually used.
+#   Success:
+#     The log starts with full paths for properties, CSV, diagnostic log, and selected tests.
+#   Error checks:
+#     If the log cannot be opened, the run fails before CsvStore can produce ambiguous output.
 def write_regression_start_log(config, unittest_args):
-    # Testing algorithm:
-    #   What we test:
-    #     The first diagnostic log lines must prove which inputs the test actually used.
-    #   Success:
-    #     The log starts with full paths for properties, CSV, diagnostic log, and selected tests.
-    #   Error checks:
-    #     If the log cannot be opened, the run fails before CsvStore can produce ambiguous output.
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")                  # One timestamp for the header.
     lines = [
         f"[{timestamp}] Regression test started",                             # Mark the beginning of this run.
@@ -375,14 +379,14 @@ def write_regression_start_log(config, unittest_args):
         handle.write("\n")                                                     # End with newline for CsvStore logs.
 
 
+# Testing algorithm:
+#   What we test:
+#     Human-friendly test indexes must become unittest-compatible method selectors.
+#   Success:
+#     test1/test2/test3/test4 map to exactly one test, while other unittest args pass through.
+#   Error checks:
+#     Unknown selectors are left to unittest so it can report the invalid test name.
 def normalize_unittest_args(unittest_args):
-    # Testing algorithm:
-    #   What we test:
-    #     Human-friendly test indexes must become unittest-compatible method selectors.
-    #   Success:
-    #     test1/test2/test3/test4 map to exactly one test, while other unittest args pass through.
-    #   Error checks:
-    #     Unknown selectors are left to unittest so it can report the invalid test name.
     if not unittest_args:                                              # No selector means unittest should run the full regression suite.
         return unittest_args
     return [TEST_ALIASES.get(arg, arg) for arg in unittest_args]       # Let test1 focus one test.

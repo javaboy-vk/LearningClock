@@ -140,18 +140,16 @@ LEGACY_FIELD_MAPPINGS = {
     "document_in_diavgeia": "update_diavgeia",                    # Preserve older CSV column name.
 }
 
-
+# Operational algorithm:
+#   What this class does:
+#     Owns all CSV persistence, CSV normalization, total-row math, and diagnostic logging.
+#   Success:
+#     The app can read existing rows, append valid sessions, recover emergency rows, and write
+#     one clean CSV with a final recalculated TOTAL row.
+#   Error handling:
+#     Diagnostic logging records recoverable conditions, and emergency-save helpers provide a
+#     fallback when normal persistence fails.
 class CsvStore:
-    # Operational algorithm:
-    #   What this class does:
-    #     Owns all CSV persistence, CSV normalization, total-row math, and diagnostic logging.
-    #   Success:
-    #     The app can read existing rows, append valid sessions, recover emergency rows, and write
-    #     one clean CSV with a final recalculated TOTAL row.
-    #   Error handling:
-    #     Diagnostic logging records recoverable conditions, and emergency-save helpers provide a
-    #     fallback when normal persistence fails.
-
     # Operational algorithm:
     #   What this method does:
     #     Builds the file paths used by the store for one LearningClock run.
