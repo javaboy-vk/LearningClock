@@ -2,6 +2,8 @@
 
 LearningClock is a Windows-friendly Python/Tkinter desktop timer for tracking focused learning sessions. It records time across named study activities, page counts, session metadata, recovered emergency saves, and a recalculated CSV `TOTAL` row that can feed reports and Diavgeia documentation.
 
+It is inspired by **dual timers chess clocks**. As soon as a player makes a moove stops his timer which starts his opponent timer. Similarly that Learning Clock has 7 such timers that track the different stages of learning. For example, I can start with reading, and as soon as hit the outlining timer, the reading timer stops and the outliner starts.
+
 The project is intentionally small and operational: the GUI owns timer behavior, `CsvStore` owns persistence, tests protect the CSV contract, and `scripts/dev.py` provides repeatable lifecycle commands for development, QA, coverage, packaging, Diavgeia export, and production release.
 
 ## Application And Dashboard
@@ -33,6 +35,7 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 
 - [Requirements](docs/requirements.md)
 - [Quick Start](docs/quick-start.md)
+- [Usage](docs/usage.md)
 - [Source Code Structure](docs/source-code-structure.md)
 - [CSV Contract](docs/csv-contract.md)
 - [Tests and Default Clock-QA Regression Fixture](docs/tests.md)

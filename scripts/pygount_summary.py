@@ -40,6 +40,7 @@ COUNT_PATHS = ["."]  # Match the manual repo-root command: pygount --format=summ
 
 
 def pygount_executable() -> Path:
+
     executable = ROOT / ".venv" / "Scripts" / "pygount.exe"
     if executable.exists():
         return executable
@@ -53,6 +54,7 @@ def pygount_executable() -> Path:
 
 
 def run_pygount() -> str:
+
     paths = [str(ROOT / path) for path in COUNT_PATHS if (ROOT / path).exists()]
     command = [str(pygount_executable()), "--format=summary", *paths]
     result = subprocess.run(
@@ -67,6 +69,7 @@ def run_pygount() -> str:
 
 
 def render_svg(summary_text: str) -> str:
+
     lines = summary_text.rstrip().splitlines()
     if not lines:
         lines = ["No pygount output."]
@@ -105,6 +108,7 @@ def render_svg(summary_text: str) -> str:
 
 
 def update_readme() -> None:
+
     text = README.read_text(encoding="utf-8").rstrip()
     existing_index = text.find(f"\n{README_SECTION_TITLE}\n")
     if existing_index != -1:
@@ -113,6 +117,7 @@ def update_readme() -> None:
 
 
 def main() -> int:
+
     summary_text = run_pygount()
     BUILD_REPORT_DIR.mkdir(parents=True, exist_ok=True)
     ASSET_DIR.mkdir(parents=True, exist_ok=True)

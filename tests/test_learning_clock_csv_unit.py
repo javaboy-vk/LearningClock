@@ -26,6 +26,7 @@ from learningclock.app import LearningClock
 #   Error checks:
 #     Assertions catch schema drift, bad totals, unsafe empty saves, bad duration parsing, and recovery failures.
 class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
+
     # Testing algorithm:
     #   What we test:
     #     CsvStore builds one session row from fixed app state and a supplied session end.
@@ -34,6 +35,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Field-by-field assertions catch date, duration, page, and total formatting drift.
     def test_create_session_row_formats_fields_and_total(self):
+
         self.clock.totals["Reading"] = 60                                      # Seed one minute of reading.
         self.clock.totals["Experimenting"] = 3600                              # Seed one hour of experimenting.
         self.clock.totals["Update Diavgeia"] = 30                              # Seed thirty seconds in a mapped activity.
@@ -59,6 +61,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch per-column summing errors and page-count conversion drift.
     def test_create_total_row_sums_activities_pages_and_total(self):
+
         rows = [                                                               # Build representative persisted session rows.
             self.row(
                 reading="00:10:00",                                            # First row reading duration.
@@ -86,6 +89,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch skipped saves, extra blank lines, row-count drift, and wrong TOTAL placement.
     def test_save_session_summary_writes_one_session_and_total_without_blank_lines(self):
+
         self.clock.totals["Reading"] = 5                                      # Seed small reading duration.
         self.clock.totals["Outlining"] = 8                                    # Seed small outlining duration.
         self.clock.totals["Memorizing"] = 17                                  # Seed small memorizing duration.
@@ -113,6 +117,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch accidental empty-file creation and incorrect save-state updates.
     def test_save_session_summary_does_not_create_empty_csv_for_empty_session(self):
+
         saved = self.clock.save_session_summary(datetime(2026, 6, 5, 18, 48, 22))  # Attempt to save zero data.
 
         self.assertFalse(saved)                                               # Empty session should be skipped.
@@ -127,6 +132,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch lost history, misplaced rows, bad activity sums, and bad page totals.
     def test_save_session_summary_preserves_existing_rows_and_recalculates_total(self):
+
         existing = self.row(
             date="2026-06-04",                                                # Prior session date.
             reading="00:10:00",                                               # Prior session reading duration.
@@ -160,6 +166,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch date normalization, legacy-column mapping, defaulting, and recalculated total drift.
     def test_normalize_existing_row_maps_legacy_fields_and_missing_values(self):
+
         row = {                                                               # Simulate a legacy partial CSV row.
             "date": "06/05/26",                                               # Legacy short date format.
             "document_in_diavgeia": "00:03:00",                               # Legacy column name.
@@ -182,6 +189,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch accidental TOTAL leakage and incorrect row normalization.
     def test_read_existing_session_rows_removes_total_row(self):
+
         self.write_csv([
             self.row(reading="00:02:00", total="00:02:00"),                  # Real session row.
             self.row(date="TOTAL", reading="99:00:00", total="99:00:00"),    # Existing summary row.
@@ -201,6 +209,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch unmerged emergency files, lost emergency rows, wrong order, and bad totals.
     def test_emergency_rows_are_merged_and_files_marked_after_successful_save(self):
+
         emergency_file = self.log_dir / "learning_time_log_emergency_20260605_100000.csv"  # Expected emergency filename.
         with emergency_file.open("w", newline="", encoding="utf-8") as handle:             # Create emergency CSV fixture.
             writer = csv.DictWriter(handle, fieldnames=learning_clock.FIELDNAMES)          # Use production schema.
@@ -232,6 +241,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch missing fallback files, schema drift, bad page values, and wrong totals.
     def test_save_emergency_session_file_uses_main_csv_schema(self):
+
         self.clock.totals["Audiobook"] = 90                                # Seed audiobook duration.
         self.clock.pages_read = 1                                           # Seed page count.
 
@@ -259,6 +269,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch parser exceptions, bad fallback values, and formatting drift.
     def test_duration_parsing_and_formatting_are_stable_for_bad_values(self):
+
         self.assertEqual(3723, learning_clock.parse_duration("01:02:03"))   # Valid duration parses to seconds.
         self.assertEqual(0, learning_clock.parse_duration(""))              # Blank duration safely becomes zero.
         self.assertEqual(0, learning_clock.parse_duration("not-a-duration"))  # Malformed duration safely becomes zero.
@@ -272,6 +283,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch accepted-format drift and missing validation errors.
     def test_manual_input_accepts_supported_formats_and_rejects_bad_values(self):
+
         self.assertEqual(300, LearningClock.parse_manual_input("5"))        # Plain number means minutes.
         self.assertEqual(5400, LearningClock.parse_manual_input("01:30"))   # HH:MM converts to seconds.
         self.assertEqual(5445, LearningClock.parse_manual_input("01:30:45"))  # HH:MM:SS converts to seconds.

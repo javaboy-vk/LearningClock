@@ -148,11 +148,13 @@ LEGACY_FIELD_MAPPINGS = {
 #   Error handling:
 #     format_seconds rejects non-integer-like values; parse_duration treats unreadable values as zero.
 def format_seconds(seconds):
+
     seconds = int(seconds)                                                # Normalize integer-like input.
     return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"  # Render HH:MM:SS.
 
 
 def parse_duration(duration):
+
     try:
         hours, minutes, seconds = duration.split(":")                     # Split duration components.
         return int(hours) * 3600 + int(minutes) * 60 + int(seconds)       # Convert to total seconds.
@@ -198,7 +200,7 @@ class CsvStore:
     #   Error handling:
     #     Logging failures are swallowed so diagnostic output never breaks timer operation.
     def write_diagnostic_log(self, message, exc=None):
-        
+
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")              # Timestamp this diagnostic event.
             lines = [f"[{timestamp}] {message}"]                                  # Start with the caller's message.
@@ -224,6 +226,7 @@ class CsvStore:
         activity_seconds: dict[str, int],
         pages_read: int,
     ):
+
         total_seconds = sum(activity_seconds.values())                            # Sum all tracked activity time.
 
         row = {
@@ -250,6 +253,7 @@ class CsvStore:
     #     Empty sessions are skipped, empty files are not written, and emergency files are marked
     #     merged only after the main CSV write succeeds.
     def save_session_summary(self, session_row):
+
         self.write_diagnostic_log(
             f"Save started | session_end={session_row.get('session_end')} | "
             f"log_file={self.log_file}"                                      # Record target CSV path.
@@ -318,6 +322,7 @@ class CsvStore:
     #   Error handling:
     #     Bad page values are treated as zero so malformed input does not crash shutdown.
     def has_session_data(self, session_row):
+
         if parse_duration(session_row.get("total", "00:00:00")) > 0:           # Any positive time is useful data.
             return True                                                        # Save time-bearing rows.
         try:
@@ -333,6 +338,7 @@ class CsvStore:
     #   Error handling:
     #     Missing CSV is normal for first run and returns an empty row list.
     def read_existing_session_rows(self):
+
         if not self.log_file.exists():                                        # First run may not have a CSV yet.
             self.write_diagnostic_log(f"Main CSV does not exist yet | log_file={self.log_file}")  # Record empty source.
             return []                                                         # No rows to merge.
@@ -355,6 +361,7 @@ class CsvStore:
     #   Error handling:
     #     A bad emergency file is logged and skipped so other recoverable files can still merge.
     def read_emergency_session_rows(self):
+
         rows = []                                                             # Recovered emergency session rows.
         files = []                                                            # Emergency files that should be marked merged.
 
@@ -388,6 +395,7 @@ class CsvStore:
     #   Error handling:
     #     Rename/delete failures are ignored because the main CSV write has already succeeded.
     def mark_emergency_files_merged(self, emergency_files):
+
         for emergency_file in emergency_files:                                  # Process each consumed emergency file.
             merged_file = emergency_file.with_suffix(emergency_file.suffix + ".merged")  # Build marker filename.
             try:
@@ -405,6 +413,7 @@ class CsvStore:
     #   Error handling:
     #     Missing fields are filled with safe defaults; missing totals are recalculated from activity columns.
     def normalize_existing_row(self, row):
+
         normalized_row = {field: row.get(field, "") for field in FIELDNAMES}   # Copy only current schema fields.
         normalized_row["date"] = self.normalize_csv_date_value(normalized_row.get("date", ""))  # Canonicalize date.
 
@@ -433,6 +442,7 @@ class CsvStore:
     #   Error handling:
     #     Bad page values count as zero; bad durations parse as zero through parse_duration.
     def create_total_row(self, rows):
+
         total_seconds_by_field = {field_name: 0 for field_name in ACTIVITY_TO_FIELD.values()}  # Accumulate per activity.
         grand_total = 0                                                                        # Accumulate row totals.
         pages_total = 0                                                                        # Accumulate pages.
@@ -469,6 +479,7 @@ class CsvStore:
     #   Error handling:
     #     Missing or malformed activity durations parse as zero.
     def recalculate_row_total(self, row):
+
         return format_seconds(
             sum(
                 parse_duration(row.get(field_name, "00:00:00"))                  # Convert each activity to seconds.
@@ -484,6 +495,7 @@ class CsvStore:
     #   Error handling:
     #     Unsupported date text is preserved and logged instead of crashing CSV reads.
     def normalize_csv_date_value(self, value):
+
         raw_value = (value or "").strip()                                      # Normalize empty/None and whitespace.
 
         if not raw_value or raw_value == "TOTAL":                              # Blank and summary markers are not dates.
@@ -517,6 +529,7 @@ class CsvStore:
     #   Error handling:
     #     Write errors propagate to the caller, which can log or surface the emergency-save failure.
     def save_emergency_session_file(self, session_row, session_end, error):
+
         emergency_file = self.log_dir / (
             EMERGENCY_FILE_PREFIX                                              # Prefix identifies recovery files.
             + session_end.strftime("%Y%m%d_%H%M%S")                            # Timestamp keeps emergency files unique.
@@ -543,6 +556,7 @@ class CsvStore:
     #     Unsupported values raise ValueError so callers/tests notice invalid date input.
     @staticmethod
     def format_csv_date(value):
+
         if isinstance(value, datetime):                                       # Datetime is already structured.
             return value.strftime(CSV_DATE_FORMAT)                            # Format directly.
         return datetime.strptime(str(value), CSV_DATE_FORMAT).strftime(CSV_DATE_FORMAT)  # Validate and normalize text.

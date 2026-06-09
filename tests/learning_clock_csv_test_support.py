@@ -27,6 +27,7 @@ from learningclock.csv_store import ACTIVITIES, CsvStore
 #   Error checks:
 #     CsvStore path setup errors still propagate so broken test storage fails immediately.
 class CsvStoreTtestHarness(CsvStore):
+
     # Testing algorithm:
     #   What we test:
     #     CsvStoreTtestHarness initializes production CsvStore behavior with deterministic test state.
@@ -40,6 +41,7 @@ class CsvStoreTtestHarness(CsvStore):
         learning_path_name: str = "UnitTestPath",
         diagnostic_log_file: Path | None = None,
     ):
+
         super().__init__(log_dir, learning_path_name)                         # Reuse production CsvStore setup.
         if diagnostic_log_file is not None:                                   # Optional shared diagnostic log for regression tests.
             self.diagnostic_log_file = Path(diagnostic_log_file)              # Store resolved diagnostic log path.
@@ -57,6 +59,7 @@ class CsvStoreTtestHarness(CsvStore):
     #   Error checks:
     #     Production create_session_row validation and formatting errors surface to the test.
     def create_session_row(self, session_end):
+
         return super().create_session_row(
             self.session_start,                                               # Fixed harness session start.
             session_end,                                                       # Test-provided session end.
@@ -72,6 +75,7 @@ class CsvStoreTtestHarness(CsvStore):
     #   Error checks:
     #     Production save errors propagate so unit tests fail with the original persistence error.
     def save_session_summary(self, session_end):
+
         saved = super().save_session_summary(self.create_session_row(session_end))  # Save generated session row.
         self.session_saved = saved                                            # Mirror app session_saved state.
         return saved                                                          # Return production save result.
@@ -84,6 +88,7 @@ class CsvStoreTtestHarness(CsvStore):
     #   Error checks:
     #     Production emergency-save errors propagate to the failing test.
     def save_emergency_session_file(self, session_end, error):
+
         return super().save_emergency_session_file(
             self.create_session_row(session_end),                              # Generated row for fallback persistence.
             session_end,                                                       # Timestamp used in emergency filename/content.
@@ -99,6 +104,7 @@ class CsvStoreTtestHarness(CsvStore):
 #   Error checks:
 #     Temporary-directory and CSV parsing failures surface directly to the failing test.
 class LearningClockCsvHarness:
+
     # Testing algorithm:
     #   What we test:
     #     Each test gets a clean temporary directory and fresh store instance.
@@ -107,6 +113,7 @@ class LearningClockCsvHarness:
     #   Error checks:
     #     Temporary directory creation or store initialization errors fail the test setup.
     def setUp(self):
+
         self.temp_dir = TemporaryDirectory()                                   # Create isolated filesystem workspace.
         self.log_dir = Path(self.temp_dir.name)                                # Convert temp path to Path for CsvStore.
         self.clock = self.make_clock()                                         # Build the test store/app adapter.
@@ -119,6 +126,7 @@ class LearningClockCsvHarness:
     #   Error checks:
     #     TemporaryDirectory cleanup errors surface through unittest teardown.
     def tearDown(self):
+
         self.temp_dir.cleanup()                                                # Remove isolated workspace.
 
     # Testing algorithm:
@@ -129,6 +137,7 @@ class LearningClockCsvHarness:
     #   Error checks:
     #     CsvStoreTtestHarness initialization errors fail setup before assertions run.
     def make_clock(self):
+
         return CsvStoreTtestHarness(self.log_dir)                              # Create default deterministic store.
 
     # Testing algorithm:
@@ -139,6 +148,7 @@ class LearningClockCsvHarness:
     #   Error checks:
     #     Missing files, invalid encodings, and CSV parsing problems surface to the test.
     def read_log_rows(self):
+
         with self.clock.log_file.open("r", newline="", encoding="utf-8") as handle:  # Open main CSV output.
             return list(csv.DictReader(handle))                                # Return rows keyed by CSV header.
 
@@ -150,6 +160,7 @@ class LearningClockCsvHarness:
     #   Error checks:
     #     File write errors and invalid row shapes surface during fixture setup.
     def write_csv(self, rows):
+
         with self.clock.log_file.open("w", newline="", encoding="utf-8") as handle:  # Open main CSV for fixture data.
             writer = csv.DictWriter(handle, fieldnames=learning_clock.FIELDNAMES)    # Use production schema.
             writer.writeheader()                                               # Write header before rows.
@@ -163,6 +174,7 @@ class LearningClockCsvHarness:
     #   Error checks:
     #     Invalid override keys are preserved so production normalization/schema assertions can catch them.
     def row(self, **overrides):
+
         values = {                                                            # Start with one complete CSV row.
             "date": "2026-06-05",                                             # Default session date.
             "learning_path": "UnitTestPath",                                  # Default harness learning path.

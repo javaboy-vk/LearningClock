@@ -28,6 +28,7 @@ PRODUCTION_APP_DIR = Path(r"D:\LearningPath\Tools\LearningClock")
 
 
 def safe_remove(path: Path) -> None:
+
     resolved = path.resolve()
     if not str(resolved).startswith(str(ROOT.resolve())):
         raise RuntimeError(f"Refusing to remove outside repository: {resolved}")
@@ -38,6 +39,7 @@ def safe_remove(path: Path) -> None:
 
 
 def run(args: list[str], *, env: dict[str, str] | None = None) -> None:
+
     merged_env = os.environ.copy()
     merged_env["PYTHONPATH"] = str(ROOT / "src")
     if env:
@@ -46,12 +48,14 @@ def run(args: list[str], *, env: dict[str, str] | None = None) -> None:
 
 
 def python_executable() -> str:
+
     if VENV_PYTHON.exists():
         return str(VENV_PYTHON)
     return sys.executable
 
 
 def require_venv() -> str:
+
     if not VENV_PYTHON.exists():
         raise SystemExit(
             "Missing .venv. Create it first from Command Prompt with: python -m venv .venv"
@@ -60,6 +64,7 @@ def require_venv() -> str:
 
 
 def clean(_args: list[str] | None = None) -> None:
+
     for path in [
         BUILD_DIR,
         ROOT / "dist",
@@ -75,11 +80,13 @@ def clean(_args: list[str] | None = None) -> None:
 
 
 def remove_python_metadata() -> None:
+
     for path in ROOT.rglob("*.egg-info"):
         safe_remove(path)
 
 
 def dependency_requirements() -> list[str]:
+
     with (ROOT / "pyproject.toml").open("rb") as handle:
         config = tomllib.load(handle)
 
@@ -90,6 +97,7 @@ def dependency_requirements() -> list[str]:
 
 
 def compile_sources(_args: list[str] | None = None) -> None:
+
     BUILD_DIR.mkdir(exist_ok=True)
     ok = compileall.compile_dir(ROOT / "src", quiet=1)
     ok = compileall.compile_dir(ROOT / "tests", quiet=1) and ok
@@ -98,6 +106,7 @@ def compile_sources(_args: list[str] | None = None) -> None:
 
 
 def validate_config(_args: list[str] | None = None) -> None:
+
     config_files = [
         ROOT / ".vscode" / "launch.json",
         ROOT / ".vscode" / "tasks.json",
@@ -117,10 +126,12 @@ def validate_config(_args: list[str] | None = None) -> None:
 
 
 def test(_args: list[str] | None = None) -> None:
+
     run([require_venv(), "-m", "pytest"])
 
 
 def coverage(_args: list[str] | None = None) -> None:
+
     run(
         [
             require_venv(),
@@ -134,22 +145,27 @@ def coverage(_args: list[str] | None = None) -> None:
 
 
 def pygount_summary(_args: list[str] | None = None) -> None:
+
     run([require_venv(), str(ROOT / "scripts" / "pygount_summary.py")])
 
 
 def readme_assets(_args: list[str] | None = None) -> None:
+
     run([require_venv(), str(ROOT / "scripts" / "generate_readme_assets.py")])
 
 
 def unittest_csv(args: list[str] | None = None) -> None:
+
     run([require_venv(), "tests/test_learning_clock_csv_unit.py", *(args or [])])
 
 
 def unittest_csv_file(args: list[str] | None = None) -> None:
+
     run([require_venv(), "tests/test_learning_clock_csv_regression.py", *(args or [])])
 
 
 def csv_test(args: list[str] | None = None) -> None:
+
     parser = argparse.ArgumentParser(prog="dev.py csv-test")
     parser.add_argument("selector", nargs="?", default="test1")
     parser.add_argument("--properties", default=str(REGRESSION_PROPERTIES))
@@ -168,12 +184,14 @@ def csv_test(args: list[str] | None = None) -> None:
 
 
 def package(_args: list[str] | None = None) -> None:
+
     (BUILD_DIR / "dist").mkdir(parents=True, exist_ok=True)
     run([require_venv(), "-m", "build", "--outdir", str(BUILD_DIR / "dist")])
     remove_python_metadata()
 
 
 def install(_args: list[str] | None = None) -> None:
+
     py = require_venv()
     run([py, "-m", "pip", "install", "--upgrade", "pip"])
     requirements = dependency_requirements()
@@ -183,6 +201,7 @@ def install(_args: list[str] | None = None) -> None:
 
 
 def deploy(_args: list[str] | None = None) -> None:
+
     run(
         [
             "powershell",
@@ -196,6 +215,7 @@ def deploy(_args: list[str] | None = None) -> None:
 
 
 def release(args: list[str] | None = None) -> None:
+
     parser = argparse.ArgumentParser(prog="dev.py release")
     parser.add_argument("--production-dir", default=str(PRODUCTION_APP_DIR))
     parser.add_argument("--dry-run", action="store_true")
@@ -236,6 +256,7 @@ def release(args: list[str] | None = None) -> None:
 
 
 def all_targets(_args: list[str] | None = None) -> None:
+
     clean()
     compile_sources()
     test()
@@ -262,6 +283,7 @@ TARGETS = {
 
 
 def main(argv: list[str] | None = None) -> int:
+
     parser = argparse.ArgumentParser(prog="dev.py")
     parser.add_argument("target", choices=TARGETS)
     parser.add_argument("args", nargs=argparse.REMAINDER)

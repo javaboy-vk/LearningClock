@@ -58,6 +58,7 @@ from learningclock import __version__
 #   Error handling:
 #     argparse owns invalid-option reporting when parse_args is called by main.
 def build_parser() -> argparse.ArgumentParser:
+
     parser = argparse.ArgumentParser(prog="learningclock")                    # Create parser with stable command name.
     parser.add_argument(
         "--version",                                                          # Optional metadata command.
@@ -75,6 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
 #   Error handling:
 #     argparse raises SystemExit for malformed arguments, preserving standard command-line behavior.
 def main(argv: list[str] | None = None) -> int:
+
     args = build_parser().parse_args(argv)                                    # Parse supplied args or sys.argv via argparse.
     if args.version:                                                          # Version-only command path.
         print(__version__)                                                    # Emit package version for scripts/users.

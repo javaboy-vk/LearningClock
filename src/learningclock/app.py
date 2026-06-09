@@ -158,6 +158,7 @@ ADD_PAGE_COUNT_GEOMETRY = "530x345"
 #   Error handling:
 #     argparse reports invalid arguments before Tkinter starts.
 def parse_args(argv: list[str] | None = None):
+
     parser = argparse.ArgumentParser(description="Learning Clock")      # Create CLI parser for app launch.
     parser.add_argument("--learning-path", default=None)                 # Optional display/persisted path name.
     parser.add_argument("--log-dir", default=None)                       # Optional CSV/log output directory.
@@ -190,6 +191,7 @@ class LearningClock:
         debug_break_on_click=False,
         debug_break_on_close=False,
     ):
+
         self.root = root                                                            # Tk root window owned by this app.
         self.learning_path_name = learning_path_name or Path.cwd().name             # Default to current folder name.
         self.debug_break_on_click = debug_break_on_click                            # Developer click breakpoint flag.
@@ -246,6 +248,7 @@ class LearningClock:
     #   Error handling:
     #     CsvStore absorbs logging failures so app actions are not blocked by diagnostics.
     def write_diagnostic_log(self, message, exc=None):
+
         self.store.write_diagnostic_log(message, exc)                              # Share CsvStore diagnostic log.
 
     # Operational algorithm:
@@ -256,6 +259,7 @@ class LearningClock:
     #   Error handling:
     #     No special error handling is needed because values are plain strings.
     def build_window_title(self):
+
         return f"{APP_TITLE} - {APP_VERSION} - {self.learning_path_name}"          # Compose visible window title.
 
     # Operational algorithm:
@@ -266,6 +270,7 @@ class LearningClock:
     #   Error handling:
     #     Tkinter construction errors propagate because the UI cannot run without a menu.
     def build_menu(self):
+
         menu_bar = tk.Menu(self.root)                                               # Create menu bar.
         menu_bar.add_command(label="About", command=self.show_about)                # Show runtime/path info.
         menu_bar.add_command(label="Add Time", command=self.enter_add_time_mode)    # Enter manual duration mode.
@@ -280,6 +285,7 @@ class LearningClock:
     #   Error handling:
     #     Tkinter construction errors propagate because the window is unusable without controls.
     def build_main_ui(self):
+
         self.status = tk.Label(
             self.root,                                                        # Parent window.
             text="No timer running",                                          # Initial status.
@@ -362,6 +368,7 @@ class LearningClock:
     #   Error handling:
     #     messagebox errors are left to Tkinter; this method has no persistence side effects.
     def show_about(self):
+
         about_text = "\n".join([
             f"{APP_TITLE} - {APP_VERSION}",                                   # App identity.
             f"Learning Path: {self.learning_path_name}",                       # Configured learning path.
@@ -382,6 +389,7 @@ class LearningClock:
     #   Error handling:
     #     Re-entering the same mode is a no-op; page-count mode is closed first.
     def enter_add_time_mode(self):
+
         if self.add_page_count_mode:                                           # Only one temporary input mode at a time.
             self.exit_add_page_count_mode()
         if self.add_time_mode:                                                 # Already in add-time mode.
@@ -409,6 +417,7 @@ class LearningClock:
     #   Error handling:
     #     Exiting when not in add-time mode is a no-op.
     def exit_add_time_mode(self):
+
         if not self.add_time_mode:                                             # Already in normal layout.
             return
 
@@ -429,6 +438,7 @@ class LearningClock:
     #   Error handling:
     #     Re-entering the same mode is a no-op; add-time mode is closed first.
     def enter_add_page_count_mode(self):
+
         if self.add_time_mode:                                                 # Only one temporary input mode at a time.
             self.exit_add_time_mode()
         if self.add_page_count_mode:                                           # Already in page-count mode.
@@ -452,6 +462,7 @@ class LearningClock:
     #   Error handling:
     #     Exiting when not in page-count mode is a no-op.
     def exit_add_page_count_mode(self):
+
         if not self.add_page_count_mode:                                       # Already in normal layout.
             return
 
@@ -472,6 +483,7 @@ class LearningClock:
     #   Error handling:
     #     No special error handling is needed because it only updates one label.
     def restore_running_status(self):
+
         if self.active_activity:                                               # A timer is currently active.
             self.status.config(text=f"Running: {self.active_activity}")        # Show active timer.
         else:
@@ -485,6 +497,7 @@ class LearningClock:
     #   Error handling:
     #     Optional debug breakpoint allows inspection before state changes.
     def switch_to(self, activity):
+
         if self.debug_break_on_click:                                         # Developer debugging hook.
             breakpoint()
 
@@ -507,6 +520,7 @@ class LearningClock:
     #   Error handling:
     #     Calling with no active timer is a no-op.
     def close_active_timer(self, now):
+
         if self.active_activity is None or self.active_start is None:          # Nothing is currently running.
             return
         elapsed_seconds = (now - self.active_start).total_seconds()            # Compute elapsed runtime.
@@ -528,6 +542,7 @@ class LearningClock:
     #   Error handling:
     #     If no timer is running, the status stays idle and no totals change.
     def stop_running_timer(self):
+
         if self.active_activity is None:                                       # Nothing to stop.
             self.status.config(text="No timer running")                        # Keep idle status visible.
             return
@@ -543,6 +558,7 @@ class LearningClock:
     #   Error handling:
     #     If no timer is running, a warning is shown and no totals change.
     def reset_running_timer(self):
+
         if self.active_activity is None:                                       # Reset requires an active timer.
             messagebox.showwarning("Reset Timer", "No timer is currently running.")  # Explain no-op to user.
             return
@@ -561,6 +577,7 @@ class LearningClock:
     #   Error handling:
     #     Any invalid field blocks the entire add operation and reports all field errors.
     def add_all_manual_time(self):
+
         additions = []                                                        # Valid (activity, seconds) pairs.
         errors = []                                                           # Validation messages to show together.
 
@@ -607,6 +624,7 @@ class LearningClock:
     #   Error handling:
     #     Missing, non-numeric, or non-positive values show warnings/errors and do not change totals.
     def add_page_count(self):
+
         if self.page_count_entry is None:                                      # Page field may not exist in tests.
             return
 
@@ -642,6 +660,7 @@ class LearningClock:
     #     Blank or malformed text raises ValueError with user-facing guidance.
     @staticmethod
     def parse_manual_input(value):
+
         normalized = value.strip()                                             # Remove surrounding whitespace.
         if not normalized:                                                     # Blank input is not meaningful.
             raise ValueError("Manual time cannot be blank.")
@@ -672,6 +691,7 @@ class LearningClock:
     #   Error handling:
     #     Activity keys are expected to come from ACTIVITIES; invalid keys naturally raise KeyError.
     def current_total(self, activity):
+
         total = self.totals[activity]                                          # Start with accumulated stored seconds.
         if self.active_activity == activity and self.active_start is not None:  # Include live timer when active.
             total += (datetime.now() - self.active_start).total_seconds()
@@ -685,6 +705,7 @@ class LearningClock:
     #   Error handling:
     #     CsvStore owns date/time formatting validation for the final row.
     def create_session_row(self, session_end):
+
         activity_seconds = {
             activity: self.current_total(activity)                             # Include live totals per activity.
             for activity in ACTIVITIES                                         # Preserve configured activity order.
@@ -704,6 +725,7 @@ class LearningClock:
     #   Error handling:
     #     Exceptions propagate to on_close, which can create an emergency file.
     def save_session_summary(self, session_end):
+
         saved = self.store.save_session_summary(self.create_session_row(session_end))  # Persist current session.
         self.session_saved = saved                                             # Remember save result.
         return saved                                                           # Return result to caller.
@@ -716,6 +738,7 @@ class LearningClock:
     #   Error handling:
     #     Exceptions propagate to on_close, which logs emergency-save failure.
     def save_emergency_session_file(self, session_end, error):
+
         session_row = self.create_session_row(session_end)                     # Rebuild row for emergency save.
         return self.store.save_emergency_session_file(session_row, session_end, error)  # Persist fallback CSV.
 
@@ -727,6 +750,7 @@ class LearningClock:
     #   Error handling:
     #     Closing state and Tkinter teardown errors stop the loop quietly.
     def update_display(self):
+
         if self.is_closing:                                                    # Do not update widgets during shutdown.
             return
         try:
@@ -744,6 +768,7 @@ class LearningClock:
     #   Error handling:
     #     Normal save failures are logged; emergency save is attempted; the user sees a warning.
     def on_close(self):
+
         if self.is_closing:                                                    # Prevent duplicate close processing.
             return
 
@@ -810,6 +835,7 @@ class LearningClock:
     #   Error handling:
     #     Startup exceptions propagate because an app that cannot initialize should fail visibly.
 def main(argv: list[str] | None = None) -> int:
+
     args = parse_args(argv)                                                     # Parse CLI/debug launch arguments.
     root = tk.Tk()                                                              # Create root Tk window.
     LearningClock(

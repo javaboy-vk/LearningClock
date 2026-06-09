@@ -89,6 +89,7 @@ TEST_ALIASES = {                                                   # Map short c
 #     Downstream setup fails early if the resolved CSV path does not exist.
 @dataclass(frozen=True)
 class RegressionConfig:
+
     properties_path: Path | None       # Full path to the properties file that configured the run.
     learning_path_name: str            # App learning-path name passed into CsvStore.
     log_dir: Path                      # Directory that owns the configured CSV and log files.
@@ -113,6 +114,7 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #   Error checks:
     #     Missing config skips the tests with instructions. A nonexistent path fails immediately.
     def setUp(self):
+
         config = get_regression_config()                    # Normal pytest uses clock-QA.properties by default.
         ensure_default_qa_csv(config)                       # Seed build\Clock-QA only for default QA.
 
@@ -131,6 +133,7 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #   Error checks:
     #     If REGRESSION_CONFIG is missing, setUp skips before this helper is meaningfully used.
     def make_clock(self):
+
         config = get_regression_config()                    # Use the same config as setUp.
         return CsvStoreTtestHarness(
             self.log_dir,                         # Temporary CSV directory protects the source CSV.
@@ -146,6 +149,7 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #   Error checks:
     #     File and CSV parsing errors should surface naturally to the failing test.
     def read_rows(self):
+
         with self.clock.log_file.open(
             "r", newline="", encoding="utf-8"
         ) as handle:                              # Read temp CSV.
@@ -161,6 +165,7 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #     assertGreater detects an empty import. assertEqual catches missing or extra fields.
     #     assertNotEqual catches accidental TOTAL leakage. assertRegex catches bad durations.
     def test1_csv_can_be_read_and_normalized(self):
+
         rows = self.clock.read_existing_session_rows()                             # Load and normalize non-TOTAL session rows.
 
         self.assertGreater(
@@ -183,6 +188,7 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #     parse_duration compares values numerically, so formatting differences do not hide math
     #     errors, and the custom assertion message explains the broken invariant.
     def test2_csv_row_totals_match_activity_sums(self):
+
         rows = self.clock.read_existing_session_rows()                          # Load normalized rows from the test copy.
 
         for index, row in enumerate(rows, start=1):                             # Validate totals row by row.
@@ -204,6 +210,7 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #     assertTrue catches skipped saves. assertNotIn catches blank-line regressions.
     #     assertEqual catches duplicate or misplaced TOTAL rows. assertRegex catches bad times.
     def test3_csv_rewrite_has_clean_total_row(self):
+
         saved = self.clock.save_session_summary(datetime(2026, 6, 5, 10, 0, 0))      # Rewrite temp CSV.
 
         self.assertTrue(
@@ -244,6 +251,7 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #   Error checks:
     #     Field-by-field assertEqual calls pinpoint exactly which summary value is wrong.
     def test4_csv_total_row_matches_session_rows(self):
+
         self.clock.save_session_summary(
             datetime(2026, 6, 5, 10, 0, 0)
         )                                                                               # Force TOTAL recalculation.
@@ -268,6 +276,7 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
 #   Error checks:
 #     argparse reports malformed regression arguments before unittest starts.
 def parse_test_args(argv):
+
     parser = argparse.ArgumentParser(description="Learning Clock CSV regression suite")  # Suite parser.
     parser.add_argument(
         "--properties",                                                              # App-style config.
@@ -291,6 +300,7 @@ def parse_test_args(argv):
 #   Error checks:
 #     Missing properties file stops the run before any test can use the wrong CSV or log.
 def load_properties(path):
+
     properties_path = Path(path).resolve()                                            # Normalize for logging.
     if not properties_path.exists():                                                  # Error check: config file exists.
         raise SystemExit(f"Properties file does not exist: {properties_path}")
@@ -315,6 +325,7 @@ def load_properties(path):
 #   Error checks:
 #     Callers validate existence when the resolved path must already exist.
 def resolve_config_path(value, base_dir):
+
     path = Path(value)                         # Convert property text to a path object.
     if path.is_absolute():                     # Absolute paths are already fully specified.
         return path
@@ -329,6 +340,7 @@ def resolve_config_path(value, base_dir):
 #   Error checks:
 #     Missing properties file fails in load_properties; missing CSV fails in setUp.
 def load_regression_config(args):
+
     properties_path, properties = load_properties(args.properties)                    # Load app settings.
     log_dir = resolve_config_path(properties.get("logDir", "."), properties_path.parent)  # Resolve log dir.
     csv_path = (
@@ -358,6 +370,7 @@ def load_regression_config(args):
 #   Error checks:
 #     Missing or malformed default properties fail the regression tests instead of silently skipping them.
 def get_regression_config():
+
     global REGRESSION_CONFIG
     if REGRESSION_CONFIG is None:                                             # Pytest import path has no __main__ setup.
         args = argparse.Namespace(properties=str(DEFAULT_REGRESSION_PROPERTIES), csv=None)
@@ -373,6 +386,7 @@ def get_regression_config():
 #   Error checks:
 #     Non-default regression configs are never auto-generated so explicit external CSV mistakes still fail.
 def ensure_default_qa_csv(config):
+
     if config.properties_path.name != DEFAULT_REGRESSION_PROPERTIES.name:      # Only seed the default QA fixture.
         return
 
@@ -444,6 +458,7 @@ def ensure_default_qa_csv(config):
 #   Error checks:
 #     Filesystem errors should stop the run because logs are part of the regression evidence.
 def reset_regression_log(config):
+
     config.diagnostic_log_path.parent.mkdir(parents=True, exist_ok=True)       # Ensure log directory exists.
     config.diagnostic_log_path.write_text("", encoding="utf-8")                # Clear stale evidence.
 
@@ -456,6 +471,7 @@ def reset_regression_log(config):
 #   Error checks:
 #     If the log cannot be opened, the run fails before CsvStore can produce ambiguous output.
 def write_regression_start_log(config, unittest_args):
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")                  # One timestamp for the header.
     lines = [
         f"[{timestamp}] Regression test started",                             # Mark the beginning of this run.
@@ -479,6 +495,7 @@ def write_regression_start_log(config, unittest_args):
 #   Error checks:
 #     Unknown selectors are left to unittest so it can report the invalid test name.
 def normalize_unittest_args(unittest_args):
+
     if not unittest_args:                                              # No selector means unittest should run the full regression suite.
         return unittest_args
     return [TEST_ALIASES.get(arg, arg) for arg in unittest_args]       # Let test1 focus one test.

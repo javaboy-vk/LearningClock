@@ -30,14 +30,17 @@ QA_CSV = ROOT / "build" / "Clock-QA" / "learning_time_log.csv"
 
 
 def text(value: object) -> str:
+
     return html.escape(str(value), quote=True)
 
 
 def format_duration(seconds: int) -> str:
+
     return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
 
 
 def read_dashboard_totals() -> tuple[dict[str, int], int, int]:
+
     totals = {activity: 0 for activity in ACTIVITIES}
     pages = 0
     grand_total = 0
@@ -65,6 +68,7 @@ def read_dashboard_totals() -> tuple[dict[str, int], int, int]:
 
 
 def generate_ui_svg() -> str:
+
     width = 560
     height = 500
     row_height = 43
@@ -118,6 +122,7 @@ def generate_ui_svg() -> str:
 
 
 def generate_dashboard_svg() -> str:
+
     totals, pages, grand_total = read_dashboard_totals()
     width = 920
     height = 500
@@ -176,6 +181,7 @@ def generate_dashboard_svg() -> str:
 
 
 def main() -> int:
+
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
     UI_SVG.write_text(generate_ui_svg(), encoding="utf-8")
     DASHBOARD_SVG.write_text(generate_dashboard_svg(), encoding="utf-8")

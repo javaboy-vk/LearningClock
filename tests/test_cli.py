@@ -19,6 +19,7 @@ from learningclock.cli import main  # CLI entry point under test.
 #   Error checks:
 #     Assertions catch nonzero exits, missing output, and accidental message changes.
 def test_main_prints_ready_message(capsys):
+
     assert main([]) == 0                                                     # Empty argv should succeed.
     assert capsys.readouterr().out.strip() == "LearningClock is ready."       # Default output is stable.
 
@@ -31,5 +32,6 @@ def test_main_prints_ready_message(capsys):
 #   Error checks:
 #     Assertions catch nonzero exits, missing output, and version-reporting drift.
 def test_main_prints_version(capsys):
+
     assert main(["--version"]) == 0                                          # Version flag should succeed.
     assert capsys.readouterr().out.strip() == "0.1.0"                        # Output matches package version.
