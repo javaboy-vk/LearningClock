@@ -21,15 +21,15 @@ from learningclock.csv_store import ACTIVITIES, CsvStore
 
 # Testing algorithm:
 #   What we test:
-#     TestCsvStore adapts CsvStore for deterministic unit and regression test sessions.
+#     CsvStoreTtestHarness adapts CsvStore for deterministic unit and regression test sessions.
 #   Success:
 #     Tests get fixed session start data, isolated totals, and optional shared diagnostic logging.
 #   Error checks:
 #     CsvStore path setup errors still propagate so broken test storage fails immediately.
-class TestCsvStore(CsvStore):
+class CsvStoreTtestHarness(CsvStore):
     # Testing algorithm:
     #   What we test:
-    #     TestCsvStore initializes production CsvStore behavior with deterministic test state.
+    #     CsvStoreTtestHarness initializes production CsvStore behavior with deterministic test state.
     #   Success:
     #     The store uses a test log directory, fixed session start, empty totals, and optional diagnostic path.
     #   Error checks:
@@ -95,7 +95,7 @@ class TestCsvStore(CsvStore):
 #   What we test:
 #     The harness creates and cleans an isolated CSV workspace for every test case.
 #   Success:
-#     Test cases receive a fresh TestCsvStore plus helpers for reading and seeding CSV rows.
+#     Test cases receive a fresh CsvStoreTtestHarness plus helpers for reading and seeding CSV rows.
 #   Error checks:
 #     Temporary-directory and CSV parsing failures surface directly to the failing test.
 class LearningClockCsvHarness:
@@ -123,13 +123,13 @@ class LearningClockCsvHarness:
 
     # Testing algorithm:
     #   What we test:
-    #     Harness subclasses can override store construction while the default uses TestCsvStore.
+    #     Harness subclasses can override store construction while the default uses CsvStoreTtestHarness.
     #   Success:
-    #     Unit tests get a deterministic TestCsvStore rooted in the temporary directory.
+    #     Unit tests get a deterministic CsvStoreTtestHarness rooted in the temporary directory.
     #   Error checks:
-    #     TestCsvStore initialization errors fail setup before assertions run.
+    #     CsvStoreTtestHarness initialization errors fail setup before assertions run.
     def make_clock(self):
-        return TestCsvStore(self.log_dir)                                      # Create default deterministic store.
+        return CsvStoreTtestHarness(self.log_dir)                              # Create default deterministic store.
 
     # Testing algorithm:
     #   What we test:

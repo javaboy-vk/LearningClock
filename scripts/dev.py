@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = ROOT / "build"
 VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
-REGRESSION_PROPERTIES = ROOT / "tests" / "fixtures" / "MAGPAI-regression.properties"
+REGRESSION_PROPERTIES = ROOT / "tests" / "fixtures" / "clock-QA.properties"
 PRODUCTION_APP_DIR = Path(r"D:\LearningPath\Tools\LearningClock")
 
 
@@ -118,6 +118,27 @@ def validate_config(_args: list[str] | None = None) -> None:
 
 def test(_args: list[str] | None = None) -> None:
     run([require_venv(), "-m", "pytest"])
+
+
+def coverage(_args: list[str] | None = None) -> None:
+    run(
+        [
+            require_venv(),
+            "-m",
+            "pytest",
+            "--cov=learningclock",
+            "--cov-report=term-missing",
+            "--cov-report=html:build/coverage/html",
+        ]
+    )
+
+
+def pygount_summary(_args: list[str] | None = None) -> None:
+    run([require_venv(), str(ROOT / "scripts" / "pygount_summary.py")])
+
+
+def readme_assets(_args: list[str] | None = None) -> None:
+    run([require_venv(), str(ROOT / "scripts" / "generate_readme_assets.py")])
 
 
 def unittest_csv(args: list[str] | None = None) -> None:
@@ -226,6 +247,9 @@ TARGETS = {
     "compile": compile_sources,
     "validate-config": validate_config,
     "test": test,
+    "coverage": coverage,
+    "pygount-summary": pygount_summary,
+    "readme-assets": readme_assets,
     "unittest-csv": unittest_csv,
     "unittest-csv-file": unittest_csv_file,
     "csv-test": csv_test,

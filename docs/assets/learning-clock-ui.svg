@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="500" viewBox="0 0 560 500" role="img" aria-label="LearningClock desktop UI with seven learning timers">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="560" height="500" fill="#c8c6bd"/>
+  <rect x="18" y="26" width="524" height="496" rx="9" fill="#eeeeee" stroke="#9d9d9d" filter="url(#shadow)"/>
+  <rect x="18" y="26" width="524" height="41" rx="9" fill="#f8f8f8"/>
+  <rect x="18" y="57" width="524" height="30" fill="#ffffff"/>
+  <text x="31" y="52" fill="#174c84" font-family="Segoe UI Emoji, Segoe UI Symbol, Arial, sans-serif" font-size="19">🪶</text>
+  <text x="54" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="15">Learning Clock - v3.3 - LearningClock</text>
+  <text x="389" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="18">−</text>
+  <rect x="448" y="40" width="10" height="10" fill="none" stroke="#d9d9d9"/>
+  <text x="506" y="52" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="24">×</text>
+  <text x="26" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">About</text>
+  <text x="86" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Time</text>
+  <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Page Count</text>
+  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Stopped: Experimenting</text>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    
+            <g>
+              <rect x="38" y="126" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <line x1="40" y1="128" x2="318" y2="128" stroke="#ffffff" stroke-width="1"/>
+              <line x1="40" y1="161" x2="318" y2="161" stroke="#777777" stroke-width="1"/>
+              <text x="45" y="152" fill="#111111" font-size="21">Reading</text>
+              <text x="360" y="152" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">00:00:00</text>
+            </g>
+            <g>
+              <rect x="38" y="169" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <line x1="40" y1="171" x2="318" y2="171" stroke="#ffffff" stroke-width="1"/>
+              <line x1="40" y1="204" x2="318" y2="204" stroke="#777777" stroke-width="1"/>
+              <text x="45" y="195" fill="#111111" font-size="21">Outlining</text>
+              <text x="360" y="195" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">00:00:00</text>
+            </g>
+            <g>
+              <rect x="38" y="212" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <line x1="40" y1="214" x2="318" y2="214" stroke="#ffffff" stroke-width="1"/>
+              <line x1="40" y1="247" x2="318" y2="247" stroke="#777777" stroke-width="1"/>
+              <text x="45" y="238" fill="#111111" font-size="21">Memorizing</text>
+              <text x="360" y="238" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">00:00:00</text>
+            </g>
+            <g>
+              <rect x="38" y="255" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <line x1="40" y1="257" x2="318" y2="257" stroke="#ffffff" stroke-width="1"/>
+              <line x1="40" y1="290" x2="318" y2="290" stroke="#777777" stroke-width="1"/>
+              <text x="45" y="281" fill="#111111" font-size="21">Experimenting</text>
+              <text x="360" y="281" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">01:42:35</text>
+            </g>
+            <g>
+              <rect x="38" y="298" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <line x1="40" y1="300" x2="318" y2="300" stroke="#ffffff" stroke-width="1"/>
+              <line x1="40" y1="333" x2="318" y2="333" stroke="#777777" stroke-width="1"/>
+              <text x="45" y="324" fill="#111111" font-size="21">Audiobook</text>
+              <text x="360" y="324" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">00:00:00</text>
+            </g>
+            <g>
+              <rect x="38" y="341" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <line x1="40" y1="343" x2="318" y2="343" stroke="#ffffff" stroke-width="1"/>
+              <line x1="40" y1="376" x2="318" y2="376" stroke="#777777" stroke-width="1"/>
+              <text x="45" y="367" fill="#111111" font-size="21">Update Diavgeia</text>
+              <text x="360" y="367" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">00:00:00</text>
+            </g>
+            <g>
+              <rect x="38" y="384" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <line x1="40" y1="386" x2="318" y2="386" stroke="#ffffff" stroke-width="1"/>
+              <line x1="40" y1="419" x2="318" y2="419" stroke="#777777" stroke-width="1"/>
+              <text x="45" y="410" fill="#111111" font-size="21">Promote stable concept</text>
+              <text x="360" y="410" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">00:00:00</text>
+            </g>
+  </g>
+  <rect x="38" y="434" width="132" height="35" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+  <line x1="40" y1="436" x2="168" y2="436" stroke="#ffffff" stroke-width="1"/>
+  <text x="87" y="458" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16">Stop</text>
+  <rect x="178" y="434" width="132" height="35" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+  <line x1="180" y1="436" x2="308" y2="436" stroke="#ffffff" stroke-width="1"/>
+  <text x="211" y="458" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16">Reset Timer</text>
+</svg>

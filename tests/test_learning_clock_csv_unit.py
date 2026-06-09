@@ -259,10 +259,10 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   Error checks:
     #     Assertions catch parser exceptions, bad fallback values, and formatting drift.
     def test_duration_parsing_and_formatting_are_stable_for_bad_values(self):
-        self.assertEqual(3723, self.clock.parse_duration("01:02:03"))       # Valid duration parses to seconds.
-        self.assertEqual(0, self.clock.parse_duration(""))                  # Blank duration safely becomes zero.
-        self.assertEqual(0, self.clock.parse_duration("not-a-duration"))    # Malformed duration safely becomes zero.
-        self.assertEqual("01:02:03", self.clock.format_seconds(3723))       # Seconds format back to HH:MM:SS.
+        self.assertEqual(3723, learning_clock.parse_duration("01:02:03"))   # Valid duration parses to seconds.
+        self.assertEqual(0, learning_clock.parse_duration(""))              # Blank duration safely becomes zero.
+        self.assertEqual(0, learning_clock.parse_duration("not-a-duration"))  # Malformed duration safely becomes zero.
+        self.assertEqual("01:02:03", learning_clock.format_seconds(3723))   # Seconds format back to HH:MM:SS.
 
     # Testing algorithm:
     #   What we test:

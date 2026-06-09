@@ -61,9 +61,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from learning_clock_csv_test_support import LearningClockCsvHarness, TestCsvStore, learning_clock
+from learning_clock_csv_test_support import (
+    CsvStoreTtestHarness,
+    LearningClockCsvHarness,
+    learning_clock,
+)
 
-REGRESSION_CONFIG = None                                           # Filled by __main__ after parsing properties; tests skip until configured.
+DEFAULT_REGRESSION_PROPERTIES = Path("tests/fixtures/clock-QA.properties")  # Default config used by pytest.
+REGRESSION_CONFIG = None                                           # Lazily filled from default properties or __main__ args.
 DURATION_PATTERN = r"^\d{1,}:\d{2}:\d{2}$"                         # Regex: start, 1+ hour digits, colon, 2 minute digits, colon, 2 second digits, end.
 CANONICAL_DURATION_PATTERN = r"^\d{2,}:\d{2}:\d{2}$"               # Regex: canonical totals require 2+ hour digits, then exactly mm:ss digit pairs.
 LOG_FILE_NAME = "learning_time_log.csv"                            # Default app CSV filename when properties do not override csvFile.
@@ -108,11 +113,11 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #   Error checks:
     #     Missing config skips the tests with instructions. A nonexistent path fails immediately.
     def setUp(self):
-        if not REGRESSION_CONFIG:                           # Error check: the suite needs app-like configuration.
-            self.skipTest("No regression config supplied. Use --properties path\\to\\file.properties.")
+        config = get_regression_config()                    # Normal pytest uses clock-QA.properties by default.
+        ensure_default_qa_csv(config)                       # Seed build\Clock-QA only for default QA.
 
         super().setUp()                                     # Create the isolated CsvStore and temporary log directory.
-        self.source_csv = REGRESSION_CONFIG.csv_path        # Keep the original path for diagnostics.
+        self.source_csv = config.csv_path                   # Keep the original path for diagnostics.
         if not self.source_csv.exists():                    # Error check: fail before copying a bad path.
             self.fail(f"CSV file does not exist: {self.source_csv}")
 
@@ -126,10 +131,11 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
     #   Error checks:
     #     If REGRESSION_CONFIG is missing, setUp skips before this helper is meaningfully used.
     def make_clock(self):
-        return TestCsvStore(
+        config = get_regression_config()                    # Use the same config as setUp.
+        return CsvStoreTtestHarness(
             self.log_dir,                         # Temporary CSV directory protects the source CSV.
-            REGRESSION_CONFIG.learning_path_name,  # Match the app learning path from properties.
-            REGRESSION_CONFIG.diagnostic_log_path, # Write test and CsvStore diagnostics together.
+            config.learning_path_name,             # Match the app learning path from properties.
+            config.diagnostic_log_path,            # Write test and CsvStore diagnostics together.
         )
 
     # Testing algorithm:
@@ -183,8 +189,8 @@ class LearningClockCsvRegressionTestCase(LearningClockCsvHarness, unittest.TestC
             expected_total = self.clock.recalculate_row_total(row)              # Sum activities from the row.
             with self.subTest(row=index, date=row.get("date"), start=row.get("session_start")):
                 self.assertEqual(
-                    self.clock.parse_duration(expected_total),                  # Expected total in seconds.
-                    self.clock.parse_duration(row["total"]),                    # Stored total in seconds.
+                    learning_clock.parse_duration(expected_total),              # Expected total in seconds.
+                    learning_clock.parse_duration(row["total"]),                # Stored total in seconds.
                     "Row total does not match the sum of activity columns.",
                 )
 
@@ -265,7 +271,7 @@ def parse_test_args(argv):
     parser = argparse.ArgumentParser(description="Learning Clock CSV regression suite")  # Suite parser.
     parser.add_argument(
         "--properties",                                                              # App-style config.
-        default="tests/fixtures/MAGPAI-regression.properties",
+        default=str(DEFAULT_REGRESSION_PROPERTIES),
         help="Properties file containing app-style learning-path-name and logDir values.",
     )
     parser.add_argument(
@@ -342,6 +348,92 @@ def load_regression_config(args):
         csv_path=csv_path,                                                            # Source CSV input path.
         diagnostic_log_path=diagnostic_log_path,                                      # Shared test/store log.
     )
+
+
+# Testing algorithm:
+#   What we test:
+#     Normal pytest runs must have a deterministic regression configuration without CLI arguments.
+#   Success:
+#     The default clock-QA properties file is loaded once, and explicit __main__ config still wins.
+#   Error checks:
+#     Missing or malformed default properties fail the regression tests instead of silently skipping them.
+def get_regression_config():
+    global REGRESSION_CONFIG
+    if REGRESSION_CONFIG is None:                                             # Pytest import path has no __main__ setup.
+        args = argparse.Namespace(properties=str(DEFAULT_REGRESSION_PROPERTIES), csv=None)
+        REGRESSION_CONFIG = load_regression_config(args)                      # Load default QA config.
+    return REGRESSION_CONFIG                                                  # Return configured regression inputs.
+
+
+# Testing algorithm:
+#   What we test:
+#     The default QA regression CSV can be generated under build\Clock-QA for normal test runs.
+#   Success:
+#     The generated CSV exists, has current fieldnames, contains session rows plus TOTAL, and stays inside build output.
+#   Error checks:
+#     Non-default regression configs are never auto-generated so explicit external CSV mistakes still fail.
+def ensure_default_qa_csv(config):
+    if config.properties_path.name != DEFAULT_REGRESSION_PROPERTIES.name:      # Only seed the default QA fixture.
+        return
+
+    config.csv_path.parent.mkdir(parents=True, exist_ok=True)                  # Ensure build\Clock-QA exists.
+    rows = [
+        {
+            "date": "2026-06-05",
+            "learning_path": config.learning_path_name,
+            "session_start": "09:00:00",
+            "session_end": "09:30:00",
+            "reading": "00:10:00",
+            "outlining": "00:05:00",
+            "memorizing": "00:03:00",
+            "experimenting": "00:02:00",
+            "audiobook": "00:00:00",
+            "update_diavgeia": "00:04:00",
+            "promote_stable_concept": "00:01:00",
+            "pages_read": "6",
+            "total": "00:25:00",
+        },
+        {
+            "date": "2026-06-06",
+            "learning_path": config.learning_path_name,
+            "session_start": "10:00:00",
+            "session_end": "10:20:00",
+            "reading": "00:00:00",
+            "outlining": "00:04:00",
+            "memorizing": "00:04:00",
+            "experimenting": "00:06:00",
+            "audiobook": "00:03:00",
+            "update_diavgeia": "00:02:00",
+            "promote_stable_concept": "00:01:00",
+            "pages_read": "2",
+            "total": "00:20:00",
+        },
+        {
+            "date": "TOTAL",
+            "learning_path": "",
+            "session_start": "",
+            "session_end": "",
+            "reading": "00:10:00",
+            "outlining": "00:09:00",
+            "memorizing": "00:07:00",
+            "experimenting": "00:08:00",
+            "audiobook": "00:03:00",
+            "update_diavgeia": "00:06:00",
+            "promote_stable_concept": "00:02:00",
+            "pages_read": "8",
+            "total": "00:45:00",
+        },
+    ]
+    if config.csv_path.exists():                                               # Repair only incomplete/stale default QA output.
+        with config.csv_path.open("r", newline="", encoding="utf-8") as handle:
+            existing_rows = list(csv.DictReader(handle))
+        if existing_rows == rows:                                              # Preserve already-complete generated fixture.
+            return
+
+    with config.csv_path.open("w", newline="", encoding="utf-8") as handle:    # Seed deterministic QA CSV.
+        writer = csv.DictWriter(handle, fieldnames=learning_clock.FIELDNAMES)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 # Testing algorithm:

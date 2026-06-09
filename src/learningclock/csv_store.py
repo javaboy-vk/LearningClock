@@ -140,6 +140,25 @@ LEGACY_FIELD_MAPPINGS = {
     "document_in_diavgeia": "update_diavgeia",                    # Preserve older CSV column name.
 }
 
+# Data conversion:
+#   What these functions do:
+#     Convert between integer seconds and HH:MM:SS duration text used by the UI and CSV.
+#   Success:
+#     Seconds format consistently, and malformed persisted duration values safely parse as zero.
+#   Error handling:
+#     format_seconds rejects non-integer-like values; parse_duration treats unreadable values as zero.
+def format_seconds(seconds):
+    seconds = int(seconds)                                                # Normalize integer-like input.
+    return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"  # Render HH:MM:SS.
+
+
+def parse_duration(duration):
+    try:
+        hours, minutes, seconds = duration.split(":")                     # Split duration components.
+        return int(hours) * 3600 + int(minutes) * 60 + int(seconds)       # Convert to total seconds.
+    except (AttributeError, ValueError):
+        return 0                                                          # Bad duration values count as zero.
+
 # Operational algorithm:
 #   What this class does:
 #     Owns all CSV persistence, CSV normalization, total-row math, and diagnostic logging.
@@ -150,6 +169,12 @@ LEGACY_FIELD_MAPPINGS = {
 #     Diagnostic logging records recoverable conditions, and emergency-save helpers provide a
 #     fallback when normal persistence fails.
 class CsvStore:
+
+    learning_path_name: str
+    log_dir: Path
+    log_file: Path
+    diagnostic_log_file: Path
+
     # Operational algorithm:
     #   What this method does:
     #     Builds the file paths used by the store for one LearningClock run.
@@ -158,6 +183,7 @@ class CsvStore:
     #   Error handling:
     #     Directory creation errors propagate because the app cannot persist without the log folder.
     def __init__(self, log_dir: str | Path, learning_path_name: str):
+
         self.learning_path_name = learning_path_name                         # Persisted learning path label.
         self.log_dir = Path(log_dir)                                         # Directory for CSV and diagnostic logs.
         self.log_dir.mkdir(parents=True, exist_ok=True)                      # Ensure persistence directory exists.
@@ -172,6 +198,7 @@ class CsvStore:
     #   Error handling:
     #     Logging failures are swallowed so diagnostic output never breaks timer operation.
     def write_diagnostic_log(self, message, exc=None):
+        
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")              # Timestamp this diagnostic event.
             lines = [f"[{timestamp}] {message}"]                                  # Start with the caller's message.
@@ -205,11 +232,11 @@ class CsvStore:
             "session_start": session_start.strftime("%H:%M:%S"),                  # Persist start time.
             "session_end": session_end.strftime("%H:%M:%S"),                      # Persist end time.
             "pages_read": str(pages_read),                                        # CSV stores pages as text.
-            "total": self.format_seconds(total_seconds),                          # Persist total duration.
+            "total": format_seconds(total_seconds),                               # Persist total duration.
         }
 
         for activity, field_name in ACTIVITY_TO_FIELD.items():                    # Fill each activity column.
-            row[field_name] = self.format_seconds(activity_seconds.get(activity, 0))  # Missing activity means zero.
+            row[field_name] = format_seconds(activity_seconds.get(activity, 0))   # Missing activity means zero.
 
         return row                                                                # Return a complete session row.
 
@@ -291,7 +318,7 @@ class CsvStore:
     #   Error handling:
     #     Bad page values are treated as zero so malformed input does not crash shutdown.
     def has_session_data(self, session_row):
-        if self.parse_duration(session_row.get("total", "00:00:00")) > 0:      # Any positive time is useful data.
+        if parse_duration(session_row.get("total", "00:00:00")) > 0:           # Any positive time is useful data.
             return True                                                        # Save time-bearing rows.
         try:
             return int(session_row.get("pages_read", 0)) > 0                   # Pages also make a row worth saving.
@@ -413,8 +440,8 @@ class CsvStore:
         for row in rows:                                                                       # Aggregate each session row.
             for field_name in ACTIVITY_TO_FIELD.values():                                      # Sum each activity column.
                 duration = row.get(field_name, "00:00:00")                                     # Missing duration is zero.
-                total_seconds_by_field[field_name] += self.parse_duration(duration)            # Add parsed seconds.
-            grand_total += self.parse_duration(row.get("total", "00:00:00"))                   # Add row total seconds.
+                total_seconds_by_field[field_name] += parse_duration(duration)                 # Add parsed seconds.
+            grand_total += parse_duration(row.get("total", "00:00:00"))                        # Add row total seconds.
             try:
                 pages_total += int(row.get("pages_read", "0") or 0)                            # Add numeric page count.
             except ValueError:
@@ -426,11 +453,11 @@ class CsvStore:
             "session_start": "",                                                               # Summary row has no start time.
             "session_end": "",                                                                 # Summary row has no end time.
             "pages_read": str(pages_total),                                                     # Persist aggregate pages.
-            "total": self.format_seconds(grand_total),                                         # Persist aggregate duration.
+            "total": format_seconds(grand_total),                                              # Persist aggregate duration.
         }
 
         for field_name, seconds in total_seconds_by_field.items():                              # Write activity totals.
-            total_row[field_name] = self.format_seconds(seconds)
+            total_row[field_name] = format_seconds(seconds)
 
         return total_row                                                                        # Return complete TOTAL row.
 
@@ -442,9 +469,9 @@ class CsvStore:
     #   Error handling:
     #     Missing or malformed activity durations parse as zero.
     def recalculate_row_total(self, row):
-        return self.format_seconds(
+        return format_seconds(
             sum(
-                self.parse_duration(row.get(field_name, "00:00:00"))             # Convert each activity to seconds.
+                parse_duration(row.get(field_name, "00:00:00"))                  # Convert each activity to seconds.
                 for field_name in ACTIVITY_TO_FIELD.values()                    # Include every current activity column.
             )
         )                                                                        # Return formatted duration text.
@@ -519,41 +546,3 @@ class CsvStore:
         if isinstance(value, datetime):                                       # Datetime is already structured.
             return value.strftime(CSV_DATE_FORMAT)                            # Format directly.
         return datetime.strptime(str(value), CSV_DATE_FORMAT).strftime(CSV_DATE_FORMAT)  # Validate and normalize text.
-
-    # Operational algorithm:
-    #   What this method does:
-    #     Converts integer seconds to HH:MM:SS text for display and persistence.
-    #   Success:
-    #     Any integer-like value returns as zero-padded hours, minutes, and seconds.
-    #   Error handling:
-    #     Non-integer-like values raise ValueError/TypeError so callers do not silently persist junk.
-    @staticmethod
-    def format_seconds(seconds):
-        seconds = int(seconds)                                                # Normalize integer-like input.
-        return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"  # Render HH:MM:SS.
-
-    # Operational algorithm:
-    #   What this method does:
-    #     Parses HH:MM:SS text from CSV/UI state into integer seconds.
-    #   Success:
-    #     Well-formed duration text becomes total seconds.
-    #   Error handling:
-    #     Blank, missing, or malformed durations return zero so legacy rows stay readable.
-    @staticmethod
-    def parse_duration(duration):
-        try:
-            hours, minutes, seconds = duration.split(":")                     # Split duration components.
-            return int(hours) * 3600 + int(minutes) * 60 + int(seconds)       # Convert to total seconds.
-        except (AttributeError, ValueError):
-            return 0                                                          # Bad duration values count as zero.
-
-
-# Compatibility exports:
-#   What this provides:
-#     Module-level aliases for legacy tests or callers that imported helpers directly.
-#   Success:
-#     Existing imports keep working while the implementation remains on CsvStore.
-#   Error handling:
-#     No runtime error handling is needed; these are simple function aliases.
-format_seconds = CsvStore.format_seconds                                      # Backward-compatible helper alias.
-parse_duration = CsvStore.parse_duration                                      # Backward-compatible helper alias.
