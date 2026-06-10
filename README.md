@@ -40,6 +40,7 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 - [CSV Contract](docs/csv-contract.md)
 - [Tests and Default Clock-QA Regression Fixture](docs/tests.md)
 - [Coverage](docs/coverage.md)
+- [Coverage Report](https://javaboy-vk.github.io/LearningClock/)
 - [Convenience Commands](docs/convenience-commands.md)
 - [Production Release, Packaging, and Generated Output Policy](docs/production-release.md)
 - [Obsidian-Diavgeia Documentation](docs/obsidian-diavgeia-documentation.md)
