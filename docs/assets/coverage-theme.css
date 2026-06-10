@@ -1,0 +1,233 @@
+/* VS Code Light+ with the user's custom workspace colors. */
+:root {
+  --vscode-editor-bg: #069bff;
+  --vscode-editor-fg: #ffffff;
+  --vscode-panel-bg: #0588df;
+  --vscode-sidebar-bg: #057ed0;
+  --vscode-tab-bg: #0588df;
+  --vscode-border: #ffffff;
+  --vscode-soft-border: rgba(255, 255, 255, 0.45);
+  --vscode-line: rgba(255, 255, 255, 0.16);
+  --vscode-muted: rgba(255, 255, 255, 0.78);
+  --vscode-blue: #069bff;
+  --vscode-blue-soft: rgba(6, 155, 255, 0.14);
+  --vscode-selection: rgba(110, 135, 154, 0.35);
+  --vscode-find: rgba(170, 152, 95, 0.35);
+  --vscode-orange: #ff6600;
+  --vscode-yellow: #f8c52a;
+  --vscode-green: #388a34;
+  --vscode-red: #c62828;
+}
+
+html,
+body {
+  background: var(--vscode-editor-bg);
+  color: var(--vscode-editor-fg);
+  font-weight: 700;
+}
+
+body,
+button,
+input,
+select {
+  font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+}
+
+a,
+a:visited {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+a:hover {
+  color: #f8c52a;
+}
+
+#header {
+  background: var(--vscode-tab-bg);
+  border-bottom: 1px solid var(--vscode-border);
+  color: var(--vscode-editor-fg);
+}
+
+#header h1,
+#header h2 {
+  color: var(--vscode-editor-fg);
+}
+
+#header h1 a {
+  color: var(--vscode-editor-fg);
+  text-decoration-color: var(--vscode-blue);
+}
+
+#footer {
+  background: var(--vscode-sidebar-bg);
+  border-top: 1px solid var(--vscode-soft-border);
+  color: var(--vscode-muted);
+}
+
+.content,
+.contexts,
+.indexfile,
+.source,
+table.index,
+table.index tbody,
+table.index tr,
+table.index th,
+table.index td {
+  background: var(--vscode-editor-bg);
+  color: var(--vscode-editor-fg);
+}
+
+table.index {
+  border: 1px solid var(--vscode-border);
+  border-radius: 6px;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+table.index thead tr,
+table.index th {
+  background: var(--vscode-panel-bg);
+  color: var(--vscode-editor-fg);
+}
+
+table.index tr:nth-child(even) td {
+  background: #0588df;
+}
+
+table.index tr:hover td {
+  background: var(--vscode-selection);
+}
+
+table.index td,
+table.index th {
+  border-color: var(--vscode-soft-border);
+}
+
+.region,
+.source pre,
+.source code,
+p,
+.text,
+.stm,
+.run,
+.pln {
+  color: var(--vscode-editor-fg) !important;
+  font-weight: 700;
+}
+
+body,
+body *,
+.content,
+.content *,
+table.index,
+table.index *,
+.source,
+.source * {
+  color: var(--vscode-editor-fg) !important;
+}
+
+.key,
+.nam {
+  color: #ffffff;
+}
+
+.str {
+  color: #fff0a8;
+}
+
+.num {
+  color: #d7ffcb;
+}
+
+.com {
+  color: #d7ffcb;
+}
+
+.typ {
+  color: #ffffff;
+}
+
+.pc_cov,
+.pc_covered {
+  background: #ffffff !important;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  color: var(--vscode-blue) !important;
+  display: inline-block;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+.pc_missing,
+.pc_partial {
+  color: var(--vscode-yellow);
+  font-weight: 700;
+}
+
+.mis,
+.exc {
+  color: #ffd5d5;
+}
+
+.par {
+  color: var(--vscode-yellow);
+}
+
+.status {
+  background: var(--vscode-panel-bg);
+  border-color: var(--vscode-border);
+  color: var(--vscode-editor-fg);
+}
+
+.button,
+.button:visited,
+button,
+input[type="button"] {
+  background: var(--vscode-yellow) !important;
+  border: 1px solid #d39b00 !important;
+  border-radius: 3px;
+  color: #ffffff !important;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.button:hover,
+.button:focus,
+.button:active,
+.button.current,
+button:hover,
+button:focus,
+button:active,
+input[type="button"]:hover {
+  background: var(--vscode-orange) !important;
+  border-color: #c94f00 !important;
+  color: #ffffff !important;
+}
+
+.highlight,
+.highlight .hll {
+  background: var(--vscode-find);
+}
+
+.missing,
+.mis .text,
+.exc .text {
+  background: rgba(198, 40, 40, 0.28);
+}
+
+.partial,
+.par .text {
+  background: rgba(248, 197, 42, 0.24);
+}
+
+.excluded,
+.exc .text {
+  color: var(--vscode-muted);
+}
+
+.linenos,
+.line {
+  color: var(--vscode-muted);
+}

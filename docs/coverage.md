@@ -18,6 +18,12 @@ HTML output is written to:
 build\coverage\html\index.html
 ```
 
+The terminal report includes fully covered files. The HTML report uses a VS Code Light+ custom-color stylesheet at:
+
+```text
+docs\assets\coverage-theme.css
+```
+
 ## GitHub Pages
 
 The `.github/workflows/coverage-pages.yml` workflow publishes the HTML coverage report to GitHub Pages on every push to `main` and can also be run manually from the Actions tab.

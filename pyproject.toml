@@ -45,7 +45,12 @@ data_file = "build/coverage/.coverage"
 
 [tool.coverage.report]
 show_missing = true
-skip_covered = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "build/coverage/html"
+extra_css = "docs/assets/coverage-theme.css"
+title = "LearningClock Coverage"
 
 [tool.ruff]
 line-length = 100
