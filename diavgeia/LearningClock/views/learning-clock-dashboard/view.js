@@ -8,7 +8,8 @@ Purpose:
   Renders the LearningClock learning-time dashboard from the vault CSV.
 */
 
-const csvPath = "Engineering/LearningClock/LearningPath/learning_time_log.csv";
+const csvFileName = "learning_time_log.csv";
+const legacyCsvFolderName = "LearningPath";
 
 const activityFields = [
   ["Reading", "reading"],
@@ -108,6 +109,37 @@ function appendText(parent, tag, text, className) {
   }
   parent.appendChild(element);
   return element;
+}
+
+function joinVaultPath(...parts) {
+  return parts.filter(Boolean).join("/");
+}
+
+function getCurrentFolderPath() {
+  const currentPath = dv.current()?.file?.path;
+  if (!currentPath) {
+    throw new Error("Could not resolve the current dashboard page path.");
+  }
+
+  const lastSlash = currentPath.lastIndexOf("/");
+  return lastSlash >= 0 ? currentPath.slice(0, lastSlash) : "";
+}
+
+function findCsvFile() {
+  const currentFolder = getCurrentFolderPath();
+  const candidatePaths = [
+    joinVaultPath(currentFolder, csvFileName),
+    joinVaultPath(currentFolder, legacyCsvFolderName, csvFileName),
+  ];
+
+  for (const candidatePath of candidatePaths) {
+    const candidateFile = app.vault.getAbstractFileByPath(candidatePath);
+    if (candidateFile) {
+      return { file: candidateFile, path: candidatePath };
+    }
+  }
+
+  throw new Error(`CSV file not found in dashboard component: ${candidatePaths.join(" or ")}`);
 }
 
 function applyStyles(root) {
@@ -215,10 +247,7 @@ try {
   const root = dv.container;
   applyStyles(root);
 
-  const file = app.vault.getAbstractFileByPath(csvPath);
-  if (!file) {
-    throw new Error(`CSV file not found: ${csvPath}`);
-  }
+  const { file, path: csvPath } = findCsvFile();
 
   const text = await app.vault.read(file);
   const rows = parseCsv(text);
