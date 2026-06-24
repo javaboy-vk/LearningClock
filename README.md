@@ -45,6 +45,7 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 - [Production Release, Packaging, and Generated Output Policy](docs/production-release.md)
 - [Obsidian-Diavgeia Documentation](docs/obsidian-diavgeia-documentation.md)
 - [VS Code Support](docs/vscode-support.md)
+- [Automated Code Inventory](docs/code-inventory-automation.md)
 
 ## Code Inventory
 

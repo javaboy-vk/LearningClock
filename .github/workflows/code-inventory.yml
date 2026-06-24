@@ -1,0 +1,51 @@
+name: Update Code Inventory
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: code-inventory-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Regenerate pygount summary
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install pygount
+        run: python -m pip install "pygount>=1.8"
+
+      - name: Regenerate Code Inventory
+        run: python scripts/pygount_summary.py
+
+      - name: Commit updated inventory
+        shell: bash
+        run: |
+          if git diff --quiet -- README.md docs/assets/pygount-summary.svg; then
+            echo "Code Inventory is already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/assets/pygount-summary.svg
+          git commit -m "docs: update code inventory [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
