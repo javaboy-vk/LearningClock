@@ -36,9 +36,6 @@ scripts\\pygount-summary.cmd
 ![Pygount summary](docs/assets/pygount-summary.svg)
 """
 
-COUNT_PATHS = ["."]  # Match the manual repo-root command: pygount --format=summary .
-
-
 def pygount_executable() -> Path:
 
     executable = ROOT / ".venv" / "Scripts" / "pygount.exe"
@@ -53,10 +50,28 @@ def pygount_executable() -> Path:
     )
 
 
+def git_tracked_files() -> list[str]:
+
+    result = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    tracked_files = [
+        path.decode("utf-8")
+        for path in result.stdout.split(b"\0")
+        if path and (ROOT / path.decode("utf-8")).is_file()
+    ]
+    if not tracked_files:
+        raise SystemExit("No Git-tracked files were found for the pygount summary.")
+    return tracked_files
+
+
 def run_pygount() -> str:
 
-    paths = [str(ROOT / path) for path in COUNT_PATHS if (ROOT / path).exists()]
-    command = [str(pygount_executable()), "--format=summary", *paths]
+    command = [str(pygount_executable()), "--format=summary", *git_tracked_files()]
     result = subprocess.run(
         command,
         cwd=ROOT,
