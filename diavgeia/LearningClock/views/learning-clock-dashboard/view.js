@@ -111,6 +111,18 @@ function appendText(parent, tag, text, className) {
   return element;
 }
 
+function appendDashboardTitle(parent, learningPathName) {
+  const title = document.createElement("h1");
+  const name = document.createElement("span");
+  name.className = "lc-title-name";
+  name.textContent = learningPathName;
+
+  title.appendChild(name);
+  title.appendChild(document.createTextNode(" Learning Time"));
+  parent.appendChild(title);
+  return title;
+}
+
 function joinVaultPath(...parts) {
   return parts.filter(Boolean).join("/");
 }
@@ -123,6 +135,17 @@ function getCurrentFolderPath() {
 
   const lastSlash = currentPath.lastIndexOf("/");
   return lastSlash >= 0 ? currentPath.slice(0, lastSlash) : "";
+}
+
+function getLearningPathName(rows) {
+  const rowWithPath = rows.find((row) => row.learning_path && row.learning_path.trim());
+  if (rowWithPath) {
+    return rowWithPath.learning_path.trim();
+  }
+
+  const currentFolder = getCurrentFolderPath();
+  const folderParts = currentFolder.split("/").filter(Boolean);
+  return folderParts[folderParts.length - 1] || "LearningClock";
 }
 
 function findCsvFile() {
@@ -153,6 +176,9 @@ function applyStyles(root) {
       box-shadow: 0 1px 3px rgba(21, 76, 130, 0.08);
       margin: 18px 0 24px;
       overflow: hidden;
+    }
+    .lc-title-name {
+      color: #3279b7;
     }
     .lc-bars {
       display: grid;
@@ -253,6 +279,7 @@ try {
   const rows = parseCsv(text);
   const sessions = rows.filter((row) => row.date && row.date !== "TOTAL");
   const totalRow = rows.find((row) => row.date === "TOTAL");
+  const learningPathName = getLearningPathName(rows);
 
   const totals = Object.fromEntries(activityFields.map(([, field]) => [field, 0]));
   let totalSeconds = 0;
@@ -271,6 +298,8 @@ try {
   const maxSeconds = Math.max(...activityFields.map(([, field]) => totals[field]), 1);
   const firstSession = sessions[0];
   const lastSession = sessions[sessions.length - 1];
+
+  appendDashboardTitle(root, learningPathName);
 
   const card = document.createElement("section");
   card.className = "lc-card";
