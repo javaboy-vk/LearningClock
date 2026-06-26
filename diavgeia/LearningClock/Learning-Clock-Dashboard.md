@@ -1,5 +1,3 @@
-# LearningClock Learning Time
-
 ```dataviewjs
 const dashboardPath = dv.current().file.path;
 const dashboardFolder = dashboardPath.includes("/") ? dashboardPath.slice(0, dashboardPath.lastIndexOf("/")) : "";
