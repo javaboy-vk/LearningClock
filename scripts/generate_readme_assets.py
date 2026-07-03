@@ -76,22 +76,6 @@ def format_duration(seconds: int) -> str:
     return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
 
 
-# UI label sizing:
-#   What this function does:
-#     Selects a smaller SVG font for long activity names in the desktop UI mock.
-#   Success:
-#     Long labels such as Classical Software Engineering remain inside the button rectangle.
-#   Error handling:
-#     Labels are plain strings from ACTIVITIES, so no special failure path is needed.
-def ui_label_font_size(label: str) -> int:
-
-    if len(label) >= 30:
-        return 16
-    if len(label) >= 23:
-        return 17
-    return 21
-
-
 # Dashboard label wrapping:
 #   What this function does:
 #     Splits chart labels into short lines that fit under one bar cell.
@@ -192,8 +176,11 @@ def read_dashboard_totals() -> tuple[dict[str, int], int, int]:
 #     No filesystem writes happen here; generation failures surface before main writes assets.
 def generate_ui_svg() -> str:
 
-    width = 560
+    width = 700
     height = 165 + (len(ACTIVITIES) * 43)
+    window_width = width - 36
+    button_width = 365
+    timer_x = 470
     row_height = 43
     top = 126
     controls_y = top + (len(ACTIVITIES) * row_height) + 7
@@ -201,15 +188,14 @@ def generate_ui_svg() -> str:
     for index, activity in enumerate(ACTIVITIES):
         y = top + index * row_height
         status = "01:42:35" if activity == "Sandbox" else "00:00:00"
-        font_size = ui_label_font_size(activity)
         rows.append(
             f"""
             <g>
-              <rect x="38" y="{y}" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
-              <line x1="40" y1="{y + 2}" x2="318" y2="{y + 2}" stroke="#ffffff" stroke-width="1"/>
-              <line x1="40" y1="{y + 35}" x2="318" y2="{y + 35}" stroke="#777777" stroke-width="1"/>
-              <text x="45" y="{y + 26}" fill="#111111" font-size="{font_size}">{text(activity)}</text>
-              <text x="360" y="{y + 26}" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">{status}</text>
+              <rect x="38" y="{y}" width="{button_width}" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <line x1="40" y1="{y + 2}" x2="{38 + button_width - 2}" y2="{y + 2}" stroke="#ffffff" stroke-width="1"/>
+              <line x1="40" y1="{y + 35}" x2="{38 + button_width - 2}" y2="{y + 35}" stroke="#777777" stroke-width="1"/>
+              <text x="45" y="{y + 26}" fill="#111111" font-size="18">{text(activity)}</text>
+              <text x="{timer_x}" y="{y + 26}" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">{status}</text>
             </g>"""
         )
 
@@ -221,14 +207,14 @@ def generate_ui_svg() -> str:
     </filter>
   </defs>
   <rect width="{width}" height="{height}" fill="#c8c6bd"/>
-  <rect x="18" y="26" width="524" height="{height - 4}" rx="9" fill="#eeeeee" stroke="#9d9d9d" filter="url(#shadow)"/>
-  <rect x="18" y="26" width="524" height="41" rx="9" fill="#f8f8f8"/>
-  <rect x="18" y="57" width="524" height="30" fill="#ffffff"/>
+  <rect x="18" y="26" width="{window_width}" height="{height - 4}" rx="9" fill="#eeeeee" stroke="#9d9d9d" filter="url(#shadow)"/>
+  <rect x="18" y="26" width="{window_width}" height="41" rx="9" fill="#f8f8f8"/>
+  <rect x="18" y="57" width="{window_width}" height="30" fill="#ffffff"/>
   <text x="31" y="52" fill="#174c84" font-family="Segoe UI Emoji, Segoe UI Symbol, Arial, sans-serif" font-size="19">🪶</text>
   <text x="54" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="15">Learning Clock - {APP_VERSION} - LearningClock</text>
-  <text x="389" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="18">−</text>
-  <rect x="448" y="40" width="10" height="10" fill="none" stroke="#d9d9d9"/>
-  <text x="506" y="52" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="24">×</text>
+  <text x="529" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="18">−</text>
+  <rect x="588" y="40" width="10" height="10" fill="none" stroke="#d9d9d9"/>
+  <text x="646" y="52" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="24">×</text>
   <text x="26" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">About</text>
   <text x="86" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Time</text>
   <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Page Count</text>
