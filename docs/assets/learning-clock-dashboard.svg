@@ -14,8 +14,8 @@
             <text x="278.7" y="160" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:09:00</text>
             <rect x="330.0" y="177" width="78.7" height="145" rx="8" fill="#2f6f9f"/>
             <text x="369.3" y="201" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:07:00</text>
-            <rect x="420.7" y="288" width="78.7" height="34" rx="8" fill="#7aa9c9"/>
-            <text x="460.0" y="312" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:00:00</text>
+            <rect x="420.7" y="157" width="78.7" height="165" rx="8" fill="#7aa9c9"/>
+            <text x="460.0" y="181" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:08:00</text>
             <rect x="511.3" y="198" width="78.7" height="124" rx="8" fill="#4f86b3"/>
             <text x="550.7" y="222" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:06:00</text>
             <rect x="602.0" y="94" width="78.7" height="228" rx="8" fill="#245f8f"/>
@@ -24,7 +24,7 @@
             <text x="732.0" y="222" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:06:00</text>
             <rect x="783.3" y="281" width="78.7" height="41" rx="8" fill="#2c5d7f"/>
             <text x="822.7" y="305" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:02:00</text>
-    <text x="97.3" y="360" fill="#111827" font-size="13" text-anchor="middle">Reading</text><text x="188.0" y="360" fill="#111827" font-size="13" text-anchor="middle">Audiobook</text><text x="278.7" y="360" fill="#111827" font-size="13" text-anchor="middle">Outlining</text><text x="369.3" y="360" fill="#111827" font-size="13" text-anchor="middle">Active Recall</text><text x="460.0" y="360" fill="#111827" font-size="13" text-anchor="middle">Sandbox</text><text x="550.7" y="360" fill="#111827" font-size="13" text-anchor="middle">AI-Assisted Engineering</text><text x="641.3" y="352" fill="#111827" font-size="13" text-anchor="middle"><tspan x="641.3">Classical Software</tspan><tspan x="641.3" dy="16">Engineering</tspan></text><text x="732.0" y="360" fill="#111827" font-size="13" text-anchor="middle">Update Diavgeia</text><text x="822.7" y="352" fill="#111827" font-size="13" text-anchor="middle"><tspan x="822.7">Promote Stable</tspan><tspan x="822.7" dy="16">Concept</tspan></text>
+    <text x="97.3" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="97.3">Reading</tspan></text><text x="188.0" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="188.0">Audiobook</tspan></text><text x="278.7" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="278.7">Outlining</tspan></text><text x="369.3" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="369.3">Active</tspan><tspan x="369.3" dy="15">Recall</tspan></text><text x="460.0" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="460.0">Sandbox</tspan></text><text x="550.7" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="550.7">AI-Assisted</tspan><tspan x="550.7" dy="15">Engineering</tspan></text><text x="641.3" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="641.3">Classical</tspan><tspan x="641.3" dy="15">Software</tspan><tspan x="641.3" dy="15">Engineering</tspan></text><text x="732.0" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="732.0">Update</tspan><tspan x="732.0" dy="15">Diavgeia</tspan></text><text x="822.7" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="822.7">Promote</tspan><tspan x="822.7" dy="15">Stable</tspan><tspan x="822.7" dy="15">Concept</tspan></text>
   </g>
   <g font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#111827">
     <text x="58" y="430">Total time: <tspan fill="#164f86" font-weight="700">01:02:00</tspan></text>

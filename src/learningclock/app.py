@@ -136,7 +136,7 @@ except ModuleNotFoundError:
 #   Error handling:
 #     No special error handling is needed because the values are static strings.
 APP_TITLE = "Learning Clock"
-APP_VERSION = "v3.3"
+APP_VERSION = "v3.4"
 
 # Operational algorithm:
 #   What this constant group does:

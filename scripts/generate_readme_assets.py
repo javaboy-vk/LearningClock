@@ -43,6 +43,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))  # Let direct script execution import the local package.
 
+from learningclock.app import APP_VERSION  # noqa: E402
 from learningclock.csv_store import ACTIVITY_TO_FIELD, ACTIVITIES, parse_duration  # noqa: E402
 
 ASSET_DIR = ROOT / "docs" / "assets"
@@ -73,6 +74,78 @@ def text(value: object) -> str:
 def format_duration(seconds: int) -> str:
 
     return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
+
+
+# UI label sizing:
+#   What this function does:
+#     Selects a smaller SVG font for long activity names in the desktop UI mock.
+#   Success:
+#     Long labels such as Classical Software Engineering remain inside the button rectangle.
+#   Error handling:
+#     Labels are plain strings from ACTIVITIES, so no special failure path is needed.
+def ui_label_font_size(label: str) -> int:
+
+    if len(label) >= 30:
+        return 16
+    if len(label) >= 23:
+        return 17
+    return 21
+
+
+# Dashboard label wrapping:
+#   What this function does:
+#     Splits chart labels into short lines that fit under one bar cell.
+#   Success:
+#     Dense labels do not overlap adjacent labels in the README dashboard image.
+#   Error handling:
+#     Unknown labels fall back to conservative word wrapping.
+def dashboard_label_lines(label: str) -> list[str]:
+
+    explicit_breaks = {
+        "Active Recall": ["Active", "Recall"],
+        "AI-Assisted Engineering": ["AI-Assisted", "Engineering"],
+        "Classical Software Engineering": ["Classical", "Software", "Engineering"],
+        "Update Diavgeia": ["Update", "Diavgeia"],
+        "Promote Stable Concept": ["Promote", "Stable", "Concept"],
+    }
+    if label in explicit_breaks:
+        return explicit_breaks[label]
+
+    words = label.split(" ")
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if len(candidate) <= 12:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
+
+
+# Dashboard label rendering:
+#   What this function does:
+#     Renders a wrapped label as one centered SVG text element with tspans.
+#   Success:
+#     Every line stays centered under its own bar.
+#   Error handling:
+#     Escaping is delegated to text() before content enters the SVG.
+def dashboard_label_svg(label: str, x: float, y: int) -> str:
+
+    lines = dashboard_label_lines(label)
+    tspans = []
+    for index, line in enumerate(lines):
+        dy = 0 if index == 0 else 15
+        dy_attribute = "" if index == 0 else f' dy="{dy}"'
+        tspans.append(f'<tspan x="{x:.1f}"{dy_attribute}>{text(line)}</tspan>')
+    return (
+        f'<text x="{x:.1f}" y="{y}" fill="#111827" font-size="12" '
+        f'text-anchor="middle">{"".join(tspans)}</text>'
+    )
 
 
 # Dashboard data source:
@@ -128,13 +201,14 @@ def generate_ui_svg() -> str:
     for index, activity in enumerate(ACTIVITIES):
         y = top + index * row_height
         status = "01:42:35" if activity == "Sandbox" else "00:00:00"
+        font_size = ui_label_font_size(activity)
         rows.append(
             f"""
             <g>
               <rect x="38" y="{y}" width="282" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
               <line x1="40" y1="{y + 2}" x2="318" y2="{y + 2}" stroke="#ffffff" stroke-width="1"/>
               <line x1="40" y1="{y + 35}" x2="318" y2="{y + 35}" stroke="#777777" stroke-width="1"/>
-              <text x="45" y="{y + 26}" fill="#111111" font-size="21">{text(activity)}</text>
+              <text x="45" y="{y + 26}" fill="#111111" font-size="{font_size}">{text(activity)}</text>
               <text x="360" y="{y + 26}" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">{status}</text>
             </g>"""
         )
@@ -151,7 +225,7 @@ def generate_ui_svg() -> str:
   <rect x="18" y="26" width="524" height="41" rx="9" fill="#f8f8f8"/>
   <rect x="18" y="57" width="524" height="30" fill="#ffffff"/>
   <text x="31" y="52" fill="#174c84" font-family="Segoe UI Emoji, Segoe UI Symbol, Arial, sans-serif" font-size="19">🪶</text>
-  <text x="54" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="15">Learning Clock - v3.3 - LearningClock</text>
+  <text x="54" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="15">Learning Clock - {APP_VERSION} - LearningClock</text>
   <text x="389" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="18">−</text>
   <rect x="448" y="40" width="10" height="10" fill="none" stroke="#d9d9d9"/>
   <text x="506" y="52" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="24">×</text>
@@ -215,18 +289,7 @@ def generate_dashboard_svg() -> str:
             <rect x="{x:.1f}" y="{y}" width="{bar_width:.1f}" height="{bar_height}" rx="8" fill="{colors[index]}"/>
             <text x="{x + bar_width / 2:.1f}" y="{y + 24}" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">{format_duration(seconds)}</text>"""
         )
-        label = text(activity)
-        label_lines = label.split(" ")
-        if len(label_lines) > 2:
-            first = " ".join(label_lines[:2])
-            second = " ".join(label_lines[2:])
-            labels.append(
-                f'<text x="{x + bar_width / 2:.1f}" y="352" fill="#111827" font-size="13" text-anchor="middle"><tspan x="{x + bar_width / 2:.1f}">{first}</tspan><tspan x="{x + bar_width / 2:.1f}" dy="16">{second}</tspan></text>'
-            )
-        else:
-            labels.append(
-                f'<text x="{x + bar_width / 2:.1f}" y="360" fill="#111827" font-size="13" text-anchor="middle">{label}</text>'
-            )
+        labels.append(dashboard_label_svg(activity, x + bar_width / 2, 350))
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="LearningClock Obsidian dashboard bar chart">
