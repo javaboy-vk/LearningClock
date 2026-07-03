@@ -1,6 +1,6 @@
 # Automated Code Inventory
 
-The repository regenerates the README Code Inventory after every push to `main`.
+The repository verifies the README Code Inventory after every push to `main`.
 The automation is implemented by:
 
 ```text
@@ -13,24 +13,27 @@ The workflow:
 1. Checks out the repository.
 2. Installs Python and `pygount`.
 3. Runs `python scripts/pygount_summary.py`.
-4. Commits `README.md` and `docs/assets/pygount-summary.svg` when their contents changed.
-5. Pushes the generated commit back to the branch.
+4. Fails if `README.md` or `docs/assets/pygount-summary.svg` changed during regeneration.
 
-The generated commit contains `[skip ci]`. GitHub also prevents events created
-with the repository `GITHUB_TOKEN` from recursively starting another workflow.
-The workflow exits without committing when the generated files are unchanged.
+The workflow exits successfully when the generated files are already current.
+When it fails, run the generator locally and commit the updated files:
+
+```text
+python scripts/pygount_summary.py
+git add README.md docs/assets/pygount-summary.svg
+git commit
+```
 
 ## Repository Settings
 
-In GitHub, open:
+The workflow only needs read access to repository contents:
 
 ```text
 Settings -> Actions -> General -> Workflow permissions
 ```
 
-Select **Read and write permissions** so `GITHUB_TOKEN` can push the generated
-files. If `main` has branch protection, allow GitHub Actions to push or use a
-pull-request-based update workflow instead.
+Select **Read repository contents permission**. The action does not push commits,
+so it will not create bot commits that make local branches diverge from `main`.
 
 ## Add It to Another Repository
 
@@ -64,7 +67,7 @@ Review the following project-specific settings after copying:
 - Python version.
 - Paths counted by `COUNT_PATHS` in `scripts/pygount_summary.py`.
 - Generated README heading and SVG path.
-- Files staged by the workflow's `git add` command.
+- Files checked by the workflow's `git diff` command.
 
 This duplication is intentional. Every repository remains operational if
 LearningClock is renamed, deleted, made private, or its workflow changes.

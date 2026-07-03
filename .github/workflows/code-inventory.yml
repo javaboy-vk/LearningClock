@@ -1,4 +1,4 @@
-name: Update Code Inventory
+name: Verify Code Inventory
 
 on:
   push:
@@ -7,15 +7,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: code-inventory-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  update:
-    name: Regenerate pygount summary
+  verify:
+    name: Verify pygount summary
     runs-on: ubuntu-latest
 
     steps:
@@ -36,7 +36,7 @@ jobs:
       - name: Regenerate Code Inventory
         run: python scripts/pygount_summary.py
 
-      - name: Commit updated inventory
+      - name: Verify committed inventory
         shell: bash
         run: |
           if git diff --quiet -- README.md docs/assets/pygount-summary.svg; then
@@ -44,8 +44,6 @@ jobs:
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md docs/assets/pygount-summary.svg
-          git commit -m "docs: update code inventory [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "Code Inventory is out of date. Run 'python scripts/pygount_summary.py' and commit the updated files."
+          git diff -- README.md docs/assets/pygount-summary.svg
+          exit 1
