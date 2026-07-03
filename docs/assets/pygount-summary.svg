@@ -8,7 +8,7 @@
 <text x="14" y="63" xml:space="preserve">┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━┳━━━━━━━━━┳━━━━━━┓</text>
 <text x="14" y="81" xml:space="preserve">┃ Language               ┃ Files ┃     % ┃ Code ┃    % ┃ Comment ┃    % ┃</text>
 <text x="14" y="99" xml:space="preserve">┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━╇━━━━━━━━━╇━━━━━━┩</text>
-<text x="14" y="117" xml:space="preserve">│ Python                 │    14 │  21.9 │ 1617 │ 43.5 │    1249 │ 33.6 │</text>
+<text x="14" y="117" xml:space="preserve">│ Python                 │    14 │  21.9 │ 1615 │ 43.6 │    1242 │ 33.6 │</text>
 <text x="14" y="135" xml:space="preserve">│ JSON                   │     3 │   4.7 │  292 │ 56.8 │       0 │  0.0 │</text>
 <text x="14" y="153" xml:space="preserve">│ VBScript               │     1 │   1.6 │  175 │ 76.8 │      21 │  9.2 │</text>
 <text x="14" y="171" xml:space="preserve">│ JavaScript+Genshi Text │     1 │   1.6 │  170 │ 46.4 │       9 │  2.5 │</text>
@@ -23,7 +23,7 @@
 <text x="14" y="333" xml:space="preserve">│ __unknown__            │     3 │   4.7 │    0 │  0.0 │       0 │  0.0 │</text>
 <text x="14" y="351" xml:space="preserve">│ __binary__             │     1 │   1.6 │    0 │  0.0 │       0 │  0.0 │</text>
 <text x="14" y="369" xml:space="preserve">├────────────────────────┼───────┼───────┼──────┼──────┼─────────┼──────┤</text>
-<text x="14" y="387" xml:space="preserve">│ Sum                    │    64 │ 100.0 │ 2771 │ 42.9 │    1687 │ 26.1 │</text>
+<text x="14" y="387" xml:space="preserve">│ Sum                    │    64 │ 100.0 │ 2769 │ 43.0 │    1680 │ 26.1 │</text>
 <text x="14" y="405" xml:space="preserve">└────────────────────────┴───────┴───────┴──────┴──────┴─────────┴──────┘</text>
 </g>
 </svg>
