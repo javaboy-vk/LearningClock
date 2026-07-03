@@ -21,6 +21,15 @@ Files copied by release:
 - `src\learningclock\app.py`
 - `src\learningclock\csv_store.py`
 
+Release also reads `D:\LearningPath\*.properties` and exports the shared dashboard component beside each configured `LearningPath` CSV folder:
+
+```text
+Learning-Clock-Dashboard.md
+views\
+```
+
+For a properties file with `logDir=D:\DiavgeiaVault\Engineering\MAGPAI\LearningPath`, release updates `D:\DiavgeiaVault\Engineering\MAGPAI\Learning-Clock-Dashboard.md` and `D:\DiavgeiaVault\Engineering\MAGPAI\views\`.
+
 Release to a different folder:
 
 ```cmd

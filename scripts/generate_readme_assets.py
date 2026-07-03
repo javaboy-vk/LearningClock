@@ -7,7 +7,29 @@
 # Purpose:
 #   Generates stable SVG visuals used by README.md to show the app UI and
 #   Obsidian dashboard output.
+#
+# Generation call tree:
+#   main()
+#   |-- generate_ui_svg()
+#   |   |-- read ACTIVITIES from learningclock.csv_store
+#   |   |-- render one representative timer row per activity
+#   |   `-- return a complete desktop UI SVG string
+#   |-- generate_dashboard_svg()
+#   |   |-- read_dashboard_totals()
+#   |   |   |-- read build\Clock-QA\learning_time_log.csv when present
+#   |   |   |-- aggregate activity totals through ACTIVITY_TO_FIELD
+#   |   |   `-- fall back to deterministic sample totals when QA CSV is absent
+#   |   |-- render bars and labels for every activity
+#   |   `-- return a complete dashboard SVG string
+#   `-- write docs\assets\learning-clock-ui.svg and learning-clock-dashboard.svg
+#
+# Import note:
+#   This script is a direct repo utility, not an installed console entry point.
+#   It prepends src\ to sys.path before importing learningclock so it can run
+#   from a clean checkout. That intentional dynamic import shape conflicts with
+#   Ruff's sorted-import rule, so the import-order warning is disabled here.
 # =============================================================================
+# ruff: noqa: E402,I001
 
 from __future__ import annotations
 
@@ -19,7 +41,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+    sys.path.insert(0, str(SRC))  # Let direct script execution import the local package.
 
 from learningclock.csv_store import ACTIVITY_TO_FIELD, ACTIVITIES, parse_duration  # noqa: E402
 
@@ -29,16 +51,37 @@ DASHBOARD_SVG = ASSET_DIR / "learning-clock-dashboard.svg"
 QA_CSV = ROOT / "build" / "Clock-QA" / "learning_time_log.csv"
 
 
+# Text rendering:
+#   What this function does:
+#     Escapes values before embedding them into SVG text nodes.
+#   Success:
+#     Activity labels and totals remain valid XML even if labels contain special characters.
+#   Error handling:
+#     Conversion uses str() so non-string values can still be rendered safely.
 def text(value: object) -> str:
 
     return html.escape(str(value), quote=True)
 
 
+# Duration formatting:
+#   What this function does:
+#     Converts integer seconds into the HH:MM:SS format used by the dashboard mock.
+#   Success:
+#     README assets visually match the app and dashboard duration convention.
+#   Error handling:
+#     Callers provide integer-like totals derived from test CSV data or deterministic samples.
 def format_duration(seconds: int) -> str:
 
     return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
 
 
+# Dashboard data source:
+#   What this function does:
+#     Reads generated QA CSV totals when available, otherwise produces stable sample values.
+#   Success:
+#     README dashboard art reflects real CSV categories and stays deterministic in clean checkouts.
+#   Error handling:
+#     CSV parsing errors surface directly because broken generated CSV should be fixed, not hidden.
 def read_dashboard_totals() -> tuple[dict[str, int], int, int]:
 
     totals = {activity: 0 for activity in ACTIVITIES}
@@ -67,16 +110,24 @@ def read_dashboard_totals() -> tuple[dict[str, int], int, int]:
     return totals, pages, grand_total
 
 
+# UI SVG generation:
+#   What this function does:
+#     Builds the static desktop screenshot used by README.md.
+#   Success:
+#     Every current activity appears exactly once, and layout height follows the activity count.
+#   Error handling:
+#     No filesystem writes happen here; generation failures surface before main writes assets.
 def generate_ui_svg() -> str:
 
     width = 560
-    height = 500
+    height = 165 + (len(ACTIVITIES) * 43)
     row_height = 43
     top = 126
+    controls_y = top + (len(ACTIVITIES) * row_height) + 7
     rows = []
     for index, activity in enumerate(ACTIVITIES):
         y = top + index * row_height
-        status = "01:42:35" if activity == "Experimenting" else "00:00:00"
+        status = "01:42:35" if activity == "Sandbox" else "00:00:00"
         rows.append(
             f"""
             <g>
@@ -89,14 +140,14 @@ def generate_ui_svg() -> str:
         )
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="LearningClock desktop UI with seven learning timers">
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="LearningClock desktop UI with learning timers">
   <defs>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.25"/>
     </filter>
   </defs>
   <rect width="{width}" height="{height}" fill="#c8c6bd"/>
-  <rect x="18" y="26" width="524" height="496" rx="9" fill="#eeeeee" stroke="#9d9d9d" filter="url(#shadow)"/>
+  <rect x="18" y="26" width="524" height="{height - 4}" rx="9" fill="#eeeeee" stroke="#9d9d9d" filter="url(#shadow)"/>
   <rect x="18" y="26" width="524" height="41" rx="9" fill="#f8f8f8"/>
   <rect x="18" y="57" width="524" height="30" fill="#ffffff"/>
   <text x="31" y="52" fill="#174c84" font-family="Segoe UI Emoji, Segoe UI Symbol, Arial, sans-serif" font-size="19">🪶</text>
@@ -107,20 +158,27 @@ def generate_ui_svg() -> str:
   <text x="26" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">About</text>
   <text x="86" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Time</text>
   <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Page Count</text>
-  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Stopped: Experimenting</text>
+  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Stopped: Sandbox</text>
   <g font-family="Segoe UI, Arial, sans-serif">
     {''.join(rows)}
   </g>
-  <rect x="38" y="434" width="132" height="35" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
-  <line x1="40" y1="436" x2="168" y2="436" stroke="#ffffff" stroke-width="1"/>
-  <text x="87" y="458" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16">Stop</text>
-  <rect x="178" y="434" width="132" height="35" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
-  <line x1="180" y1="436" x2="308" y2="436" stroke="#ffffff" stroke-width="1"/>
-  <text x="211" y="458" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16">Reset Timer</text>
+  <rect x="38" y="{controls_y}" width="132" height="35" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+  <line x1="40" y1="{controls_y + 2}" x2="168" y2="{controls_y + 2}" stroke="#ffffff" stroke-width="1"/>
+  <text x="87" y="{controls_y + 24}" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16">Stop</text>
+  <rect x="178" y="{controls_y}" width="132" height="35" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+  <line x1="180" y1="{controls_y + 2}" x2="308" y2="{controls_y + 2}" stroke="#ffffff" stroke-width="1"/>
+  <text x="211" y="{controls_y + 24}" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16">Reset Timer</text>
 </svg>
 """
 
 
+# Dashboard SVG generation:
+#   What this function does:
+#     Builds the static Obsidian/Diavgeia dashboard chart used by README.md.
+#   Success:
+#     Bars and labels follow ACTIVITIES and ACTIVITY_TO_FIELD from the production CSV contract.
+#   Error handling:
+#     Bad CSV values parse through production parse_duration; structural errors surface naturally.
 def generate_dashboard_svg() -> str:
 
     totals, pages, grand_total = read_dashboard_totals()
@@ -136,7 +194,17 @@ def generate_dashboard_svg() -> str:
 
     bars = []
     labels = []
-    colors = ["#3279b7", "#4c8fc2", "#6aa2cc", "#2f6f9f", "#7aa9c9", "#4f86b3", "#245f8f"]
+    colors = [
+        "#3279b7",
+        "#4c8fc2",
+        "#6aa2cc",
+        "#2f6f9f",
+        "#7aa9c9",
+        "#4f86b3",
+        "#245f8f",
+        "#6d95b8",
+        "#2c5d7f",
+    ]
     for index, activity in enumerate(ACTIVITIES):
         seconds = totals[activity]
         bar_height = max(34, int((seconds / max_seconds) * 228))
@@ -180,6 +248,13 @@ def generate_dashboard_svg() -> str:
 """
 
 
+# Command-line entry point:
+#   What this function does:
+#     Ensures the asset folder exists and writes both generated SVG files.
+#   Success:
+#     README image references point at fresh assets matching the current category schema.
+#   Error handling:
+#     Write failures propagate so release/deploy workflows fail visibly.
 def main() -> int:
 
     ASSET_DIR.mkdir(parents=True, exist_ok=True)

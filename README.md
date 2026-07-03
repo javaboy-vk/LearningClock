@@ -2,19 +2,39 @@
 
 LearningClock is a Windows-friendly Python/Tkinter desktop timer for tracking focused learning sessions. It records time across named study activities, page counts, session metadata, recovered emergency saves, and a recalculated CSV `TOTAL` row that can feed reports and Diavgeia documentation.
 
-It is inspired by **dual timers chess clocks**. As soon as a player makes a moove stops his timer which starts his opponent timer. Similarly that Learning Clock has 7 such timers that track the different stages of learning. For example, I can start with reading, and as soon as hit the outlining timer, the reading timer stops and the outliner starts.
+It is inspired by **dual timers chess clocks**. As soon as a player makes a moove stops his timer which starts his opponent timer. Similarly that Learning Clock has timers that track the different stages of learning. For example, I can start with reading, and as soon as hit the outlining timer, the reading timer stops and the outliner starts.
 
 The project is intentionally small and operational: the GUI owns timer behavior, `CsvStore` owns persistence, tests protect the CSV contract, and `scripts/dev.py` provides repeatable lifecycle commands for development, QA, coverage, packaging, Diavgeia export, and production release.
 
 ## Application And Dashboard
 
-The desktop app presents seven learning timers that map directly to the persisted CSV activity columns.
+The desktop app presents learning timers that map directly to the persisted CSV activity columns.
 
-![LearningClock desktop UI with seven learning timers](docs/assets/learning-clock-ui.svg)
+![LearningClock desktop UI with learning timers](docs/assets/learning-clock-ui.svg)
 
 The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning-time graph from `diavgeia/LearningClock/Learning-Clock-Dashboard.md`.
 
 ![LearningClock Obsidian dashboard graph](docs/assets/learning-clock-dashboard.svg)
+
+## Categories
+
+| Category | Purpose |
+| --- | --- |
+| Reading | Reading books, articles, docs. |
+| Audiobook | Listening to technical learning material. |
+| Outlining | Structuring notes, chapters, designs. |
+| Active Recall | Recall practice, repetition, self-testing, and memory reinforcement. |
+| Sandbox | Trial-and-error sandbox work, examples, prototypes, technology probes, and book/example exercises. |
+| AI-Assisted Engineering | Working with ChatGPT, CODEX, or other AI tools to generate, repair, design, document, test, or debug code. |
+| Classical Software Engineering | Personally writing, modifying, refactoring, testing, debugging, and implementing code using traditional software engineering practices. |
+| Update Diavgeia | Capturing stable knowledge in Obsidian/Diavgeia. |
+| Promote Stable Concept | Turning stable ideas into reusable, publishable, or shareable concepts. |
+
+“Sandbox” is for sandbox learning, trial-and-error, book examples, technology probes, prototype exploration, and trying things out before they become stable engineering work.
+
+“AI-Assisted Engineering” is for time spent instructing ChatGPT, CODEX, or another AI assistant to generate, repair, explain, refactor, test, document, or debug code.
+
+“Classical Software Engineering” is for time spent directly implementing software yourself using traditional engineering practices: editing files, designing code, debugging in the IDE, running tests, refactoring, and fixing issues based on your own analysis.
 
 ## What Is Implemented
 

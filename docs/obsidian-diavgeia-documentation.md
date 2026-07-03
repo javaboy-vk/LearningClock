@@ -31,3 +31,18 @@ The deploy target runs:
 ```powershell
 scripts\export-diavgeia-vault.ps1
 ```
+
+It also reads `D:\LearningPath\*.properties`, resolves each `logDir`, and copies the shared dashboard component into the parent Diavgeia folder for that learning path. For example, a `logDir` of:
+
+```text
+D:\DiavgeiaVault\Engineering\MAGPAI\LearningPath
+```
+
+receives:
+
+```text
+D:\DiavgeiaVault\Engineering\MAGPAI\Learning-Clock-Dashboard.md
+D:\DiavgeiaVault\Engineering\MAGPAI\views\
+```
+
+The `release` target performs the same dashboard export after updating the runnable desktop application files.

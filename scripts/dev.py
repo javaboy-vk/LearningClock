@@ -25,6 +25,9 @@ BUILD_DIR = ROOT / "build"
 VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
 REGRESSION_PROPERTIES = ROOT / "tests" / "fixtures" / "clock-QA.properties"
 PRODUCTION_APP_DIR = Path(r"D:\LearningPath\Tools\LearningClock")
+LEARNING_PATH_PROPERTIES_DIR = Path(r"D:\LearningPath")
+DASHBOARD_MARKDOWN = ROOT / "diavgeia" / "LearningClock" / "Learning-Clock-Dashboard.md"
+DASHBOARD_VIEWS_DIR = ROOT / "diavgeia" / "LearningClock" / "views"
 
 
 def safe_remove(path: Path) -> None:
@@ -83,6 +86,72 @@ def remove_python_metadata() -> None:
 
     for path in ROOT.rglob("*.egg-info"):
         safe_remove(path)
+
+
+def load_properties(path: Path) -> dict[str, str]:
+
+    values = {}
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            stripped = line.strip()
+            if not stripped or stripped.startswith(("#", ";")):
+                continue
+            key, separator, value = stripped.partition("=")
+            if separator:
+                values[key.strip()] = value.strip().strip('"')
+    return values
+
+
+def resolve_config_path(value: str, base_dir: Path) -> Path:
+
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    return (base_dir / path).resolve()
+
+
+def learning_path_dashboard_destinations(properties_dir: Path) -> list[tuple[Path, Path]]:
+
+    destinations = []
+    for properties_path in sorted(properties_dir.glob("*.properties")):
+        properties = load_properties(properties_path)
+        log_dir_value = properties.get("logDir")
+        if not log_dir_value:
+            print(f"skipping dashboard export without logDir: {properties_path}")
+            continue
+        log_dir = resolve_config_path(log_dir_value, properties_path.parent)
+        destinations.append((properties_path, log_dir.parent))
+    return destinations
+
+
+def export_dashboard_components(properties_dir: Path, *, dry_run: bool = False) -> None:
+
+    if not DASHBOARD_MARKDOWN.exists():
+        raise SystemExit(f"Dashboard source file was not found: {DASHBOARD_MARKDOWN}")
+    if not DASHBOARD_VIEWS_DIR.exists():
+        raise SystemExit(f"Dashboard views source folder was not found: {DASHBOARD_VIEWS_DIR}")
+
+    destinations = learning_path_dashboard_destinations(properties_dir)
+    if not destinations:
+        raise SystemExit(f"No dashboard destinations resolved from {properties_dir}")
+
+    for properties_path, destination in destinations:
+        target_markdown = destination / DASHBOARD_MARKDOWN.name
+        target_views_dir = destination / "views"
+        if dry_run:
+            print(
+                f"would export dashboard from {properties_path.name}: "
+                f"{DASHBOARD_MARKDOWN.relative_to(ROOT)} -> {target_markdown}"
+            )
+            print(
+                f"would export dashboard from {properties_path.name}: "
+                f"{DASHBOARD_VIEWS_DIR.relative_to(ROOT)} -> {target_views_dir}"
+            )
+            continue
+        destination.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(DASHBOARD_MARKDOWN, target_markdown)
+        shutil.copytree(DASHBOARD_VIEWS_DIR, target_views_dir, dirs_exist_ok=True)
+        print(f"exported dashboard from {properties_path.name} -> {destination}")
 
 
 def dependency_requirements() -> list[str]:
@@ -212,6 +281,7 @@ def deploy(_args: list[str] | None = None) -> None:
             str(ROOT / "scripts" / "export-diavgeia-vault.ps1"),
         ]
     )
+    export_dashboard_components(LEARNING_PATH_PROPERTIES_DIR)
 
 
 def release(args: list[str] | None = None) -> None:
@@ -253,6 +323,8 @@ def release(args: list[str] | None = None) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         print(f"released: {source.relative_to(ROOT)} -> {target}")
+
+    export_dashboard_components(LEARNING_PATH_PROPERTIES_DIR, dry_run=parsed_args.dry_run)
 
 
 def all_targets(_args: list[str] | None = None) -> None:

@@ -29,6 +29,20 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
 
     # Testing algorithm:
     #   What we test:
+    #     The public category list and CSV schema use Sandbox as the current name.
+    #   Success:
+    #     The UI-facing activity list contains Sandbox, and future CSV writes use sandbox.
+    #   Error checks:
+    #     Assertions catch accidental reintroduction of the old Experimenting label or column.
+    def test_schema_uses_sandbox_category_and_column(self):
+
+        self.assertIn("Sandbox", learning_clock.ACTIVITIES)                    # UI label is current.
+        self.assertNotIn("Experimenting", learning_clock.ACTIVITIES)           # Old display label is legacy only.
+        self.assertIn("sandbox", learning_clock.FIELDNAMES)                    # CSV column is current.
+        self.assertNotIn("experimenting", learning_clock.FIELDNAMES)           # Old CSV column is legacy only.
+
+    # Testing algorithm:
+    #   What we test:
     #     CsvStore builds one session row from fixed app state and a supplied session end.
     #   Success:
     #     Date, learning path, start/end times, activity fields, page count, and total are formatted.
@@ -37,7 +51,9 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     def test_create_session_row_formats_fields_and_total(self):
 
         self.clock.totals["Reading"] = 60                                      # Seed one minute of reading.
-        self.clock.totals["Experimenting"] = 3600                              # Seed one hour of experimenting.
+        self.clock.totals["Sandbox"] = 3600                                    # Seed one hour of sandbox time.
+        self.clock.totals["AI-Assisted Engineering"] = 120                     # Seed AI-assisted engineering time.
+        self.clock.totals["Classical Software Engineering"] = 180              # Seed classical engineering time.
         self.clock.totals["Update Diavgeia"] = 30                              # Seed thirty seconds in a mapped activity.
         self.clock.pages_read = 7                                              # Seed session page count.
 
@@ -48,10 +64,12 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("09:00:00", row["session_start"])                     # Harness session start is fixed.
         self.assertEqual("10:15:30", row["session_end"])                       # Provided session end is formatted.
         self.assertEqual("00:01:00", row["reading"])                           # Reading seconds become HH:MM:SS.
-        self.assertEqual("01:00:00", row["experimenting"])                     # Experimenting seconds become HH:MM:SS.
+        self.assertEqual("01:00:00", row["sandbox"])                           # Sandbox seconds become HH:MM:SS.
+        self.assertEqual("00:02:00", row["ai_assisted_engineering"])           # New AI-assisted field is written.
+        self.assertEqual("00:03:00", row["classical_software_engineering"])    # New classical field is written.
         self.assertEqual("00:00:30", row["update_diavgeia"])                   # Mapped activity field is written.
         self.assertEqual("7", row["pages_read"])                               # Page count is persisted as text.
-        self.assertEqual("01:01:30", row["total"])                             # Total sums all activity seconds.
+        self.assertEqual("01:06:30", row["total"])                             # Total sums all activity seconds.
 
     # Testing algorithm:
     #   What we test:
@@ -65,21 +83,32 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         rows = [                                                               # Build representative persisted session rows.
             self.row(
                 reading="00:10:00",                                            # First row reading duration.
-                experimenting="00:05:00",                                      # First row experimenting duration.
+                active_recall="00:01:00",                                      # First row active recall duration.
+                sandbox="00:05:00",                                           # First row sandbox duration.
+                ai_assisted_engineering="00:02:00",                            # First row AI-assisted duration.
                 pages_read="3",                                                # First row page count.
-                total="00:15:00",                                              # First row total duration.
+                total="00:18:00",                                              # First row total duration.
             ),
-            self.row(reading="00:20:00", audiobook="00:07:30", pages_read="4", total="00:27:30"),  # Second row.
+            self.row(
+                reading="00:20:00",
+                audiobook="00:07:30",
+                classical_software_engineering="00:04:00",
+                pages_read="4",
+                total="00:31:30",
+            ),                                                                  # Second row.
         ]
 
         total = self.clock.create_total_row(rows)                              # Calculate summary from rows.
 
         self.assertEqual("TOTAL", total["date"])                               # Summary row marker.
         self.assertEqual("00:30:00", total["reading"])                         # Reading values are summed.
-        self.assertEqual("00:05:00", total["experimenting"])                   # Experimenting value carries forward.
+        self.assertEqual("00:01:00", total["active_recall"])                   # Active Recall values are summed.
+        self.assertEqual("00:05:00", total["sandbox"])                         # Sandbox value carries forward.
+        self.assertEqual("00:02:00", total["ai_assisted_engineering"])         # AI-assisted value carries forward.
+        self.assertEqual("00:04:00", total["classical_software_engineering"])  # Classical engineering value carries forward.
         self.assertEqual("00:07:30", total["audiobook"])                       # Audiobook value carries forward.
         self.assertEqual("7", total["pages_read"])                             # Page counts are summed.
-        self.assertEqual("00:42:30", total["total"])                           # Grand total sums activity totals.
+        self.assertEqual("00:49:30", total["total"])                           # Grand total sums activity totals.
 
     # Testing algorithm:
     #   What we test:
@@ -92,8 +121,8 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
 
         self.clock.totals["Reading"] = 5                                      # Seed small reading duration.
         self.clock.totals["Outlining"] = 8                                    # Seed small outlining duration.
-        self.clock.totals["Memorizing"] = 17                                  # Seed small memorizing duration.
-        self.clock.totals["Experimenting"] = 600                              # Seed ten minutes of experimenting.
+        self.clock.totals["Active Recall"] = 17                               # Seed small active recall duration.
+        self.clock.totals["Sandbox"] = 600                                    # Seed ten minutes of sandbox time.
 
         saved = self.clock.save_session_summary(datetime(2026, 6, 5, 18, 48, 22))  # Persist session and TOTAL row.
 
@@ -142,7 +171,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.write_csv([existing])                                            # Seed existing CSV history.
 
         self.clock.totals["Reading"] = 600                                    # New session reading duration.
-        self.clock.totals["Experimenting"] = 120                              # New session experimenting duration.
+        self.clock.totals["Sandbox"] = 120                                    # New session sandbox duration.
         self.clock.pages_read = 3                                             # New session pages.
 
         saved = self.clock.save_session_summary(datetime(2026, 6, 5, 10, 0, 0))  # Append new session and rewrite TOTAL.
@@ -154,7 +183,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("2026-06-05", rows[1]["date"])                       # New row is appended.
         self.assertEqual("TOTAL", rows[2]["date"])                            # TOTAL row is final.
         self.assertEqual("00:20:00", rows[2]["reading"])                      # Reading total includes both rows.
-        self.assertEqual("00:02:00", rows[2]["experimenting"])                # Experimenting total includes new row.
+        self.assertEqual("00:02:00", rows[2]["sandbox"])                      # Sandbox total includes new row.
         self.assertEqual("5", rows[2]["pages_read"])                          # Page total includes both rows.
         self.assertEqual("00:22:00", rows[2]["total"])                        # Grand total includes all activities.
 
@@ -170,6 +199,9 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         row = {                                                               # Simulate a legacy partial CSV row.
             "date": "06/05/26",                                               # Legacy short date format.
             "document_in_diavgeia": "00:03:00",                               # Legacy column name.
+            "memorizing": "00:04:00",                                         # Legacy Active Recall column name.
+            "experimenting": "00:05:00",                                      # Legacy Sandbox column name.
+            "sandbox": "00:01:00",                                            # Current Sandbox column name.
             "reading": "00:02:00",                                            # Current column with duration.
         }
 
@@ -177,9 +209,11 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
 
         self.assertEqual("2026-06-05", normalized["date"])                    # Date becomes ISO format.
         self.assertEqual("00:03:00", normalized["update_diavgeia"])           # Legacy field maps to current field.
+        self.assertEqual("00:04:00", normalized["active_recall"])             # Legacy memorizing maps to Active Recall.
+        self.assertEqual("00:06:00", normalized["sandbox"])                   # Legacy experimenting combines with Sandbox.
         self.assertEqual("00:00:00", normalized["outlining"])                 # Missing duration defaults to zero.
         self.assertEqual("0", normalized["pages_read"])                       # Missing pages default to zero.
-        self.assertEqual("00:05:00", normalized["total"])                     # Total is recalculated from activity fields.
+        self.assertEqual("00:15:00", normalized["total"])                     # Total is recalculated from activity fields.
 
     # Testing algorithm:
     #   What we test:

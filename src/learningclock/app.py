@@ -145,9 +145,9 @@ APP_VERSION = "v3.3"
 #     Mode changes resize the app predictably without recalculating geometry at runtime.
 #   Error handling:
 #     Tkinter reports invalid geometry strings when the window applies them.
-NORMAL_GEOMETRY = "420x345"
-ADD_TIME_GEOMETRY = "580x345"
-ADD_PAGE_COUNT_GEOMETRY = "530x345"
+NORMAL_GEOMETRY = "520x430"
+ADD_TIME_GEOMETRY = "690x430"
+ADD_PAGE_COUNT_GEOMETRY = "620x430"
 
 
 # Operational algorithm:
@@ -305,7 +305,7 @@ class LearningClock:
                 row,                                                          # Parent row.
                 text=activity,                                                # Activity label on button.
                 font=("Arial", 12),                                           # Readable button font.
-                width=24,                                                     # Fixed width keeps rows aligned.
+                width=32,                                                     # Fixed width keeps rows aligned.
                 anchor="w",                                                   # Left-align activity text.
                 command=lambda a=activity: self.switch_to(a),                 # Capture activity for callback.
             )

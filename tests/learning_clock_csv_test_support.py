@@ -181,10 +181,12 @@ class LearningClockCsvHarness:
             "session_start": "09:00:00",                                      # Default session start time.
             "session_end": "09:30:00",                                        # Default session end time.
             "reading": "00:00:00",                                            # Default reading duration.
-            "outlining": "00:00:00",                                          # Default outlining duration.
-            "memorizing": "00:00:00",                                         # Default memorizing duration.
-            "experimenting": "00:00:00",                                      # Default experimenting duration.
             "audiobook": "00:00:00",                                          # Default audiobook duration.
+            "outlining": "00:00:00",                                          # Default outlining duration.
+            "active_recall": "00:00:00",                                      # Default active recall duration.
+            "sandbox": "00:00:00",                                            # Default sandbox duration.
+            "ai_assisted_engineering": "00:00:00",                            # Default AI-assisted engineering duration.
+            "classical_software_engineering": "00:00:00",                     # Default classical engineering duration.
             "update_diavgeia": "00:00:00",                                    # Default Diavgeia update duration.
             "promote_stable_concept": "00:00:00",                             # Default promotion duration.
             "pages_read": "0",                                                # Default page count.

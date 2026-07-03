@@ -81,13 +81,15 @@ from pathlib import Path
 #   Error checks:
 #     Tests should fail if a new activity is added without a matching field mapping.
 ACTIVITIES = [
-    "Reading",                  # Time spent reading source material.
-    "Outlining",                # Time spent structuring notes or plans.
-    "Memorizing",               # Time spent memorizing or drilling.
-    "Experimenting",            # Time spent testing ideas in practice.
-    "Audiobook",                # Time spent listening to study material.
-    "Update Diavgeia",          # Time spent documenting the learning path.
-    "Promote stable concept",   # Time spent promoting stable concepts.
+    "Reading",                           # Time spent reading source material.
+    "Audiobook",                         # Time spent listening to study material.
+    "Outlining",                         # Time spent structuring notes or plans.
+    "Active Recall",                     # Time spent recall practice and self-testing.
+    "Sandbox",                           # Time spent sandbox learning and prototypes.
+    "AI-Assisted Engineering",           # Time spent using AI tools for software work.
+    "Classical Software Engineering",    # Time spent directly engineering software.
+    "Update Diavgeia",                   # Time spent documenting the learning path.
+    "Promote Stable Concept",            # Time spent promoting stable concepts.
 ]
 
 # File and formatting contract:
@@ -116,10 +118,12 @@ FIELDNAMES = [
     "session_start",                                              # Session start time.
     "session_end",                                                # Session end time.
     "reading",                                                    # Reading duration.
-    "outlining",                                                  # Outlining duration.
-    "memorizing",                                                 # Memorizing duration.
-    "experimenting",                                              # Experimenting duration.
     "audiobook",                                                  # Audiobook duration.
+    "outlining",                                                  # Outlining duration.
+    "active_recall",                                              # Active Recall duration.
+    "sandbox",                                                    # Sandbox duration.
+    "ai_assisted_engineering",                                    # AI-assisted engineering duration.
+    "classical_software_engineering",                             # Classical software engineering duration.
     "update_diavgeia",                                            # Documentation duration.
     "promote_stable_concept",                                     # Stable-concept promotion duration.
     "pages_read",                                                 # Pages read during the session.
@@ -128,16 +132,20 @@ FIELDNAMES = [
 
 ACTIVITY_TO_FIELD = {
     "Reading": "reading",                                         # Map UI activity to CSV column.
-    "Outlining": "outlining",                                     # Map UI activity to CSV column.
-    "Memorizing": "memorizing",                                   # Map UI activity to CSV column.
-    "Experimenting": "experimenting",                             # Map UI activity to CSV column.
     "Audiobook": "audiobook",                                     # Map UI activity to CSV column.
+    "Outlining": "outlining",                                     # Map UI activity to CSV column.
+    "Active Recall": "active_recall",                             # Map UI activity to CSV column.
+    "Sandbox": "sandbox",                                         # Map UI activity to CSV column.
+    "AI-Assisted Engineering": "ai_assisted_engineering",          # Map UI activity to CSV column.
+    "Classical Software Engineering": "classical_software_engineering",  # Map UI activity to CSV column.
     "Update Diavgeia": "update_diavgeia",                         # Map UI activity to CSV column.
-    "Promote stable concept": "promote_stable_concept",           # Map UI activity to CSV column.
+    "Promote Stable Concept": "promote_stable_concept",           # Map UI activity to CSV column.
 }
 
 LEGACY_FIELD_MAPPINGS = {
     "document_in_diavgeia": "update_diavgeia",                    # Preserve older CSV column name.
+    "memorizing": "active_recall",                                # Preserve pre-Active Recall CSV history.
+    "experimenting": "sandbox",                                   # Preserve pre-Sandbox CSV history.
 }
 
 # Data conversion:
@@ -275,8 +283,10 @@ class CsvStore:
             f"end={session_row.get('session_end')} | "
             f"reading={session_row.get('reading')} | "
             f"outlining={session_row.get('outlining')} | "
-            f"memorizing={session_row.get('memorizing')} | "
-            f"experimenting={session_row.get('experimenting')} | "
+            f"active_recall={session_row.get('active_recall')} | "
+            f"sandbox={session_row.get('sandbox')} | "
+            f"ai_assisted_engineering={session_row.get('ai_assisted_engineering')} | "
+            f"classical_software_engineering={session_row.get('classical_software_engineering')} | "
             f"audiobook={session_row.get('audiobook')} | "
             f"update_diavgeia={session_row.get('update_diavgeia')} | "
             f"promote_stable_concept={session_row.get('promote_stable_concept')} | "
@@ -419,8 +429,11 @@ class CsvStore:
 
         for legacy_field, current_field in LEGACY_FIELD_MAPPINGS.items():      # Preserve known old column names.
             legacy_value = row.get(legacy_field, "")                           # Read old column value.
-            current_value = normalized_row.get(current_field, "")              # Check whether current column is empty.
-            if legacy_value and not current_value:                             # Use legacy value only when needed.
+            current_value = normalized_row.get(current_field, "")              # Check whether current column has data.
+            if legacy_value and current_value:                                 # Keep time from both columns if both exist.
+                combined_seconds = parse_duration(current_value) + parse_duration(legacy_value)
+                normalized_row[current_field] = format_seconds(combined_seconds)
+            elif legacy_value:                                                 # Use legacy value when current column is empty.
                 normalized_row[current_field] = legacy_value                   # Move old value into current field.
 
         for field in ACTIVITY_TO_FIELD.values():                               # Ensure each activity field exists.

@@ -13,7 +13,7 @@ The desktop launcher reads a `.properties` file and passes the configured learni
 wscript.exe //nologo launcher\Learning-clock.vbs launcher\dev.properties
 ```
 There is an option to manually add time and record also the number of pages you process in each session.
-There are also timers for  experimenting, updating documentation, and even promote any cool code to a production version. A user doesn't have to use all of the timers, but just the ones that fit his needs.
+There are also timers for sandbox exploration, updating documentation, and even promote any cool code to a production version. A user doesn't have to use all of the timers, but just the ones that fit his needs.
 
 I typically create a shortcut on my desktop, pointing to the "...\LearningClock\Learning-clock.vbs" and pass as a single parameter the location of the <learning path>.properties file.
 
@@ -36,7 +36,9 @@ logDir=<path where the app creates the .csv and .log files>\learning-clock-logs.
 - Use `Stop Timer` to pause the active timer.
 - Use `Reset Timer` to clear only the currently running activity.
 
-Tracked activities are `Reading`, `Outlining`, `Memorizing`, `Experimenting`, `Audiobook`, `Update Diavgeia`, and `Promote Stable Concept`.
+Tracked activities are `Reading`, `Audiobook`, `Outlining`, `Active Recall`, `Sandbox`, `AI-Assisted Engineering`, `Classical Software Engineering`, `Update Diavgeia`, and `Promote Stable Concept`.
+
+`Sandbox` is for sandbox learning, trial-and-error, book examples, technology probes, prototype exploration, and trying things out before they become stable engineering work. `AI-Assisted Engineering` is for work done by instructing ChatGPT, CODEX, or another AI assistant to generate, repair, explain, refactor, test, document, or debug code. `Classical Software Engineering` is for directly implementing software yourself with traditional engineering practices.
 
 ## Manual Time And Pages
 

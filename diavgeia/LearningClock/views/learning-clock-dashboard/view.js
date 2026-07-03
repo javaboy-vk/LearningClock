@@ -13,12 +13,14 @@ const legacyCsvFolderName = "LearningPath";
 
 const activityFields = [
   ["Reading", "reading"],
-  ["Outlining", "outlining"],
-  ["Memorizing", "memorizing"],
-  ["Experimenting", "experimenting"],
   ["Audiobook", "audiobook"],
+  ["Outlining", "outlining"],
+  ["Active Recall", "active_recall", ["memorizing"]],
+  ["Sandbox", "sandbox", ["experimenting"]],
+  ["AI-Assisted Engineering", "ai_assisted_engineering"],
+  ["Classical Software Engineering", "classical_software_engineering"],
   ["Update Diavgeia", "update_diavgeia"],
-  ["Promote stable concept", "promote_stable_concept"],
+  ["Promote Stable Concept", "promote_stable_concept"],
 ];
 
 function parseDuration(value) {
@@ -182,7 +184,7 @@ function applyStyles(root) {
     }
     .lc-bars {
       display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(9, minmax(0, 1fr));
       gap: 10px;
       align-items: end;
       height: 238px;
@@ -215,7 +217,7 @@ function applyStyles(root) {
     }
     .lc-labels {
       display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(9, minmax(0, 1fr));
       gap: 10px;
       margin-top: 12px;
       text-align: center;
@@ -286,8 +288,10 @@ try {
   let pagesRead = 0;
 
   for (const row of sessions) {
-    for (const [, field] of activityFields) {
-      totals[field] += parseDuration(row[field]);
+    for (const [, field, legacyFields = []] of activityFields) {
+      const currentSeconds = parseDuration(row[field]);
+      const legacySeconds = legacyFields.reduce((sum, legacyField) => sum + parseDuration(row[legacyField]), 0);
+      totals[field] += currentSeconds || legacySeconds;
     }
     totalSeconds += parseDuration(row.total);
     pagesRead += Number.parseInt(row.pages_read || "0", 10) || 0;
@@ -328,7 +332,7 @@ try {
   card.appendChild(labels);
   for (const [label] of activityFields) {
     const labelElement = appendText(labels, "div", label);
-    if (label === "Experimenting") {
+    if (["Sandbox", "Active Recall"].includes(label)) {
       labelElement.className = "lc-label-nowrap";
     }
   }
