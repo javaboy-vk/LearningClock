@@ -43,7 +43,7 @@ scripts\release.cmd
 - `validate-config`: validate `.vscode\launch.json`, `.vscode\tasks.json`, and `LearningClock.code-workspace`.
 - `test`: run the complete pytest suite.
 - `coverage`: run the complete pytest suite with terminal and HTML coverage.
-- `pygount-summary`: generate a pygount summary SVG and keep the README code inventory section at the bottom of the page.
+- `pygount-summary`: generate the pygount summary files under `build\reports` and keep the README pointed at the published Pages asset.
 - `readme-assets`: generate README SVG visuals for the desktop UI and Obsidian dashboard.
 - `unittest-csv`: run the isolated CSV unit test file.
 - `unittest-csv-file`: run the CSV regression suite against a properties-selected or explicitly supplied CSV.

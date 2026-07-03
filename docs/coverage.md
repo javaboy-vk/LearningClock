@@ -26,7 +26,9 @@ docs\assets\coverage-theme.css
 
 ## GitHub Pages
 
-The `.github/workflows/coverage-pages.yml` workflow publishes the HTML coverage report to GitHub Pages on every push to `main` and can also be run manually from the Actions tab.
+The `.github/workflows/coverage-pages.yml` workflow publishes the HTML coverage
+report and generated Code Inventory SVG to GitHub Pages on every push to `main`.
+It can also be run manually from the Actions tab.
 
 The repository must have GitHub Pages configured to use GitHub Actions as its publishing source.
 
@@ -34,4 +36,11 @@ The coverage target runs:
 
 ```cmd
 pytest --cov=learningclock --cov-report=term-missing --cov-report=html:build/coverage/html
+```
+
+The published Code Inventory image is generated during the same workflow and is
+served from:
+
+```text
+https://javaboy-vk.github.io/LearningClock/assets/pygount-summary.svg
 ```

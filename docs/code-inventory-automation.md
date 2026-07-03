@@ -1,39 +1,59 @@
 # Automated Code Inventory
 
-The repository verifies the README Code Inventory after every push to `main`.
+The README Code Inventory image points to a generated GitHub Pages asset:
+
+```text
+https://javaboy-vk.github.io/LearningClock/assets/pygount-summary.svg
+```
+
+That SVG is not committed to `main`. It is generated during the project Pages
+workflow and published with the coverage report.
+
 The automation is implemented by:
 
 ```text
-.github/workflows/code-inventory.yml
+.github/workflows/coverage-pages.yml
 scripts/pygount_summary.py
 ```
 
 The workflow:
 
 1. Checks out the repository.
-2. Installs Python and `pygount`.
-3. Runs `python scripts/pygount_summary.py`.
-4. Fails if `README.md` or `docs/assets/pygount-summary.svg` changed during regeneration.
+2. Installs the project with development dependencies.
+3. Runs the HTML coverage report.
+4. Runs `python scripts/pygount_summary.py`.
+5. Copies `build/reports/pygount-summary.svg` into the GitHub Pages artifact at
+   `assets/pygount-summary.svg`.
+6. Deploys the complete Pages artifact.
 
-The workflow exits successfully when the generated files are already current.
-When it fails, run the generator locally and commit the updated files:
+The action does not push commits, so it does not create bot commits that make
+local branches diverge from `main`.
+
+## Local Generation
+
+Run the local generator with:
 
 ```text
 python scripts/pygount_summary.py
-git add README.md docs/assets/pygount-summary.svg
-git commit
 ```
+
+It writes generated output under:
+
+```text
+build/reports/
+```
+
+The `build/` directory is ignored by Git. Do not commit generated pygount output.
 
 ## Repository Settings
 
-The workflow only needs read access to repository contents:
+In GitHub, open:
 
 ```text
-Settings -> Actions -> General -> Workflow permissions
+Settings -> Pages
 ```
 
-Select **Read repository contents permission**. The action does not push commits,
-so it will not create bot commits that make local branches diverge from `main`.
+Set the source to **GitHub Actions**.
 
 ## Add It to Another Repository
 
@@ -43,31 +63,17 @@ the LearningClock workflow from another repository.
 Copy these files into the new repository:
 
 ```text
-.github/workflows/code-inventory.yml
+.github/workflows/coverage-pages.yml
 scripts/pygount_summary.py
-```
-
-Also ensure that the repository contains:
-
-```text
-README.md
-docs/assets/
-```
-
-The copied workflow executes the copied generator from the same repository:
-
-```yaml
-- name: Regenerate Code Inventory
-  run: python scripts/pygount_summary.py
 ```
 
 Review the following project-specific settings after copying:
 
+- GitHub Pages URL in `scripts/pygount_summary.py`.
 - Default branch name in `on.push.branches`.
 - Python version.
-- Paths counted by `COUNT_PATHS` in `scripts/pygount_summary.py`.
-- Generated README heading and SVG path.
-- Files checked by the workflow's `git diff` command.
+- Paths counted by `scripts/pygount_summary.py`.
+- Published asset path in the workflow and README.
 
 This duplication is intentional. Every repository remains operational if
 LearningClock is renamed, deleted, made private, or its workflow changes.
