@@ -3,7 +3,7 @@ File Name : view.js
 Artifact  : LearningClock - Learning Clock Dashboard Dataview View
 Author    : javaboy-vk
 Date      : 2026-06-05
-Version   : v0.5.0
+Version   : v0.5.1
 Purpose:
   Renders the LearningClock learning-time dashboard from the vault CSV.
 */
@@ -210,8 +210,8 @@ function applyStyles(root) {
       align-items: flex-start;
       justify-content: center;
       padding-top: 8px;
-      font-weight: 700;
-      font-size: 14px;
+      font-weight: 400;
+      font-size: 13px;
       line-height: 1;
       box-sizing: border-box;
       text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
