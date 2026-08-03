@@ -21,7 +21,9 @@
 #   |   |   `-- fall back to deterministic sample totals when QA CSV is absent
 #   |   |-- render bars and labels for every activity
 #   |   `-- return a complete dashboard SVG string
-#   `-- write docs\assets\learning-clock-ui.svg and learning-clock-dashboard.svg
+#   |-- generate_progress_svg()
+#   |   `-- return the in-app View Progress dashboard visual
+#   `-- write the README UI, Progress, and Obsidian dashboard SVG assets
 #
 # Import note:
 #   This script is a direct repo utility, not an installed console entry point.
@@ -49,6 +51,7 @@ from learningclock.csv_store import ACTIVITY_TO_FIELD, ACTIVITIES, parse_duratio
 ASSET_DIR = ROOT / "docs" / "assets"
 UI_SVG = ASSET_DIR / "learning-clock-ui.svg"
 DASHBOARD_SVG = ASSET_DIR / "learning-clock-dashboard.svg"
+PROGRESS_SVG = ASSET_DIR / "learning-clock-progress.svg"
 QA_CSV = ROOT / "build" / "Clock-QA" / "learning_time_log.csv"
 
 
@@ -218,8 +221,10 @@ def generate_ui_svg() -> str:
   <text x="646" y="52" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="24">×</text>
   <text x="26" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">About</text>
   <text x="86" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Time</text>
-  <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Page Count</text>
-  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Stopped: Sandbox</text>
+  <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Set Date</text>
+  <text x="235" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Page Count</text>
+  <text x="347" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">View Progress</text>
+  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">No timer running</text>
   <g font-family="Segoe UI, Arial, sans-serif">
     {''.join(rows)}
   </g>
@@ -288,6 +293,76 @@ def generate_dashboard_svg() -> str:
 """
 
 
+def generate_progress_svg() -> str:
+
+    totals, pages, grand_total = read_dashboard_totals()
+    width = 1320
+    height = 520
+    panel_x = 446
+    panel_width = 850
+    chart_left = panel_x + 22
+    chart_width = panel_width - 44
+    baseline = 335
+    chart_top = 151
+    gap = 9
+    bar_width = (chart_width - gap * (len(ACTIVITIES) - 1)) / len(ACTIVITIES)
+    max_seconds = max(totals.values()) or 1
+
+    timer_rows = []
+    for index, activity in enumerate(ACTIVITIES):
+        y = 85 + index * 34
+        timer_rows.append(
+            f'<rect x="12" y="{y}" width="278" height="31" fill="#eeeeee" stroke="#8c8c8c"/>'
+            f'<text x="18" y="{y + 21}" fill="#111111" font-size="16">{text(activity)}</text>'
+            f'<text x="322" y="{y + 21}" fill="#050505" font-family="Consolas, Cascadia Mono, Courier New, monospace" font-size="16">00:00:00</text>'
+        )
+
+    bars = []
+    labels = []
+    for index, activity in enumerate(ACTIVITIES):
+        seconds = totals[activity]
+        bar_height = max(20, int((seconds / max_seconds) * (baseline - chart_top)))
+        x = chart_left + index * (bar_width + gap)
+        y = baseline - bar_height
+        bars.append(
+            f'<rect x="{x:.1f}" y="{y}" width="{bar_width:.1f}" height="{bar_height}" fill="#007ACC"/>'
+            f'<text x="{x + bar_width / 2:.1f}" y="{y + 5}" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" text-anchor="middle" dominant-baseline="hanging">{format_duration(seconds)}</text>'
+        )
+        labels.append(dashboard_label_svg(activity, x + bar_width / 2, baseline + 18))
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="LearningClock in-app View Progress dashboard">
+  <rect width="{width}" height="{height}" fill="#c8c6bd"/>
+  <rect x="0" y="0" width="{width}" height="44" fill="#f8f8f8"/>
+  <rect x="0" y="44" width="{width}" height="27" fill="#ffffff"/>
+  <text x="16" y="28" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="15">Learning Clock - {APP_VERSION} - LearningClock</text>
+  <text x="5" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">About</text>
+  <text x="47" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">Add Time</text>
+  <text x="108" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">Set Date</text>
+  <text x="166" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">Add Page Count</text>
+  <text x="257" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">View Progress</text>
+  <text x="12" y="80" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Viewing CSV progress</text>
+  <g font-family="Segoe UI, Arial, sans-serif">{''.join(timer_rows)}</g>
+  <rect x="12" y="430" width="104" height="28" fill="#eeeeee" stroke="#8c8c8c"/>
+  <text x="53" y="449" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="13">Stop</text>
+  <rect x="122" y="430" width="106" height="28" fill="#eeeeee" stroke="#8c8c8c"/>
+  <text x="141" y="449" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="13">Reset Timer</text>
+  <rect x="{panel_x}" y="85" width="{panel_width}" height="398" fill="#f4f8fc" stroke="#c5d8ec"/>
+  <text x="{panel_x + 14}" y="115" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Progress</text>
+  <rect x="{panel_x + panel_width - 59}" y="96" width="45" height="26" fill="#eeeeee" stroke="#8c8c8c"/>
+  <text x="{panel_x + panel_width - 53}" y="114" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="12">Refresh</text>
+  <line x1="{chart_left}" y1="{baseline}" x2="{chart_left + chart_width}" y2="{baseline}" stroke="#a9c5df" stroke-width="2"/>
+  <g font-family="Segoe UI, Arial, sans-serif">{''.join(bars)}{''.join(labels)}</g>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#111827">
+    <text x="{panel_x + 14}" y="463">Total time: <tspan fill="#164f86" font-weight="700">{format_duration(grand_total)}</tspan></text>
+    <text x="{panel_x + 174}" y="463">Total pages read: <tspan fill="#164f86" font-weight="700">{pages}</tspan></text>
+    <text x="{panel_x + 338}" y="463">Start Date: <tspan fill="#164f86" font-weight="700">06-05-26</tspan></text>
+    <text x="{panel_x + 510}" y="463">Last Update: <tspan fill="#164f86" font-weight="700">06-06-26</tspan></text>
+  </g>
+</svg>
+"""
+
+
 # Command-line entry point:
 #   What this function does:
 #     Ensures the asset folder exists and writes both generated SVG files.
@@ -300,8 +375,10 @@ def main() -> int:
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
     UI_SVG.write_text(generate_ui_svg(), encoding="utf-8")
     DASHBOARD_SVG.write_text(generate_dashboard_svg(), encoding="utf-8")
+    PROGRESS_SVG.write_text(generate_progress_svg(), encoding="utf-8")
     print(f"wrote {UI_SVG.relative_to(ROOT)}")
     print(f"wrote {DASHBOARD_SVG.relative_to(ROOT)}")
+    print(f"wrote {PROGRESS_SVG.relative_to(ROOT)}")
     return 0
 
 

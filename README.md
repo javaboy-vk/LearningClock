@@ -8,9 +8,13 @@ The project is intentionally small and operational: the GUI owns timer behavior,
 
 ## Application And Dashboard
 
-The desktop app presents learning timers that map directly to the persisted CSV activity columns.
+The desktop app presents learning timers that map directly to the persisted CSV activity columns. The refreshed view includes **Set Date** for backdated entries, **Add Page Count**, and the **View Progress** toggle.
 
 ![LearningClock desktop UI with learning timers](docs/assets/learning-clock-ui.svg)
+
+**View Progress** opens the same CSV-based progress information inside the desktop app, beside the timers.
+
+![LearningClock in-app View Progress dashboard](docs/assets/learning-clock-progress.svg)
 
 The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning-time graph from `diavgeia/LearningClock/Learning-Clock-Dashboard.md`.
 

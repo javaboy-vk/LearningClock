@@ -16,8 +16,10 @@
   <text x="646" y="52" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="24">×</text>
   <text x="26" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">About</text>
   <text x="86" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Time</text>
-  <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Page Count</text>
-  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Stopped: Sandbox</text>
+  <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Set Date</text>
+  <text x="235" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Page Count</text>
+  <text x="347" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">View Progress</text>
+  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">No timer running</text>
   <g font-family="Segoe UI, Arial, sans-serif">
     
             <g>
