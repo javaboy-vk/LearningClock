@@ -3,7 +3,7 @@
 The README Code Inventory image points to a generated GitHub Pages asset:
 
 ```text
-https://javaboy-vk.github.io/LearningClock/assets/pygount-summary.svg
+https://javaboy-vk.github.io/LearningClock/pygount-summary.svg
 ```
 
 That SVG is not committed to `main`. It is generated during the project Pages
@@ -22,8 +22,8 @@ The workflow:
 2. Installs the project with development dependencies.
 3. Runs the HTML coverage report.
 4. Runs `python scripts/pygount_summary.py`.
-5. Copies `build/reports/pygount-summary.svg` into the GitHub Pages artifact at
-   `assets/pygount-summary.svg`.
+5. Copies `build/reports/pygount-summary.svg` into the GitHub Pages artifact as
+   `pygount-summary.svg`.
 6. Deploys the complete Pages artifact.
 
 The action does not push commits, so it does not create bot commits that make

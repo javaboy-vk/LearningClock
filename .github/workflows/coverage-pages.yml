@@ -41,9 +41,9 @@ jobs:
       - name: Assemble Pages site
         shell: bash
         run: |
-          mkdir -p build/pages/assets
+          mkdir -p build/pages
           cp -R build/coverage/html/. build/pages/
-          cp build/reports/pygount-summary.svg build/pages/assets/pygount-summary.svg
+          cp build/reports/pygount-summary.svg build/pages/pygount-summary.svg
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6

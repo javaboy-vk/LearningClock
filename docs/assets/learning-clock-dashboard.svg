@@ -6,25 +6,27 @@
   <line x1="58" y1="322" x2="862" y2="322" stroke="#a9c5df" stroke-width="3"/>
   <g font-family="Segoe UI, Arial, sans-serif">
     
-            <rect x="58.0" y="115" width="78.7" height="207" rx="8" fill="#3279b7"/>
-            <text x="97.3" y="139" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:10:00</text>
-            <rect x="148.7" y="260" width="78.7" height="62" rx="8" fill="#4c8fc2"/>
-            <text x="188.0" y="284" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:03:00</text>
-            <rect x="239.3" y="136" width="78.7" height="186" rx="8" fill="#6aa2cc"/>
-            <text x="278.7" y="160" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:09:00</text>
-            <rect x="330.0" y="177" width="78.7" height="145" rx="8" fill="#2f6f9f"/>
-            <text x="369.3" y="201" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:07:00</text>
-            <rect x="420.7" y="157" width="78.7" height="165" rx="8" fill="#7aa9c9"/>
-            <text x="460.0" y="181" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:08:00</text>
-            <rect x="511.3" y="198" width="78.7" height="124" rx="8" fill="#4f86b3"/>
-            <text x="550.7" y="222" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:06:00</text>
-            <rect x="602.0" y="94" width="78.7" height="228" rx="8" fill="#245f8f"/>
-            <text x="641.3" y="118" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:11:00</text>
-            <rect x="692.7" y="198" width="78.7" height="124" rx="8" fill="#6d95b8"/>
-            <text x="732.0" y="222" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:06:00</text>
-            <rect x="783.3" y="281" width="78.7" height="41" rx="8" fill="#2c5d7f"/>
-            <text x="822.7" y="305" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:02:00</text>
-    <text x="97.3" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="97.3">Reading</tspan></text><text x="188.0" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="188.0">Audiobook</tspan></text><text x="278.7" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="278.7">Outlining</tspan></text><text x="369.3" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="369.3">Active</tspan><tspan x="369.3" dy="15">Recall</tspan></text><text x="460.0" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="460.0">Sandbox</tspan></text><text x="550.7" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="550.7">AI-Assisted</tspan><tspan x="550.7" dy="15">Engineering</tspan></text><text x="641.3" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="641.3">Classical</tspan><tspan x="641.3" dy="15">Software</tspan><tspan x="641.3" dy="15">Engineering</tspan></text><text x="732.0" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="732.0">Update</tspan><tspan x="732.0" dy="15">Diavgeia</tspan></text><text x="822.7" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="822.7">Promote</tspan><tspan x="822.7" dy="15">Stable</tspan><tspan x="822.7" dy="15">Concept</tspan></text>
+            <rect x="58.0" y="115" width="69.6" height="207" rx="8" fill="#007ACC"/>
+            <text x="92.8" y="139" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:10:00</text>
+            <rect x="139.6" y="260" width="69.6" height="62" rx="8" fill="#007ACC"/>
+            <text x="174.4" y="284" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:03:00</text>
+            <rect x="221.2" y="136" width="69.6" height="186" rx="8" fill="#007ACC"/>
+            <text x="256.0" y="160" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:09:00</text>
+            <rect x="302.8" y="177" width="69.6" height="145" rx="8" fill="#007ACC"/>
+            <text x="337.6" y="201" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:07:00</text>
+            <rect x="384.4" y="157" width="69.6" height="165" rx="8" fill="#007ACC"/>
+            <text x="419.2" y="181" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:08:00</text>
+            <rect x="466.0" y="288" width="69.6" height="34" rx="8" fill="#007ACC"/>
+            <text x="500.8" y="312" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:00:00</text>
+            <rect x="547.6" y="198" width="69.6" height="124" rx="8" fill="#007ACC"/>
+            <text x="582.4" y="222" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:06:00</text>
+            <rect x="629.2" y="94" width="69.6" height="228" rx="8" fill="#007ACC"/>
+            <text x="664.0" y="118" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:11:00</text>
+            <rect x="710.8" y="198" width="69.6" height="124" rx="8" fill="#007ACC"/>
+            <text x="745.6" y="222" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:06:00</text>
+            <rect x="792.4" y="281" width="69.6" height="41" rx="8" fill="#007ACC"/>
+            <text x="827.2" y="305" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">00:02:00</text>
+    <text x="92.8" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="92.8">Reading</tspan></text><text x="174.4" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="174.4">Audiobook</tspan></text><text x="256.0" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="256.0">Outlining</tspan></text><text x="337.6" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="337.6">Active</tspan><tspan x="337.6" dy="15">Recall</tspan></text><text x="419.2" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="419.2">Sandbox</tspan></text><text x="500.8" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="500.8">AI-Assisted</tspan><tspan x="500.8" dy="15">Architecture</tspan><tspan x="500.8" dy="15">&amp; Design</tspan></text><text x="582.4" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="582.4">AI-Assisted</tspan><tspan x="582.4" dy="15">Engineering</tspan></text><text x="664.0" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="664.0">Classical</tspan><tspan x="664.0" dy="15">Software</tspan><tspan x="664.0" dy="15">Engineering</tspan></text><text x="745.6" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="745.6">Update</tspan><tspan x="745.6" dy="15">Diavgeia</tspan></text><text x="827.2" y="350" fill="#111827" font-size="12" text-anchor="middle"><tspan x="827.2">Promote</tspan><tspan x="827.2" dy="15">Stable</tspan><tspan x="827.2" dy="15">Concept</tspan></text>
   </g>
   <g font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#111827">
     <text x="58" y="430">Total time: <tspan fill="#164f86" font-weight="700">01:02:00</tspan></text>

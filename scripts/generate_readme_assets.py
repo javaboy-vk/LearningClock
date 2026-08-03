@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - README Visual Asset Generator
 # Author    : javaboy-vk
 # Date      : 2026-06-09
-# Version   : v0.1.0
+# Version   : v5.0
 # Purpose:
 #   Generates stable SVG visuals used by README.md to show the app UI and
 #   Obsidian dashboard output.
@@ -88,6 +88,7 @@ def dashboard_label_lines(label: str) -> list[str]:
     explicit_breaks = {
         "Active Recall": ["Active", "Recall"],
         "AI-Assisted Engineering": ["AI-Assisted", "Engineering"],
+        "AI-Assisted Architecture & Design": ["AI-Assisted", "Architecture", "& Design"],
         "Classical Software Engineering": ["Classical", "Software", "Engineering"],
         "Update Diavgeia": ["Update", "Diavgeia"],
         "Promote Stable Concept": ["Promote", "Stable", "Concept"],
@@ -254,17 +255,7 @@ def generate_dashboard_svg() -> str:
 
     bars = []
     labels = []
-    colors = [
-        "#3279b7",
-        "#4c8fc2",
-        "#6aa2cc",
-        "#2f6f9f",
-        "#7aa9c9",
-        "#4f86b3",
-        "#245f8f",
-        "#6d95b8",
-        "#2c5d7f",
-    ]
+    colors = ["#007ACC"] * len(ACTIVITIES)
     for index, activity in enumerate(ACTIVITIES):
         seconds = totals[activity]
         bar_height = max(34, int((seconds / max_seconds) * 228))

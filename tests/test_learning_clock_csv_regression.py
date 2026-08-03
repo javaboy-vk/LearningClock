@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Regression Tests
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v0.1.0
+# Version   : v5.0
 # Purpose:
 #   Tests a supplied real CSV file without modifying the original file.
 #
@@ -403,6 +403,7 @@ def ensure_default_qa_csv(config):
             "active_recall": "00:03:00",
             "sandbox": "00:02:00",
             "ai_assisted_engineering": "00:04:00",
+            "ai_assisted_architecture_design": "00:00:00",
             "classical_software_engineering": "00:06:00",
             "update_diavgeia": "00:04:00",
             "promote_stable_concept": "00:01:00",
@@ -420,6 +421,7 @@ def ensure_default_qa_csv(config):
             "active_recall": "00:04:00",
             "sandbox": "00:06:00",
             "ai_assisted_engineering": "00:02:00",
+            "ai_assisted_architecture_design": "00:00:00",
             "classical_software_engineering": "00:05:00",
             "update_diavgeia": "00:02:00",
             "promote_stable_concept": "00:01:00",
@@ -437,6 +439,7 @@ def ensure_default_qa_csv(config):
             "active_recall": "00:07:00",
             "sandbox": "00:08:00",
             "ai_assisted_engineering": "00:06:00",
+            "ai_assisted_architecture_design": "00:00:00",
             "classical_software_engineering": "00:11:00",
             "update_diavgeia": "00:06:00",
             "promote_stable_concept": "00:02:00",

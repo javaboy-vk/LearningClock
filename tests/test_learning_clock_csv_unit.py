@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Unit Tests
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v0.1.0
+# Version   : v5.0
 # Purpose:
 #   Verifies CSV save, normalization, emergency recovery, and total calculations.
 # =============================================================================
@@ -12,10 +12,15 @@ from __future__ import annotations
 
 import csv
 import unittest
-from datetime import datetime
+from datetime import date, datetime
 
 from learning_clock_csv_test_support import LearningClockCsvHarness, learning_clock
-from learningclock.app import LearningClock
+from learningclock.app import (
+    LearningClock,
+    build_progress_summary,
+    load_autosave_minutes,
+    parse_session_date,
+)
 
 
 # Testing algorithm:
@@ -53,6 +58,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.clock.totals["Reading"] = 60                                      # Seed one minute of reading.
         self.clock.totals["Sandbox"] = 3600                                    # Seed one hour of sandbox time.
         self.clock.totals["AI-Assisted Engineering"] = 120                     # Seed AI-assisted engineering time.
+        self.clock.totals["AI-Assisted Architecture & Design"] = 240          # Seed AI architecture/design time.
         self.clock.totals["Classical Software Engineering"] = 180              # Seed classical engineering time.
         self.clock.totals["Update Diavgeia"] = 30                              # Seed thirty seconds in a mapped activity.
         self.clock.pages_read = 7                                              # Seed session page count.
@@ -66,10 +72,25 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("00:01:00", row["reading"])                           # Reading seconds become HH:MM:SS.
         self.assertEqual("01:00:00", row["sandbox"])                           # Sandbox seconds become HH:MM:SS.
         self.assertEqual("00:02:00", row["ai_assisted_engineering"])           # New AI-assisted field is written.
+        self.assertEqual("00:04:00", row["ai_assisted_architecture_design"])  # AI architecture/design field is written.
         self.assertEqual("00:03:00", row["classical_software_engineering"])    # New classical field is written.
         self.assertEqual("00:00:30", row["update_diavgeia"])                   # Mapped activity field is written.
         self.assertEqual("7", row["pages_read"])                               # Page count is persisted as text.
-        self.assertEqual("01:06:30", row["total"])                             # Total sums all activity seconds.
+        self.assertEqual("01:10:30", row["total"])                             # Total sums all activity seconds.
+
+    def test_create_session_row_uses_selected_backdate(self):
+
+        row = learning_clock.CsvStore.create_session_row(
+            self.clock,
+            datetime(2026, 6, 5, 9, 0, 0),
+            datetime(2026, 6, 5, 10, 0, 0),
+            {activity: 0 for activity in learning_clock.ACTIVITIES},
+            1,
+            session_date=date(2026, 6, 1),
+        )
+
+        self.assertEqual("2026-06-01", row["date"])
+        self.assertEqual(date(2026, 6, 1), parse_session_date("06/01/2026"))
 
     # Testing algorithm:
     #   What we test:
@@ -86,8 +107,9 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
                 active_recall="00:01:00",                                      # First row active recall duration.
                 sandbox="00:05:00",                                           # First row sandbox duration.
                 ai_assisted_engineering="00:02:00",                            # First row AI-assisted duration.
+                ai_assisted_architecture_design="00:03:00",                   # First row AI architecture/design duration.
                 pages_read="3",                                                # First row page count.
-                total="00:18:00",                                              # First row total duration.
+                total="00:21:00",                                              # First row total duration.
             ),
             self.row(
                 reading="00:20:00",
@@ -105,10 +127,46 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("00:01:00", total["active_recall"])                   # Active Recall values are summed.
         self.assertEqual("00:05:00", total["sandbox"])                         # Sandbox value carries forward.
         self.assertEqual("00:02:00", total["ai_assisted_engineering"])         # AI-assisted value carries forward.
+        self.assertEqual("00:03:00", total["ai_assisted_architecture_design"])  # AI architecture/design value carries forward.
         self.assertEqual("00:04:00", total["classical_software_engineering"])  # Classical engineering value carries forward.
         self.assertEqual("00:07:30", total["audiobook"])                       # Audiobook value carries forward.
         self.assertEqual("7", total["pages_read"])                             # Page counts are summed.
-        self.assertEqual("00:49:30", total["total"])                           # Grand total sums activity totals.
+        self.assertEqual("00:52:30", total["total"])                           # Grand total sums activity totals.
+
+    # Operational algorithm:
+    #   What we test:
+    #     The in-app progress chart uses the same activity, total, page, and date aggregation as CSV reporting.
+    #   Success:
+    #     A normalized CSV row set becomes chart-ready totals without starting Tkinter.
+    #   Error checks:
+    #     Assertions catch missing activity fields or mismatched chart footer totals.
+    def test_build_progress_summary_aggregates_csv_sessions(self):
+
+        rows = [
+            self.row(
+                date="2026-06-05",
+                reading="00:10:00",
+                ai_assisted_architecture_design="00:03:00",
+                pages_read="2",
+                total="00:13:00",
+            ),
+            self.row(
+                date="2026-06-06",
+                ai_assisted_engineering="00:04:00",
+                pages_read="5",
+                total="00:04:00",
+            ),
+        ]
+
+        summary = build_progress_summary(rows)
+
+        self.assertEqual(600, summary["totals"]["Reading"])
+        self.assertEqual(180, summary["totals"]["AI-Assisted Architecture & Design"])
+        self.assertEqual(240, summary["totals"]["AI-Assisted Engineering"])
+        self.assertEqual(1020, summary["total_seconds"])
+        self.assertEqual(7, summary["pages_read"])
+        self.assertEqual("2026-06-05", summary["first_date"])
+        self.assertEqual("2026-06-06", summary["last_date"])
 
     # Testing algorithm:
     #   What we test:
@@ -187,6 +245,72 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("5", rows[2]["pages_read"])                          # Page total includes both rows.
         self.assertEqual("00:22:00", rows[2]["total"])                        # Grand total includes all activities.
 
+    def test_save_session_summary_sorts_backdated_session_chronologically(self):
+
+        self.write_csv([self.row(date="2026-06-05", reading="00:01:00", total="00:01:00")])
+        self.clock.totals["Reading"] = 60
+        backdated_row = learning_clock.CsvStore.create_session_row(
+            self.clock,
+            self.clock.session_start,
+            datetime(2026, 6, 5, 10, 0, 0),
+            self.clock.totals,
+            0,
+            session_date=date(2026, 6, 1),
+        )
+
+        learning_clock.CsvStore.save_session_summary(self.clock, backdated_row)
+
+        rows = self.read_log_rows()
+        self.assertEqual(["2026-06-01", "2026-06-05", "TOTAL"], [row["date"] for row in rows])
+
+    # Operational algorithm:
+    #   What we test:
+    #     Re-saving a current application session replaces its earlier autosave checkpoint.
+    #   Success:
+    #     The CSV retains one updated session row and one recalculated TOTAL row.
+    #   Error checks:
+    #     Assertions catch duplicated interval totals after an autosave or final close.
+    def test_save_session_summary_replaces_matching_autosave_checkpoint(self):
+
+        self.clock.totals["Reading"] = 60                                    # Seed the first checkpoint.
+        first_row = self.clock.create_session_row(datetime(2026, 6, 5, 9, 5, 0))
+        learning_clock.CsvStore.save_session_summary(
+            self.clock,
+            first_row,
+            replace_session=True,
+        )
+
+        self.clock.totals["Reading"] = 120                                   # Advance time before the next checkpoint.
+        second_row = self.clock.create_session_row(datetime(2026, 6, 5, 9, 10, 0))
+        saved = learning_clock.CsvStore.save_session_summary(
+            self.clock,
+            second_row,
+            replace_session=True,
+        )
+
+        self.assertTrue(saved)                                                # Updated checkpoint should save.
+        rows = self.read_log_rows()                                           # Read checkpoint and TOTAL rows.
+        self.assertEqual(2, len(rows))                                        # One session row plus TOTAL only.
+        self.assertEqual("09:10:00", rows[0]["session_end"])                 # New checkpoint replaces the old end time.
+        self.assertEqual("00:02:00", rows[0]["reading"])                    # New checkpoint replaces old totals.
+        self.assertEqual("00:02:00", rows[1]["total"])                      # TOTAL does not double count checkpoints.
+
+    # Operational algorithm:
+    #   What we test:
+    #     The app-local properties file accepts a positive autosave interval and rejects zero.
+    #   Success:
+    #     Valid configuration is used and invalid configuration falls back to the safe default.
+    #   Error checks:
+    #     Assertions catch missing validation for values that would disable autosave scheduling.
+    def test_load_autosave_minutes_reads_positive_properties_value(self):
+
+        properties_file = self.log_dir / "clock.properties"                  # Isolate properties from the source tree.
+        properties_file.write_text("autosave_minutes=12\n", encoding="utf-8")
+        self.assertEqual(12, load_autosave_minutes(properties_file))          # Positive configured interval is accepted.
+
+        properties_file.write_text("autosave_minutes=0\n", encoding="utf-8")
+        self.assertEqual(5, load_autosave_minutes(properties_file))           # Zero falls back to the default interval.
+
     # Testing algorithm:
     #   What we test:
     #     Existing CSV rows are normalized across legacy field names and missing values.
@@ -211,6 +335,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("00:03:00", normalized["update_diavgeia"])           # Legacy field maps to current field.
         self.assertEqual("00:04:00", normalized["active_recall"])             # Legacy memorizing maps to Active Recall.
         self.assertEqual("00:06:00", normalized["sandbox"])                   # Legacy experimenting combines with Sandbox.
+        self.assertEqual("00:00:00", normalized["ai_assisted_architecture_design"])  # The current field defaults when absent.
         self.assertEqual("00:00:00", normalized["outlining"])                 # Missing duration defaults to zero.
         self.assertEqual("0", normalized["pages_read"])                       # Missing pages default to zero.
         self.assertEqual("00:15:00", normalized["total"])                     # Total is recalculated from activity fields.
@@ -261,8 +386,8 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
 
         rows = self.read_log_rows()                                         # Read merged CSV output.
         self.assertEqual(3, len(rows))                                      # Current, emergency, TOTAL.
-        self.assertEqual("2026-06-05", rows[0]["date"])                     # Current session row is first.
-        self.assertEqual("2026-06-04", rows[1]["date"])                     # Emergency row is merged.
+        self.assertEqual("2026-06-04", rows[0]["date"])                     # Older emergency row is first chronologically.
+        self.assertEqual("2026-06-05", rows[1]["date"])                     # Current row follows the older session.
         self.assertEqual("TOTAL", rows[2]["date"])                          # TOTAL row remains final.
         self.assertEqual("00:05:00", rows[2]["reading"])                    # Reading total includes both rows.
         self.assertEqual("00:05:00", rows[2]["total"])                      # Grand total includes both rows.
@@ -319,6 +444,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     def test_manual_input_accepts_supported_formats_and_rejects_bad_values(self):
 
         self.assertEqual(300, LearningClock.parse_manual_input("5"))        # Plain number means minutes.
+        self.assertEqual(0, LearningClock.parse_manual_input("0"))          # Zero is a valid no-op duration.
         self.assertEqual(5400, LearningClock.parse_manual_input("01:30"))   # HH:MM converts to seconds.
         self.assertEqual(5445, LearningClock.parse_manual_input("01:30:45"))  # HH:MM:SS converts to seconds.
 

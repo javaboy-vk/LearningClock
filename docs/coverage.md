@@ -42,5 +42,5 @@ The published Code Inventory image is generated during the same workflow and is
 served from:
 
 ```text
-https://javaboy-vk.github.io/LearningClock/assets/pygount-summary.svg
+https://javaboy-vk.github.io/LearningClock/pygount-summary.svg
 ```

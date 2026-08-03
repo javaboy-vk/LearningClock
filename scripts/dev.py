@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Developer Command Runner
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v0.1.0
+# Version   : v5.0
 # Purpose:
 #   Provides Maven-style lifecycle commands for the Python project.
 # =============================================================================
@@ -323,6 +323,19 @@ def release(args: list[str] | None = None) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         print(f"released: {source.relative_to(ROOT)} -> {target}")
+
+    default_clock_properties = ROOT / "src" / "learningclock" / "clock.properties"
+    deployed_clock_properties = production_dir / "clock.properties"
+    if not default_clock_properties.exists():
+        raise SystemExit(f"Release source file was not found: {default_clock_properties}")
+    if deployed_clock_properties.exists():
+        print(f"preserved configured autosave file: {deployed_clock_properties}")
+    elif parsed_args.dry_run:
+        print(f"would release: {default_clock_properties.relative_to(ROOT)} -> {deployed_clock_properties}")
+    else:
+        deployed_clock_properties.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(default_clock_properties, deployed_clock_properties)
+        print(f"released: {default_clock_properties.relative_to(ROOT)} -> {deployed_clock_properties}")
 
     export_dashboard_components(LEARNING_PATH_PROPERTIES_DIR, dry_run=parsed_args.dry_run)
 

@@ -17,6 +17,7 @@ const activityFields = [
   ["Outlining", "outlining"],
   ["Active Recall", "active_recall", ["memorizing"]],
   ["Sandbox", "sandbox", ["experimenting"]],
+  ["AI-Assisted Architecture & Design", "ai_assisted_architecture_design"],
   ["AI-Assisted Engineering", "ai_assisted_engineering"],
   ["Classical Software Engineering", "classical_software_engineering"],
   ["Update Diavgeia", "update_diavgeia"],
@@ -184,7 +185,7 @@ function applyStyles(root) {
     }
     .lc-bars {
       display: grid;
-      grid-template-columns: repeat(9, minmax(0, 1fr));
+      grid-template-columns: repeat(10, minmax(0, 1fr));
       gap: 10px;
       align-items: end;
       height: 238px;
@@ -203,7 +204,7 @@ function applyStyles(root) {
       width: min(118px, 100%);
       min-height: 34px;
       border-radius: 8px 8px 0 0;
-      background: #3279b7;
+      background: #007ACC;
       color: #fff;
       display: flex;
       align-items: flex-start;
@@ -217,7 +218,7 @@ function applyStyles(root) {
     }
     .lc-labels {
       display: grid;
-      grid-template-columns: repeat(9, minmax(0, 1fr));
+      grid-template-columns: repeat(10, minmax(0, 1fr));
       gap: 10px;
       margin-top: 12px;
       text-align: center;

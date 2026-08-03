@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v0.1.0
+# Version   : v5.0
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, and shutdown
 #   lifecycle for LearningClock.
@@ -88,9 +88,11 @@
 from __future__ import annotations
 
 import argparse
+import calendar
 import sys
 import tkinter as tk
-from datetime import datetime
+import tkinter.font as tkfont
+from datetime import date, datetime
 from pathlib import Path
 from tkinter import messagebox
 
@@ -116,16 +118,20 @@ if __package__ in (None, ""):
 try:
     from learningclock.csv_store import (
         ACTIVITIES,
+        ACTIVITY_TO_FIELD,
         CSV_DATE_FORMAT_DESCRIPTION,
         CsvStore,
         format_seconds,
+        parse_duration,
     )
 except ModuleNotFoundError:
     from csv_store import (  # type: ignore[no-redef]
         ACTIVITIES,
+        ACTIVITY_TO_FIELD,
         CSV_DATE_FORMAT_DESCRIPTION,
         CsvStore,
         format_seconds,
+        parse_duration,
     )
 
 # Operational algorithm:
@@ -136,7 +142,7 @@ except ModuleNotFoundError:
 #   Error handling:
 #     No special error handling is needed because the values are static strings.
 APP_TITLE = "Learning Clock"
-APP_VERSION = "v3.4"
+APP_VERSION = "v5.0"
 
 # Operational algorithm:
 #   What this constant group does:
@@ -145,9 +151,66 @@ APP_VERSION = "v3.4"
 #     Mode changes resize the app predictably without recalculating geometry at runtime.
 #   Error handling:
 #     Tkinter reports invalid geometry strings when the window applies them.
-NORMAL_GEOMETRY = "520x430"
-ADD_TIME_GEOMETRY = "690x430"
-ADD_PAGE_COUNT_GEOMETRY = "620x430"
+NORMAL_GEOMETRY = "450x420"
+ADD_TIME_GEOMETRY = "540x420"
+PROGRESS_GEOMETRY = "1320x465"
+DEFAULT_AUTOSAVE_MINUTES = 5
+AUTOSAVE_PROPERTIES_FILE = Path(__file__).resolve().with_name("clock.properties")
+
+
+def load_autosave_minutes(properties_file: Path = AUTOSAVE_PROPERTIES_FILE) -> int:
+
+    """Return the positive autosave interval configured beside this application."""
+    try:
+        for raw_line in properties_file.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith(("#", ";")) or "=" not in line:
+                continue
+            key, value = (part.strip() for part in line.split("=", 1))
+            if key == "autosave_minutes":
+                minutes = int(value)
+                if minutes > 0:
+                    return minutes
+                raise ValueError("autosave_minutes must be greater than zero")
+    except (OSError, ValueError) as exc:
+        print(
+            f"LearningClock autosave configuration ignored ({exc}); "
+            f"using {DEFAULT_AUTOSAVE_MINUTES} minutes.",
+            file=sys.stderr,
+        )
+    return DEFAULT_AUTOSAVE_MINUTES
+
+
+def parse_session_date(value: str) -> date | None:
+
+    """Parse the optional Set Date value entered in the application's MM/DD/YYYY format."""
+    normalized = value.strip()
+    if not normalized:
+        return None
+    return datetime.strptime(normalized, "%m/%d/%Y").date()
+
+
+def build_progress_summary(rows):
+
+    """Aggregate normalized CSV session rows for the in-app progress chart."""
+    totals = {activity: 0 for activity in ACTIVITIES}
+    total_seconds = 0
+    pages_read = 0
+    for row in rows:
+        for activity, field_name in ACTIVITY_TO_FIELD.items():
+            totals[activity] += parse_duration(row.get(field_name, "00:00:00"))
+        total_seconds += parse_duration(row.get("total", "00:00:00"))
+        try:
+            pages_read += int(row.get("pages_read", "0") or 0)
+        except ValueError:
+            pass
+    return {
+        "totals": totals,
+        "total_seconds": total_seconds,
+        "pages_read": pages_read,
+        "first_date": rows[0].get("date") if rows else None,
+        "last_date": rows[-1].get("date") if rows else None,
+    }
 
 
 # Operational algorithm:
@@ -205,6 +268,7 @@ class LearningClock:
         self.log_dir = self.store.log_dir                                           # Expose resolved log directory.
         self.log_file = self.store.log_file                                         # Expose resolved CSV file path.
         self.diagnostic_log_file = self.store.diagnostic_log_file                   # Expose diagnostic log path.
+        self.autosave_minutes = load_autosave_minutes()                             # Read deployed app-local setting.
 
         self.write_diagnostic_log(
             "Application initialized\n"
@@ -213,6 +277,8 @@ class LearningClock:
             f"log_dir={self.log_dir}\n"
             f"log_file={self.log_file}\n"
             f"diagnostic_log_file={self.diagnostic_log_file}\n"
+            f"autosave_properties_file={AUTOSAVE_PROPERTIES_FILE}\n"
+            f"autosave_minutes={self.autosave_minutes}\n"
             f"python={sys.executable}\n"
             f"csv_date_format={CSV_DATE_FORMAT_DESCRIPTION}"
         )
@@ -221,11 +287,15 @@ class LearningClock:
         self.session_saved = False                                                  # Save happens only during close.
         self.is_closing = False                                                     # Prevent duplicate close handling.
         self.after_job_id = None                                                    # Tkinter scheduled update handle.
+        self.autosave_after_job_id = None                                           # Tkinter scheduled autosave handle.
 
         self.active_activity = None                                                 # Currently running activity name.
         self.active_start = None                                                    # Start timestamp for active timer.
         self.add_time_mode = False                                                  # Manual-time UI mode flag.
         self.add_page_count_mode = False                                            # Page-count UI mode flag.
+        self.set_date_mode = False                                                  # Optional backdated-session date editor flag.
+        self.progress_mode = False                                                  # CSV progress-chart UI mode flag.
+        self.selected_session_date = None                                           # Date written to CSV when Set Date is used.
 
         self.totals = {activity: 0 for activity in ACTIVITIES}                      # Accumulated seconds by activity.
         self.pages_read = 0                                                         # Accumulated session pages.
@@ -233,12 +303,17 @@ class LearningClock:
         self.labels = {}                                                            # Activity -> visible timer label.
         self.manual_entries = {}                                                    # Activity -> manual-time entry.
         self.page_count_entry = None                                                # Entry widget for pages.
-        self.add_time_button = None                                                 # Button shown in add-time mode.
-        self.add_pages_button = None                                                # Button shown in add-page mode.
+        self.date_frame = None                                                      # Hidden Set Date controls below the timer buttons.
+        self.date_entry = None                                                      # Optional MM/DD/YYYY session date entry.
+        self.date_picker_field = None                                               # Date field used to anchor the calendar popup.
+        self.progress_panel = None                                                  # Right-side CSV chart panel.
+        self.progress_canvas = None                                                 # Canvas used to render progress bars.
+        self.progress_footer = None                                                 # Obsidian-style progress summary row.
 
         self.build_menu()                                                           # Create menu commands.
         self.build_main_ui()                                                        # Create timer controls.
         self.update_display()                                                       # Start recurring label updates.
+        self.schedule_autosave()                                                    # Start recurring session checkpoints.
 
     # Operational algorithm:
     #   What this method does:
@@ -273,8 +348,10 @@ class LearningClock:
 
         menu_bar = tk.Menu(self.root)                                               # Create menu bar.
         menu_bar.add_command(label="About", command=self.show_about)                # Show runtime/path info.
-        menu_bar.add_command(label="Add Time", command=self.enter_add_time_mode)    # Enter manual duration mode.
-        menu_bar.add_command(label="Add Page Count", command=self.enter_add_page_count_mode)  # Enter pages mode.
+        menu_bar.add_command(label="Add Time", command=self.toggle_add_time_mode)   # Show/hide manual duration fields.
+        menu_bar.add_command(label="Set Date", command=self.toggle_set_date_mode)  # Show/hide the backdated-session date editor.
+        menu_bar.add_command(label="Add Page Count", command=self.toggle_add_page_count_mode)  # Show/hide page-count field.
+        menu_bar.add_command(label="View Progress", command=self.toggle_progress_mode)  # Show/hide CSV dashboard beside timers.
         self.root.config(menu=menu_bar)                                             # Attach menu to window.
 
     # Operational algorithm:
@@ -294,8 +371,12 @@ class LearningClock:
         )
         self.status.pack(fill="x", padx=16, pady=(6, 3))                      # Place status above timers.
 
-        self.timer_frame = tk.Frame(self.root)                                # Container for activity rows.
-        self.timer_frame.pack(fill="x", padx=16, pady=0)                      # Keep rows compact.
+        self.main_content = tk.Frame(self.root)                                # Holds the timer controls and optional progress pane.
+        self.main_content.pack(fill="both", expand=True, padx=16, pady=0)    # Permit the progress pane to expand right.
+        self.timer_panel = tk.Frame(self.main_content)                         # Left-side timer controls.
+        self.timer_panel.pack(side="left", fill="y")                         # Keep timer controls at their natural width.
+        self.timer_frame = tk.Frame(self.timer_panel)                          # Container for activity rows.
+        self.timer_frame.pack(fill="x", pady=0)                               # Keep rows compact.
 
         for activity in ACTIVITIES:                                           # Create one row per activity.
             row = tk.Frame(self.timer_frame)                                  # Row owns button/label/entries.
@@ -305,7 +386,7 @@ class LearningClock:
                 row,                                                          # Parent row.
                 text=activity,                                                # Activity label on button.
                 font=("Arial", 12),                                           # Readable button font.
-                width=32,                                                     # Fixed width keeps rows aligned.
+                width=30,                                                     # Leaves a narrow trailing gap comparable to the timer-to-chart gap.
                 anchor="w",                                                   # Left-align activity text.
                 command=lambda a=activity: self.switch_to(a),                 # Capture activity for callback.
             )
@@ -319,15 +400,11 @@ class LearningClock:
             entry.bind("<Return>", lambda _event: self.add_all_manual_time())  # Enter submits all manual values.
             self.manual_entries[activity] = entry                              # Store for add-time mode.
 
-            if activity == "Reading":                                         # Put page entry on reading row.
-                self.page_count_entry = tk.Entry(row, font=("Arial", 11), width=8)  # Hidden page-count entry.
-                self.page_count_entry.bind("<Return>", lambda _event: self.add_page_count())  # Enter adds pages.
-
-        controls_frame = tk.Frame(self.root)                                   # Container for command buttons.
-        controls_frame.pack(fill="x", padx=16, pady=(4, 0), anchor="w")        # Place below activity rows.
+        self.controls_frame = tk.Frame(self.timer_panel)                       # Container for command buttons.
+        self.controls_frame.pack(fill="x", pady=(4, 0), anchor="w")         # Place below timer rows and optional date controls.
 
         stop_button = tk.Button(
-            controls_frame,                                                    # Parent controls row.
+            self.controls_frame,                                               # Parent controls row.
             text="Stop",                                                       # Stop current timer.
             font=("Arial", 10),                                                # Compact button font.
             width=12,                                                          # Fixed width for alignment.
@@ -336,7 +413,7 @@ class LearningClock:
         stop_button.pack(side="left", padx=(0, 6))                             # First command button.
 
         reset_button = tk.Button(
-            controls_frame,                                                    # Parent controls row.
+            self.controls_frame,                                               # Parent controls row.
             text="Reset Timer",                                                # Reset currently running activity.
             font=("Arial", 10),                                                # Compact button font.
             width=12,                                                          # Fixed width for alignment.
@@ -344,21 +421,19 @@ class LearningClock:
         )
         reset_button.pack(side="left", padx=(0, 6))                            # Second command button.
 
-        self.add_time_button = tk.Button(
-            controls_frame,                                                    # Parent controls row.
-            text="Add Time",                                                   # Submit manual time entries.
-            font=("Arial", 10),                                                # Compact button font.
-            width=12,                                                          # Fixed width for alignment.
-            command=self.add_all_manual_time,                                  # Validate/add durations.
-        )
+        self.page_count_frame = tk.Frame(self.controls_frame)                  # Hidden page-count control shares the Set Date location.
+        self.page_count_entry = tk.Entry(self.page_count_frame, font=("Arial", 11), width=8)
+        self.page_count_entry.pack(side="left")
+        self.page_count_entry.bind("<Return>", lambda _event: self.add_page_count())
 
-        self.add_pages_button = tk.Button(
-            controls_frame,                                                    # Parent controls row.
-            text="Add Pages",                                                  # Submit page-count entry.
-            font=("Arial", 10),                                                # Compact button font.
-            width=12,                                                          # Fixed width for alignment.
-            command=self.add_page_count,                                       # Validate/add pages.
-        )
+        self.date_frame = tk.Frame(self.controls_frame)                        # Hidden date control shares the Stop/Reset row.
+        self.date_picker_field = tk.Frame(self.date_frame, bd=1, relief="sunken")  # Outlook-like date field with embedded picker icon.
+        self.date_picker_field.pack(side="left")
+        self.date_entry = tk.Entry(self.date_picker_field, font=("Arial", 10), width=12, bd=0)
+        self.date_entry.pack(side="left", padx=(3, 0), pady=2)
+        self.date_entry.bind("<Return>", lambda _event: self.apply_session_date())
+        tk.Button(self.date_picker_field, text="▦", width=2, bd=0, command=self.open_date_picker).pack(side="left", padx=(2, 1), pady=1)
+
 
     # Operational algorithm:
     #   What this method does:
@@ -376,10 +451,126 @@ class LearningClock:
             f"Diagnostic Log: {self.diagnostic_log_file}",                     # Diagnostic log path.
             f"CSV Date Format: {CSV_DATE_FORMAT_DESCRIPTION}",                 # Persisted date contract.
             "Manual Add accepts minutes, HH:MM, or HH:MM:SS.",                 # Manual time input contract.
-            "The session is saved only when the app closes.",                  # Save lifecycle note.
+            f"The current session autosaves every {self.autosave_minutes} minutes.",  # Save lifecycle note.
             "Emergency CSV files are merged automatically on the next successful save.",  # Recovery note.
         ])
         messagebox.showinfo("About Learning Clock", about_text)                # Display the information.
+
+    def toggle_set_date_mode(self):
+
+        if self.set_date_mode:
+            if not self.apply_session_date():
+                return
+            self.date_frame.pack_forget()
+            self.set_date_mode = False
+            self.root.geometry(NORMAL_GEOMETRY)
+            self.restore_running_status()
+            return
+
+        if self.add_page_count_mode:                                           # Both controls use the same aligned location.
+            self.exit_add_page_count_mode()
+        self.set_date_mode = True
+        if self.selected_session_date is not None:
+            self.date_entry.delete(0, tk.END)
+            self.date_entry.insert(0, self.selected_session_date.strftime("%m/%d/%Y"))
+        self.show_control_at_timer_column(self.date_frame)
+        self.date_entry.focus_set()
+
+    def show_control_at_timer_column(self, control):
+
+        control.pack(side="left", padx=0)
+        self.root.update_idletasks()
+        timer_label = self.labels[ACTIVITIES[0]]
+        label_font = tkfont.Font(font=timer_label.cget("font"))
+        text_inset = max(0, (timer_label.winfo_width() - label_font.measure(timer_label.cget("text"))) // 2)
+        timer_value_x = timer_label.winfo_x() + text_inset                    # Align to the visible digits, not the label's outer edge.
+        control_offset = max(0, timer_value_x - control.winfo_x())             # Keep Stop/Reset fixed while aligning the control.
+        control.pack_configure(padx=(control_offset, 0))
+
+    def apply_session_date(self):
+
+        try:
+            self.selected_session_date = parse_session_date(self.date_entry.get())
+        except ValueError:
+            messagebox.showerror("Set Date", "Use a valid date in MM/DD/YYYY format.")
+            self.date_entry.focus_set()
+            return False
+        if self.selected_session_date is not None:
+            self.date_entry.delete(0, tk.END)
+            self.date_entry.insert(0, self.selected_session_date.strftime("%m/%d/%Y"))
+            self.status.config(text=f"Session date set to {self.date_entry.get()}")
+        return True
+
+    def open_date_picker(self):
+
+        try:
+            initial_date = parse_session_date(self.date_entry.get()) or self.selected_session_date or date.today()
+        except ValueError:
+            initial_date = self.selected_session_date or date.today()
+
+        picker = tk.Toplevel(self.root)
+        picker.title("Select Session Date")
+        picker.transient(self.root)
+        picker.resizable(False, False)
+        state = {"year": initial_date.year, "month": initial_date.month}
+        header = tk.Frame(picker)
+        header.pack(fill="x", padx=8, pady=(8, 4))
+        calendar_frame = tk.Frame(picker)
+        calendar_frame.pack(padx=8, pady=(0, 8))
+        month_label = tk.Label(header, font=("Arial", 11, "bold"))
+
+        def select_day(day):
+            selected = date(state["year"], state["month"], day)
+            self.selected_session_date = selected
+            self.date_entry.delete(0, tk.END)
+            self.date_entry.insert(0, selected.strftime("%m/%d/%Y"))
+            self.status.config(text=f"Session date set to {self.date_entry.get()}")
+            picker.destroy()
+
+        def render_calendar():
+            for child in calendar_frame.winfo_children():
+                child.destroy()
+            month_label.config(text=f"{calendar.month_name[state['month']]} {state['year']}")
+            for column, weekday in enumerate(("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")):
+                tk.Label(calendar_frame, text=weekday, width=4, font=("Arial", 9, "bold")).grid(row=0, column=column)
+            for row, week in enumerate(calendar.monthcalendar(state["year"], state["month"]), start=1):
+                for column, day_number in enumerate(week):
+                    if day_number:
+                        tk.Button(calendar_frame, text=str(day_number), width=3, command=lambda day=day_number: select_day(day)).grid(row=row, column=column)
+                    else:
+                        tk.Label(calendar_frame, text="", width=4).grid(row=row, column=column)
+
+        def change_month(delta):
+            state["month"] += delta
+            if state["month"] == 0:
+                state["year"] -= 1
+                state["month"] = 12
+            elif state["month"] == 13:
+                state["year"] += 1
+                state["month"] = 1
+            render_calendar()
+
+        tk.Button(header, text="<", width=3, command=lambda: change_month(-1)).pack(side="left")
+        month_label.pack(side="left", expand=True)
+        tk.Button(header, text=">", width=3, command=lambda: change_month(1)).pack(side="right")
+        render_calendar()
+        picker.update_idletasks()
+        picker.geometry(f"+{self.date_picker_field.winfo_rootx()}+{self.date_picker_field.winfo_rooty() + self.date_picker_field.winfo_height()}")
+        picker.grab_set()
+
+    def toggle_add_time_mode(self):
+
+        if self.add_time_mode:
+            self.exit_add_time_mode()
+        else:
+            self.enter_add_time_mode()
+
+    def toggle_add_page_count_mode(self):
+
+        if self.add_page_count_mode:
+            self.exit_add_page_count_mode()
+        else:
+            self.enter_add_page_count_mode()
 
     # Operational algorithm:
     #   What this method does:
@@ -390,6 +581,8 @@ class LearningClock:
     #     Re-entering the same mode is a no-op; page-count mode is closed first.
     def enter_add_time_mode(self):
 
+        if self.progress_mode:                                                  # Keep the progress pane separate from data-entry modes.
+            self.exit_progress_mode()
         if self.add_page_count_mode:                                           # Only one temporary input mode at a time.
             self.exit_add_page_count_mode()
         if self.add_time_mode:                                                 # Already in add-time mode.
@@ -400,8 +593,6 @@ class LearningClock:
 
         for activity in ACTIVITIES:                                            # Show one manual entry per activity.
             self.manual_entries[activity].pack(side="left", padx=(8, 0))
-
-        self.add_time_button.pack(side="left", padx=(0, 0))                    # Show submit button.
 
         first_entry = self.manual_entries.get(ACTIVITIES[0])                   # Focus first activity entry.
         if first_entry is not None:                                            # Defensive check for UI setup.
@@ -426,7 +617,6 @@ class LearningClock:
         for entry in self.manual_entries.values():                             # Hide all manual entry fields.
             entry.pack_forget()
 
-        self.add_time_button.pack_forget()                                     # Hide submit button.
         self.root.geometry(NORMAL_GEOMETRY)                                    # Restore compact layout.
         self.restore_running_status()                                          # Restore status text.
 
@@ -439,19 +629,24 @@ class LearningClock:
     #     Re-entering the same mode is a no-op; add-time mode is closed first.
     def enter_add_page_count_mode(self):
 
+        if self.progress_mode:                                                  # Keep the progress pane separate from data-entry modes.
+            self.exit_progress_mode()
         if self.add_time_mode:                                                 # Only one temporary input mode at a time.
             self.exit_add_time_mode()
+        if self.set_date_mode:                                                 # Both controls occupy the timer-value column.
+            if not self.apply_session_date():
+                return
+            self.date_frame.pack_forget()
+            self.set_date_mode = False
         if self.add_page_count_mode:                                           # Already in page-count mode.
             return
 
         self.add_page_count_mode = True                                        # Mark mode active.
-        self.root.geometry(ADD_PAGE_COUNT_GEOMETRY)                            # Widen window for page entry.
 
-        if self.page_count_entry is not None:                                  # Page entry exists on Reading row.
-            self.page_count_entry.pack(side="left", padx=(8, 0))               # Show page-count input.
+        if self.page_count_entry is not None:                                  # Page entry is below the timers, aligned with values.
+            self.show_control_at_timer_column(self.page_count_frame)
             self.page_count_entry.focus_set()                                  # Put cursor in page entry.
 
-        self.add_pages_button.pack(side="left", padx=(0, 0))                   # Show submit button.
         self.status.config(text="Add Page Count mode")                         # Tell user the active mode.
 
     # Operational algorithm:
@@ -469,11 +664,149 @@ class LearningClock:
         self.add_page_count_mode = False                                       # Mark mode inactive.
 
         if self.page_count_entry is not None:                                  # Page entry may be absent in tests.
-            self.page_count_entry.pack_forget()                                # Hide page-count input.
+            self.page_count_frame.pack_forget()                                # Hide page-count input.
 
-        self.add_pages_button.pack_forget()                                    # Hide submit button.
         self.root.geometry(NORMAL_GEOMETRY)                                    # Restore compact layout.
         self.restore_running_status()                                          # Restore status text.
+
+    def enter_progress_mode(self):
+
+        if self.add_time_mode:                                                 # Progress uses the same expanded workspace as entry modes.
+            self.exit_add_time_mode()
+        if self.add_page_count_mode:
+            self.exit_add_page_count_mode()
+        if self.progress_mode:                                                 # Re-open acts as a refresh for the saved CSV data.
+            self.refresh_progress_chart()
+            return
+
+        self.progress_mode = True
+        self.root.geometry(PROGRESS_GEOMETRY)                                  # Expand horizontally for the dashboard pane.
+        self.build_progress_panel()
+        self.progress_panel.pack(side="right", fill="both", expand=True, padx=(20, 0))
+        self.refresh_progress_chart()
+        self.status.config(text="Viewing CSV progress")
+
+    def toggle_progress_mode(self):
+
+        if self.progress_mode:
+            self.exit_progress_mode()
+        else:
+            self.enter_progress_mode()
+
+    def exit_progress_mode(self):
+
+        if not self.progress_mode:
+            return
+        self.progress_mode = False
+        if self.progress_panel is not None:
+            self.progress_panel.pack_forget()
+        self.root.geometry(NORMAL_GEOMETRY)
+        self.restore_running_status()
+
+    def build_progress_panel(self):
+
+        if self.progress_panel is not None:
+            return
+        progress_background = "#f4f8fc"
+        self.progress_panel = tk.Frame(
+            self.main_content,
+            bg=progress_background,
+            highlightbackground="#c5d8ec",
+            highlightthickness=1,
+            width=730,
+        )
+        header = tk.Frame(self.progress_panel, bg=progress_background)
+        header.pack(fill="x", padx=10, pady=(8, 2))
+        tk.Label(header, text="Progress", font=("Arial", 14, "bold"), bg=progress_background).pack(side="left")
+        tk.Button(header, text="Refresh", command=self.refresh_progress_chart).pack(side="right")
+        self.progress_canvas = tk.Canvas(self.progress_panel, width=710, height=300, bg=progress_background, highlightthickness=0)
+        self.progress_canvas.pack(fill="both", expand=True, padx=10, pady=(0, 2))
+        self.progress_footer = tk.Frame(self.progress_panel, bg=progress_background)
+        self.progress_footer.pack(fill="x", padx=10, pady=(8, 14))
+
+    @staticmethod
+    def progress_label_lines(activity):
+
+        explicit_lines = {
+            "AI-Assisted Architecture & Design": ("AI-Assisted", "Architecture", "& Design"),
+            "AI-Assisted Engineering": ("AI-Assisted", "Engineering"),
+            "Classical Software Engineering": ("Classical", "Software", "Engineering"),
+            "Promote Stable Concept": ("Promote", "Stable Concept"),
+            "Update Diavgeia": ("Update", "Diavgeia"),
+            "Active Recall": ("Active", "Recall"),
+        }
+        return explicit_lines.get(activity, (activity,))
+
+    def refresh_progress_chart(self):
+
+        if self.progress_canvas is None or self.progress_footer is None:
+            return
+        try:
+            summary = build_progress_summary(self.store.read_existing_session_rows())
+        except Exception as exc:
+            self.write_diagnostic_log("Progress chart CSV read failed.", exc)
+            self.progress_canvas.delete("all")
+            self.progress_canvas.create_text(355, 150, text="Unable to read the progress CSV.", font=("Arial", 12))
+            self.render_progress_footer(message="Unable to read the progress CSV.")
+            return
+
+        canvas = self.progress_canvas
+        canvas.delete("all")
+        canvas.update_idletasks()
+        width = max(canvas.winfo_width(), 710)
+        baseline, top, left, right, gap = 210, 28, 12, 12, 9
+        bar_width = (width - left - right - gap * (len(ACTIVITIES) - 1)) / len(ACTIVITIES)
+        max_seconds = max(summary["totals"].values(), default=0) or 1
+        canvas.create_line(left, baseline, width - right, baseline, fill="#a9c5df", width=2)
+
+        for index, activity in enumerate(ACTIVITIES):
+            seconds = summary["totals"][activity]
+            x1 = left + index * (bar_width + gap)
+            x2 = x1 + bar_width
+            height = 18 if seconds == 0 else max(18, round((seconds / max_seconds) * (baseline - top)))
+            y1 = baseline - height
+            canvas.create_rectangle(x1, y1, x2, baseline, fill="#007ACC", outline="")
+            value_y = y1 + 5                                                   # Keep each bold value five pixels below the bar's top edge.
+            canvas.create_text((x1 + x2) / 2, value_y, text=format_seconds(seconds), fill="#FFFFFF", font=("Segoe UI", 10, "bold"), anchor="n")
+            canvas.create_text((x1 + x2) / 2, baseline + 8, text="\n".join(self.progress_label_lines(activity)), font=("Arial", 8), anchor="n", width=bar_width + 4)
+
+        self.render_progress_footer(summary=summary)
+
+    def render_progress_footer(self, summary=None, message=None):
+
+        for child in self.progress_footer.winfo_children():
+            child.destroy()
+        if message is not None:
+            tk.Label(self.progress_footer, text=message, bg="#f4f8fc", anchor="w").pack(fill="x")
+            return
+        if summary["first_date"] is None:
+            tk.Label(
+                self.progress_footer,
+                text="No saved sessions yet. Start a timer and wait for autosave, or close the app to save a session.",
+                bg="#f4f8fc",
+                anchor="w",
+            ).pack(fill="x")
+            return
+
+        stats = [
+            ("Total time: ", format_seconds(summary["total_seconds"])),
+            ("Total pages read: ", str(summary["pages_read"])),
+            ("Start Date: ", self.format_progress_date(summary["first_date"])),
+            ("Last Update: ", self.format_progress_date(summary["last_date"])),
+        ]
+        for column, (label, value) in enumerate(stats):
+            stat = tk.Frame(self.progress_footer, bg="#f4f8fc")
+            stat.grid(row=0, column=column, padx=(0, 24 if column < len(stats) - 1 else 0), sticky="w")
+            tk.Label(stat, text=label, bg="#f4f8fc", font=("Arial", 10)).pack(side="left")
+            tk.Label(stat, text=value, bg="#f4f8fc", fg="#164f86", font=("Arial", 10, "bold")).pack(side="left")
+
+    @staticmethod
+    def format_progress_date(value):
+
+        parts = (value or "").split("-")
+        if len(parts) == 3:
+            return f"{parts[1]}-{parts[2]}-{parts[0][-2:]}"
+        return value or "N/A"
 
     # Operational algorithm:
     #   What this method does:
@@ -590,16 +923,17 @@ class LearningClock:
             except ValueError as exc:
                 errors.append(f"{activity}: {exc}")                            # Keep field-specific error.
                 continue
-            if seconds <= 0:                                                   # Zero/negative time is not useful.
-                errors.append(f"{activity}: manual time must be greater than zero.")  # Explain invalid value.
+            if seconds == 0:                                                   # Zero is an accepted no-op entry.
                 continue
             additions.append((activity, seconds))                              # Keep valid addition for batch apply.
 
         if errors:                                                             # Do not partially apply invalid form.
             messagebox.showerror("Invalid Manual Time", "\n".join(errors))     # Show all errors at once.
             return
-        if not additions:                                                      # No fields contained values.
-            messagebox.showwarning("Manual Time", "Enter time for at least one timer.")  # Ask user for input.
+        if not additions:                                                      # Blank/zero-only submission is an accepted no-op.
+            for entry in self.manual_entries.values():                         # Clear any submitted zero values.
+                entry.delete(0, tk.END)
+            self.exit_add_time_mode()                                          # Return to timer view without an error.
             return
 
         for activity, seconds in additions:                                    # Apply validated additions.
@@ -630,16 +964,19 @@ class LearningClock:
 
         raw_value = self.page_count_entry.get().strip()                        # Normalize user input.
 
-        if not raw_value:                                                      # Empty field is not a page count.
-            messagebox.showwarning("Add Page Count", "Enter the number of pages read.")  # Ask for input.
+        if not raw_value:                                                      # Blank submission is an accepted no-op.
+            self.exit_add_page_count_mode()                                    # Return to timer view without an error.
+            self.status.config(text="No pages added")                          # Confirm the harmless no-op.
             return
         if not raw_value.isdigit():                                            # Only whole-number pages are supported.
             messagebox.showerror("Add Page Count", "Page count must be a whole number.")  # Explain invalid value.
             return
 
         pages = int(raw_value)                                                 # Convert validated text to int.
-        if pages <= 0:                                                         # Defensive check after digit validation.
-            messagebox.showwarning("Add Page Count", "Page count must be greater than zero.")  # Reject zero.
+        if pages == 0:                                                         # Zero submission is an accepted no-op.
+            self.page_count_entry.delete(0, tk.END)                            # Clear the accepted zero.
+            self.exit_add_page_count_mode()                                    # Return to timer view without an error.
+            self.status.config(text="No pages added")                          # Confirm the harmless no-op.
             return
 
         self.pages_read += pages                                               # Add pages to session total.
@@ -710,11 +1047,15 @@ class LearningClock:
             activity: self.current_total(activity)                             # Include live totals per activity.
             for activity in ACTIVITIES                                         # Preserve configured activity order.
         }
+        session_date = self.selected_session_date
+        if self.date_entry is not None and self.date_entry.get().strip():
+            session_date = parse_session_date(self.date_entry.get())
         return self.store.create_session_row(
             self.session_start,                                                # Session start timestamp.
             session_end,                                                       # Session end timestamp.
             activity_seconds,                                                  # Activity seconds dictionary.
             self.pages_read,                                                   # Session page total.
+            session_date=session_date,                                         # Optional user-selected date for backdated sessions.
         )
 
     # Operational algorithm:
@@ -724,11 +1065,43 @@ class LearningClock:
     #     session_saved mirrors CsvStore.save_session_summary's boolean result.
     #   Error handling:
     #     Exceptions propagate to on_close, which can create an emergency file.
-    def save_session_summary(self, session_end):
+    def save_session_summary(self, session_end, replace_session=False):
 
-        saved = self.store.save_session_summary(self.create_session_row(session_end))  # Persist current session.
+        saved = self.store.save_session_summary(                                  # Persist current session.
+            self.create_session_row(session_end),
+            replace_session=replace_session,
+        )
         self.session_saved = saved                                             # Remember save result.
         return saved                                                           # Return result to caller.
+
+    def schedule_autosave(self):
+
+        if not self.is_closing:
+            self.autosave_after_job_id = self.root.after(
+                self.autosave_minutes * 60_000,
+                self.autosave_session,
+            )
+
+    def autosave_session(self):
+
+        if self.is_closing:
+            return
+        session_end = datetime.now()
+        try:
+            saved = self.save_session_summary(session_end, replace_session=True)
+            self.write_diagnostic_log(
+                f"Autosave completed | interval_minutes={self.autosave_minutes} | "
+                f"saved={saved} | session_end={session_end:%Y-%m-%d %H:%M:%S}"
+            )
+        except Exception as exc:
+            self.write_diagnostic_log("Autosave CSV write failed.", exc)
+            try:
+                emergency_file = self.save_emergency_session_file(session_end, exc)
+                self.write_diagnostic_log(f"Autosave emergency file created | file={emergency_file}")
+            except Exception as emergency_exc:
+                self.write_diagnostic_log("Autosave emergency save failed.", emergency_exc)
+        finally:
+            self.schedule_autosave()
 
     # Operational algorithm:
     #   What this method does:
@@ -789,32 +1162,37 @@ class LearningClock:
                 except tk.TclError:
                     pass                                                       # Window may already be tearing down.
 
-            if not self.session_saved:                                         # Avoid duplicate save attempts.
-                self.close_active_timer(session_end)                           # Credit running timer before saving.
-
+            if self.autosave_after_job_id is not None:
                 try:
-                    self.save_session_summary(session_end)                     # Normal persistence path.
-                except Exception as exc:
-                    self.write_diagnostic_log("Normal CSV save failed.", exc)  # Preserve failure details.
-                    emergency_file = None                                      # Track fallback result.
-                    try:
-                        emergency_file = self.save_emergency_session_file(session_end, exc)  # Fallback persistence.
-                    except Exception as emergency_exc:
-                        self.write_diagnostic_log("Emergency save failed.", emergency_exc)  # Preserve fallback failure.
-                        emergency_file = None                                  # No fallback file available.
+                    self.root.after_cancel(self.autosave_after_job_id)
+                except tk.TclError:
+                    pass
 
-                    error_message = (
-                        "The normal CSV save failed, but the application will close.\n\n"
-                        f"Error: {exc}"                                       # Show normal-save failure.
+            self.close_active_timer(session_end)                               # Credit running timer before saving.
+
+            try:
+                self.save_session_summary(session_end, replace_session=True)   # Replace latest autosave with final totals.
+            except Exception as exc:
+                self.write_diagnostic_log("Normal CSV save failed.", exc)  # Preserve failure details.
+                emergency_file = None                                      # Track fallback result.
+                try:
+                    emergency_file = self.save_emergency_session_file(session_end, exc)  # Fallback persistence.
+                except Exception as emergency_exc:
+                    self.write_diagnostic_log("Emergency save failed.", emergency_exc)  # Preserve fallback failure.
+                    emergency_file = None                                  # No fallback file available.
+
+                error_message = (
+                    "The normal CSV save failed, but the application will close.\n\n"
+                    f"Error: {exc}"                                       # Show normal-save failure.
+                )
+                if emergency_file is not None:                             # Fallback succeeded.
+                    error_message += f"\n\nEmergency session file created:\n{emergency_file}"
+                else:
+                    error_message += (
+                        "\n\nEmergency save also failed. "
+                        "Run the debug .bat launcher to see the Python error."  # Tell user how to inspect failure.
                     )
-                    if emergency_file is not None:                             # Fallback succeeded.
-                        error_message += f"\n\nEmergency session file created:\n{emergency_file}"
-                    else:
-                        error_message += (
-                            "\n\nEmergency save also failed. "
-                            "Run the debug .bat launcher to see the Python error."  # Tell user how to inspect failure.
-                        )
-                    messagebox.showerror("Learning Clock Save Warning", error_message)  # Surface save problem.
+                messagebox.showerror("Learning Clock Save Warning", error_message)  # Surface save problem.
         finally:
             self.write_diagnostic_log("Application shutdown finalization started.")  # Record final teardown.
             try:

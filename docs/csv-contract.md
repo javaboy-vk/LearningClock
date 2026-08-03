@@ -12,6 +12,7 @@ audiobook
 outlining
 active_recall
 sandbox
+ai_assisted_architecture_design
 ai_assisted_engineering
 classical_software_engineering
 update_diavgeia
@@ -27,6 +28,8 @@ date = TOTAL
 ```
 
 The `TOTAL` row aggregates activity durations, page count, and grand total duration across all session rows. Existing `TOTAL` rows are not trusted during rewrite; they are removed and recalculated.
+
+Session rows are written in chronological order by `date` and `session_start`, so a session saved through Set Date is inserted with the corresponding past day.
 
 ## Compatibility Rules
 

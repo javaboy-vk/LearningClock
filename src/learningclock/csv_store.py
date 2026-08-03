@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Persistence
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v0.1.0
+# Version   : v5.0
 # Purpose:
 #   Provides CSV read, write, normalization, total calculation, and emergency
 #   session recovery for LearningClock.
@@ -86,6 +86,7 @@ ACTIVITIES = [
     "Outlining",                         # Time spent structuring notes or plans.
     "Active Recall",                     # Time spent recall practice and self-testing.
     "Sandbox",                           # Time spent sandbox learning and prototypes.
+    "AI-Assisted Architecture & Design",  # Time spent designing systems through AI conversations.
     "AI-Assisted Engineering",           # Time spent using AI tools for software work.
     "Classical Software Engineering",    # Time spent directly engineering software.
     "Update Diavgeia",                   # Time spent documenting the learning path.
@@ -122,6 +123,7 @@ FIELDNAMES = [
     "outlining",                                                  # Outlining duration.
     "active_recall",                                              # Active Recall duration.
     "sandbox",                                                    # Sandbox duration.
+    "ai_assisted_architecture_design",                            # AI-assisted architecture/design duration.
     "ai_assisted_engineering",                                    # AI-assisted engineering duration.
     "classical_software_engineering",                             # Classical software engineering duration.
     "update_diavgeia",                                            # Documentation duration.
@@ -136,6 +138,7 @@ ACTIVITY_TO_FIELD = {
     "Outlining": "outlining",                                     # Map UI activity to CSV column.
     "Active Recall": "active_recall",                             # Map UI activity to CSV column.
     "Sandbox": "sandbox",                                         # Map UI activity to CSV column.
+    "AI-Assisted Architecture & Design": "ai_assisted_architecture_design",
     "AI-Assisted Engineering": "ai_assisted_engineering",          # Map UI activity to CSV column.
     "Classical Software Engineering": "classical_software_engineering",  # Map UI activity to CSV column.
     "Update Diavgeia": "update_diavgeia",                         # Map UI activity to CSV column.
@@ -233,12 +236,14 @@ class CsvStore:
         session_end: datetime,
         activity_seconds: dict[str, int],
         pages_read: int,
+        session_date=None,
     ):
 
         total_seconds = sum(activity_seconds.values())                            # Sum all tracked activity time.
+        date_value = session_date.strftime(CSV_DATE_FORMAT) if session_date is not None else session_end
 
         row = {
-            "date": self.format_csv_date(session_end),                            # Persist canonical session date.
+            "date": self.format_csv_date(date_value),                            # Persist the selected or current session date.
             "learning_path": self.learning_path_name,                             # Persist the current learning path.
             "session_start": session_start.strftime("%H:%M:%S"),                  # Persist start time.
             "session_end": session_end.strftime("%H:%M:%S"),                      # Persist end time.
@@ -260,7 +265,7 @@ class CsvStore:
     #   Error handling:
     #     Empty sessions are skipped, empty files are not written, and emergency files are marked
     #     merged only after the main CSV write succeeds.
-    def save_session_summary(self, session_row):
+    def save_session_summary(self, session_row, replace_session=False):
 
         self.write_diagnostic_log(
             f"Save started | session_end={session_row.get('session_end')} | "
@@ -286,6 +291,7 @@ class CsvStore:
             f"active_recall={session_row.get('active_recall')} | "
             f"sandbox={session_row.get('sandbox')} | "
             f"ai_assisted_engineering={session_row.get('ai_assisted_engineering')} | "
+            f"ai_assisted_architecture_design={session_row.get('ai_assisted_architecture_design')} | "
             f"classical_software_engineering={session_row.get('classical_software_engineering')} | "
             f"audiobook={session_row.get('audiobook')} | "
             f"update_diavgeia={session_row.get('update_diavgeia')} | "
@@ -295,6 +301,15 @@ class CsvStore:
             f"has_data={has_data}"
         )
 
+        if has_data and replace_session:                                       # Replace an earlier checkpoint for this app session.
+            existing_rows = [
+                row
+                for row in existing_rows
+                if not (
+                    row["learning_path"] == session_row["learning_path"]
+                    and row["session_start"] == session_row["session_start"]
+                )
+            ]
         if has_data:                                                           # Only persist meaningful sessions.
             existing_rows.append(session_row)                                  # Add current session to existing rows.
         else:
@@ -306,6 +321,7 @@ class CsvStore:
             self.write_diagnostic_log("Save skipped because there were no rows to write.")  # Explain skipped save.
             return False                                                       # Caller can tell nothing was written.
 
+        existing_rows.sort(key=self.session_row_sort_key)                     # Keep saved/backdated sessions chronological.
         total_row = self.create_total_row(existing_rows)                       # Recalculate aggregate from sessions.
         rows_to_write = len(existing_rows) + 1                                 # Include final TOTAL row.
 
@@ -323,6 +339,14 @@ class CsvStore:
         self.mark_emergency_files_merged(emergency_files)                      # Mark emergency files after successful rewrite.
         self.write_diagnostic_log("Save completed successfully.")              # Record success.
         return True                                                            # Caller can tell rows were written.
+
+    @staticmethod
+    def session_row_sort_key(row):
+
+        try:
+            return (0, datetime.strptime(f"{row['date']} {row['session_start']}", "%Y-%m-%d %H:%M:%S"))
+        except (KeyError, TypeError, ValueError):
+            return (1, row.get("date", ""), row.get("session_start", ""))
 
     # Operational algorithm:
     #   What this method does:

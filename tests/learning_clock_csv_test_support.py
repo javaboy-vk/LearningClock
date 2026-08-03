@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Test Support
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v0.1.0
+# Version   : v5.0
 # Purpose:
 #   Provides shared helpers for Learning Clock CSV unit and regression tests.
 # =============================================================================
@@ -186,6 +186,7 @@ class LearningClockCsvHarness:
             "active_recall": "00:00:00",                                      # Default active recall duration.
             "sandbox": "00:00:00",                                            # Default sandbox duration.
             "ai_assisted_engineering": "00:00:00",                            # Default AI-assisted engineering duration.
+            "ai_assisted_architecture_design": "00:00:00",                   # Default AI-assisted architecture/design duration.
             "classical_software_engineering": "00:00:00",                     # Default classical engineering duration.
             "update_diavgeia": "00:00:00",                                    # Default Diavgeia update duration.
             "promote_stable_concept": "00:00:00",                             # Default promotion duration.
