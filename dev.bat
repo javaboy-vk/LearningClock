@@ -5,7 +5,7 @@ rem ============================================================================
 rem File Name : dev.bat
 rem Artifact  : LearningClock - Root Developer Command Dispatcher
 rem Author    : javaboy-vk
-rem Version   : v0.1.0
+rem Version   : v0.1.1
 rem Purpose:
 rem   Dispatches root-level dev commands to scripts\*.cmd or scripts\dev.cmd.
 rem =============================================================================
@@ -31,8 +31,7 @@ if "%COMMAND%"=="/?" (
 set "SCRIPT_COMMAND=%ROOT%scripts\%COMMAND%.cmd"
 
 if exist "%SCRIPT_COMMAND%" (
-    shift
-    call "%SCRIPT_COMMAND%" %*
+    call "%SCRIPT_COMMAND%" %2 %3 %4 %5 %6 %7 %8 %9
     exit /b %ERRORLEVEL%
 )
 
