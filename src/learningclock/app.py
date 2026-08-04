@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v5.4
+# Version   : v5.1
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, and shutdown
 #   lifecycle for LearningClock.
@@ -142,7 +142,7 @@ except ModuleNotFoundError:
 #   Error handling:
 #     No special error handling is needed because the values are static strings.
 APP_TITLE = "Learning Clock"
-APP_VERSION = "v5.4"
+APP_VERSION = "v5.1"
 
 # Operational algorithm:
 #   What this constant group does:
