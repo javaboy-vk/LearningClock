@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Unit Tests
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v5.0
+# Version   : v5.4
 # Purpose:
 #   Verifies CSV save, normalization, emergency recovery, and total calculations.
 # =============================================================================
@@ -167,6 +167,119 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual(7, summary["pages_read"])
         self.assertEqual("2026-06-05", summary["first_date"])
         self.assertEqual("2026-06-06", summary["last_date"])
+
+    # Testing algorithm:
+    #   What we test:
+    #     Pressing Add Time while its fields are open invokes the save path instead of merely
+    #     hiding the values that the user entered.
+    #   Success:
+    #     The same menu action that closes Add Time delegates to add_all_manual_time.
+    #   Error checks:
+    #     The assertion catches a regression to the old unsaved exit_add_time_mode behavior.
+    def test_add_time_toggle_submits_open_manual_entries(self):
+
+        clock = LearningClock.__new__(LearningClock)
+        clock.add_time_mode = True
+        calls = []
+        clock.add_all_manual_time = lambda: calls.append("submitted")
+
+        clock.toggle_add_time_mode()
+
+        self.assertEqual(["submitted"], calls)
+
+    def test_add_page_count_toggle_submits_open_page_entry(self):
+
+        clock = LearningClock.__new__(LearningClock)
+        clock.add_page_count_mode = True
+        calls = []
+        clock.add_page_count = lambda: calls.append("submitted")
+
+        clock.toggle_add_page_count_mode()
+
+        self.assertEqual(["submitted"], calls)
+
+    # Testing algorithm:
+    #   What we test:
+    #     A backdated Add Time submission is written immediately as one CSV row, including all
+    #     activities submitted together, and remains in the CSV total after a later checkpoint.
+    #   Success:
+    #     The saved backdated row and the progress aggregate contain the submitted manual time
+    #     exactly once, so a View Progress checkpoint cannot lose or duplicate it.
+    #   Error checks:
+    #     Assertions catch deferred persistence, a current-date row, missing activity values,
+    #     and manual-time duplication during a normal session save.
+    def test_add_manual_time_persists_backdated_activities_immediately_without_duplicate_checkpoint(self):
+
+        class Entry:
+            def __init__(self, value):
+                self.value = value
+
+            def get(self):
+                return self.value
+
+            def delete(self, _start, _end):
+                self.value = ""
+
+        clock = LearningClock.__new__(LearningClock)
+        clock.store = learning_clock.CsvStore(self.log_dir, "UnitTestPath")
+        clock.session_start = datetime(2026, 6, 5, 9, 0, 0)
+        clock.active_activity = None
+        clock.active_start = None
+        clock.selected_session_date = date(2026, 6, 1)
+        clock.date_entry = None
+        clock.totals = {activity: 0 for activity in learning_clock.ACTIVITIES}
+        clock.persisted_manual_totals = {activity: 0 for activity in learning_clock.ACTIVITIES}
+        clock.manual_totals_by_date = {}
+        clock.manual_pages_by_date = {}
+        clock.manual_session_starts = {}
+        clock.pages_read = 0
+        clock.persisted_manual_pages = 0
+        clock.session_saved = False
+        clock.manual_entries = {
+            activity: Entry("15" if activity == "Reading" else "00:02:30" if activity == "Sandbox" else "")
+            for activity in learning_clock.ACTIVITIES
+        }
+        clock.update_display = lambda: None
+        clock.exit_add_time_mode = lambda: None
+
+        clock.add_all_manual_time()
+
+        rows = self.read_log_rows()
+        self.assertEqual(["2026-06-01", "TOTAL"], [row["date"] for row in rows])
+        self.assertEqual("00:15:00", rows[0]["reading"])
+        self.assertEqual("00:02:30", rows[0]["sandbox"])
+        self.assertEqual("00:17:30", rows[-1]["total"])
+
+        clock.manual_entries["Reading"].value = "5"
+        clock.add_all_manual_time()
+
+        rows = self.read_log_rows()
+        self.assertEqual(["2026-06-01", "TOTAL"], [row["date"] for row in rows])
+        self.assertEqual("00:20:00", rows[0]["reading"])
+        self.assertEqual("00:02:30", rows[0]["sandbox"])
+        self.assertEqual("00:22:30", rows[-1]["total"])
+
+        class Status:
+            def config(self, **_kwargs):
+                pass
+
+        clock.page_count_entry = Entry("4")
+        clock.status = Status()
+        clock.exit_add_page_count_mode = lambda: None
+        clock.add_page_count()
+
+        rows = self.read_log_rows()
+        self.assertEqual(["2026-06-01", "TOTAL"], [row["date"] for row in rows])
+        self.assertEqual("4", rows[0]["pages_read"])
+        self.assertEqual("4", rows[-1]["pages_read"])
+
+        self.assertTrue(clock.persist_session_for_progress())
+
+        rows = self.read_log_rows()
+        summary = build_progress_summary(rows[:-1])
+        self.assertEqual(1200, summary["totals"]["Reading"])
+        self.assertEqual(150, summary["totals"]["Sandbox"])
+        self.assertEqual(1350, summary["total_seconds"])
 
     # Testing algorithm:
     #   What we test:

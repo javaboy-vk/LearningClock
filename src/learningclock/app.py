@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v5.0
+# Version   : v5.4
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, and shutdown
 #   lifecycle for LearningClock.
@@ -142,7 +142,7 @@ except ModuleNotFoundError:
 #   Error handling:
 #     No special error handling is needed because the values are static strings.
 APP_TITLE = "Learning Clock"
-APP_VERSION = "v5.0"
+APP_VERSION = "v5.4"
 
 # Operational algorithm:
 #   What this constant group does:
@@ -298,6 +298,11 @@ class LearningClock:
         self.selected_session_date = None                                           # Date written to CSV when Set Date is used.
 
         self.totals = {activity: 0 for activity in ACTIVITIES}                      # Accumulated seconds by activity.
+        self.persisted_manual_totals = {activity: 0 for activity in ACTIVITIES}     # Manual seconds already written immediately.
+        self.manual_totals_by_date = {}                                              # Date -> manual seconds kept in that date's CSV row.
+        self.manual_pages_by_date = {}                                               # Date -> manual page count kept in that date's CSV row.
+        self.manual_session_starts = {}                                              # Date -> stable CSV session start used to replace that row.
+        self.persisted_manual_pages = 0                                              # Manual pages already written immediately.
         self.pages_read = 0                                                         # Accumulated session pages.
 
         self.labels = {}                                                            # Activity -> visible timer label.
@@ -348,9 +353,9 @@ class LearningClock:
 
         menu_bar = tk.Menu(self.root)                                               # Create menu bar.
         menu_bar.add_command(label="About", command=self.show_about)                # Show runtime/path info.
-        menu_bar.add_command(label="Add Time", command=self.toggle_add_time_mode)   # Show/hide manual duration fields.
+        menu_bar.add_command(label="Add Time", command=self.toggle_add_time_mode)   # Open manual fields or save their entered durations.
         menu_bar.add_command(label="Set Date", command=self.toggle_set_date_mode)  # Show/hide the backdated-session date editor.
-        menu_bar.add_command(label="Add Page Count", command=self.toggle_add_page_count_mode)  # Show/hide page-count field.
+        menu_bar.add_command(label="Add Page Count", command=self.toggle_add_page_count_mode)  # Open page field or save its entered count.
         menu_bar.add_command(label="View Progress", command=self.toggle_progress_mode)  # Show/hide CSV dashboard beside timers.
         self.root.config(menu=menu_bar)                                             # Attach menu to window.
 
@@ -561,14 +566,14 @@ class LearningClock:
     def toggle_add_time_mode(self):
 
         if self.add_time_mode:
-            self.exit_add_time_mode()
+            self.add_all_manual_time()                                         # The second Add Time action submits before hiding the fields.
         else:
             self.enter_add_time_mode()
 
     def toggle_add_page_count_mode(self):
 
         if self.add_page_count_mode:
-            self.exit_add_page_count_mode()
+            self.add_page_count()                                             # The second Add Page Count action submits before hiding the field.
         else:
             self.enter_add_page_count_mode()
 
@@ -675,6 +680,8 @@ class LearningClock:
             self.exit_add_time_mode()
         if self.add_page_count_mode:
             self.exit_add_page_count_mode()
+        if not self.persist_session_for_progress():                             # The chart must always read the latest persisted state.
+            return
         if self.progress_mode:                                                 # Re-open acts as a refresh for the saved CSV data.
             self.refresh_progress_chart()
             return
@@ -718,7 +725,7 @@ class LearningClock:
         header = tk.Frame(self.progress_panel, bg=progress_background)
         header.pack(fill="x", padx=10, pady=(8, 2))
         tk.Label(header, text="Progress", font=("Arial", 14, "bold"), bg=progress_background).pack(side="left")
-        tk.Button(header, text="Refresh", command=self.refresh_progress_chart).pack(side="right")
+        tk.Button(header, text="Refresh", command=self.refresh_progress_from_session).pack(side="right")
         self.progress_canvas = tk.Canvas(self.progress_panel, width=710, height=300, bg=progress_background, highlightthickness=0)
         self.progress_canvas.pack(fill="both", expand=True, padx=10, pady=(0, 2))
         self.progress_footer = tk.Frame(self.progress_panel, bg=progress_background)
@@ -771,6 +778,28 @@ class LearningClock:
             canvas.create_text((x1 + x2) / 2, baseline + 8, text="\n".join(self.progress_label_lines(activity)), font=("Arial", 8), anchor="n", width=bar_width + 4)
 
         self.render_progress_footer(summary=summary)
+
+    def refresh_progress_from_session(self):
+
+        """Save the latest session state before refreshing the CSV-backed chart."""
+        if self.persist_session_for_progress():
+            self.refresh_progress_chart()
+
+    def persist_session_for_progress(self):
+
+        """Checkpoint all tracked session time before rendering CSV-backed progress."""
+        session_end = datetime.now()
+        try:
+            saved = self.save_session_summary(session_end, replace_session=True)
+            self.write_diagnostic_log(
+                f"Progress checkpoint completed | saved={saved} | "
+                f"session_end={session_end:%Y-%m-%d %H:%M:%S}"
+            )
+            return True
+        except Exception as exc:
+            self.write_diagnostic_log("Progress checkpoint CSV write failed.", exc)
+            messagebox.showerror("View Progress", "Unable to save the current session before showing progress.")
+            return False
 
     def render_progress_footer(self, summary=None, message=None):
 
@@ -904,9 +933,9 @@ class LearningClock:
 
     # Operational algorithm:
     #   What this method does:
-    #     Validates every manual time entry and adds valid durations to the session totals.
+    #     Validates every manual time entry, writes it immediately to the selected date, and updates the visible totals.
     #   Success:
-    #     All valid entries are applied together, fields are cleared, and add-time mode exits.
+    #     All valid entries are written together, fields are cleared, and add-time mode exits.
     #   Error handling:
     #     Any invalid field blocks the entire add operation and reports all field errors.
     def add_all_manual_time(self):
@@ -936,17 +965,43 @@ class LearningClock:
             self.exit_add_time_mode()                                          # Return to timer view without an error.
             return
 
-        for activity, seconds in additions:                                    # Apply validated additions.
-            self.totals[activity] += seconds                                  # Add manual seconds to activity total.
+        saved_at = datetime.now()
+        session_date = self.current_session_date() or saved_at.date()
+        manual_seconds = dict(self.manual_totals_by_date.get(session_date, {}))
+        if not manual_seconds:
+            manual_seconds = {activity: 0 for activity in ACTIVITIES}
+        for activity, seconds in additions:
+            manual_seconds[activity] += seconds
+
+        manual_session_start = self.manual_session_starts.get(session_date, saved_at)
+        try:
+            manual_row = self.store.create_session_row(
+                manual_session_start,
+                saved_at,
+                manual_seconds,
+                self.manual_pages_by_date.get(session_date, 0),
+                session_date=session_date,
+            )
+            self.store.save_session_summary(manual_row, replace_session=True)
+        except Exception as exc:
+            self.write_diagnostic_log("Manual time CSV write failed.", exc)
+            messagebox.showerror("Add Time", "Unable to save the manual time. No time was added.")
+            return
+
+        self.manual_totals_by_date[session_date] = manual_seconds              # Retain this date's aggregate for the next Add Time submission.
+        self.manual_session_starts[session_date] = manual_session_start        # Reuse the same row identity when updating it.
+        for activity, seconds in additions:                                    # Reflect successfully persisted additions in the UI.
+            self.totals[activity] += seconds
+            self.persisted_manual_totals[activity] += seconds                  # Keep later checkpoints from duplicating this row.
             self.write_diagnostic_log(
-                f"Manual time added | activity={activity} | added={format_seconds(seconds)} | "
+                f"Manual time saved | activity={activity} | date={manual_row['date']} | added={format_seconds(seconds)} | "
                 f"activity_total={format_seconds(round(self.totals[activity]))}"  # Record updated activity total.
             )
 
         for entry in self.manual_entries.values():                             # Clear all manual fields after success.
             entry.delete(0, tk.END)
 
-        self.session_saved = False                                             # Session changed since last save.
+        self.session_saved = True                                              # The submitted manual time is already persisted.
         self.update_display()                                                  # Refresh labels immediately.
         self.exit_add_time_mode()                                              # Return to normal timer layout.
 
@@ -979,9 +1034,34 @@ class LearningClock:
             self.status.config(text="No pages added")                          # Confirm the harmless no-op.
             return
 
-        self.pages_read += pages                                               # Add pages to session total.
+        saved_at = datetime.now()
+        session_date = self.current_session_date() or saved_at.date()
+        manual_seconds = self.manual_totals_by_date.get(
+            session_date,
+            {activity: 0 for activity in ACTIVITIES},
+        )
+        manual_pages = self.manual_pages_by_date.get(session_date, 0) + pages
+        manual_session_start = self.manual_session_starts.get(session_date, saved_at)
+        try:
+            page_row = self.store.create_session_row(
+                manual_session_start,
+                saved_at,
+                manual_seconds,
+                manual_pages,
+                session_date=session_date,
+            )
+            self.store.save_session_summary(page_row, replace_session=True)
+        except Exception as exc:
+            self.write_diagnostic_log("Manual page-count CSV write failed.", exc)
+            messagebox.showerror("Add Page Count", "Unable to save the page count. No pages were added.")
+            return
+
+        self.manual_pages_by_date[session_date] = manual_pages                # Retain this date's page total for the next manual update.
+        self.manual_session_starts[session_date] = manual_session_start       # Reuse the same dated row identity.
+        self.pages_read += pages                                               # Reflect the saved pages in the session counter.
+        self.persisted_manual_pages += pages                                   # Keep later checkpoints from duplicating these pages.
         self.write_diagnostic_log(
-            f"Pages added | added={pages} | pages_read_session_total={self.pages_read}"  # Record page total.
+            f"Pages saved | added={pages} | date={page_row['date']} | pages_read_session_total={self.pages_read}"  # Record page total.
         )
         self.page_count_entry.delete(0, tk.END)                                # Clear input field.
         self.session_saved = False                                             # Session changed since last save.
@@ -1044,19 +1124,23 @@ class LearningClock:
     def create_session_row(self, session_end):
 
         activity_seconds = {
-            activity: self.current_total(activity)                             # Include live totals per activity.
+            activity: max(0, self.current_total(activity) - self.persisted_manual_totals[activity])  # Exclude manual time already written immediately.
             for activity in ACTIVITIES                                         # Preserve configured activity order.
         }
-        session_date = self.selected_session_date
-        if self.date_entry is not None and self.date_entry.get().strip():
-            session_date = parse_session_date(self.date_entry.get())
         return self.store.create_session_row(
             self.session_start,                                                # Session start timestamp.
             session_end,                                                       # Session end timestamp.
             activity_seconds,                                                  # Activity seconds dictionary.
-            self.pages_read,                                                   # Session page total.
-            session_date=session_date,                                         # Optional user-selected date for backdated sessions.
+            max(0, self.pages_read - self.persisted_manual_pages),             # Exclude pages already written immediately.
+            session_date=self.current_session_date(),                          # Optional user-selected date for backdated sessions.
         )
+
+    def current_session_date(self):
+
+        """Return the selected CSV date, including a typed but not yet hidden Set Date value."""
+        if self.date_entry is not None and self.date_entry.get().strip():
+            return parse_session_date(self.date_entry.get())
+        return self.selected_session_date
 
     # Operational algorithm:
     #   What this method does:
