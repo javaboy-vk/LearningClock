@@ -3,7 +3,7 @@ File Name : view.js
 Artifact  : LearningClock - Learning Clock Dashboard Dataview View
 Author    : javaboy-vk
 Date      : 2026-06-05
-Version   : v0.5.1
+Version   : v5.2
 Purpose:
   Renders the LearningClock learning-time dashboard from the vault CSV.
 */
@@ -13,7 +13,7 @@ const legacyCsvFolderName = "LearningPath";
 
 const activityFields = [
   ["Reading", "reading"],
-  ["Audiobook", "audiobook"],
+  ["Book Listening", "book_listening", ["audiobook"]],
   ["Outlining", "outlining"],
   ["Active Recall", "active_recall", ["memorizing"]],
   ["Sandbox", "sandbox", ["experimenting"]],

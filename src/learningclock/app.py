@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v5.1
+# Version   : v5.2
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, and shutdown
 #   lifecycle for LearningClock.
@@ -142,7 +142,13 @@ except ModuleNotFoundError:
 #   Error handling:
 #     No special error handling is needed because the values are static strings.
 APP_TITLE = "Learning Clock"
-APP_VERSION = "v5.1"
+APP_VERSION = "v5.2"
+BUTTON_BACKGROUND = "#069bff"
+ACTIVE_TIMER_BUTTON_BACKGROUND = "#FF6600"
+BUTTON_FOREGROUND = "#ffffff"
+ACTIVITY_BUTTON_FONT = ("Arial", 12, "bold")
+CONTROL_BUTTON_FONT = ("Arial", 10, "bold")
+MENU_FONT = ("Arial", 10, "bold")
 
 # Operational algorithm:
 #   What this constant group does:
@@ -314,6 +320,7 @@ class LearningClock:
         self.progress_panel = None                                                  # Right-side CSV chart panel.
         self.progress_canvas = None                                                 # Canvas used to render progress bars.
         self.progress_footer = None                                                 # Obsidian-style progress summary row.
+        self.activity_buttons = {}                                                  # Activity buttons keyed for active-timer color updates.
 
         self.build_menu()                                                           # Create menu commands.
         self.build_main_ui()                                                        # Create timer controls.
@@ -351,7 +358,7 @@ class LearningClock:
     #     Tkinter construction errors propagate because the UI cannot run without a menu.
     def build_menu(self):
 
-        menu_bar = tk.Menu(self.root)                                               # Create menu bar.
+        menu_bar = tk.Menu(self.root, font=MENU_FONT)                                # Create a more legible bold menu bar.
         menu_bar.add_command(label="About", command=self.show_about)                # Show runtime/path info.
         menu_bar.add_command(label="Add Time", command=self.toggle_add_time_mode)   # Open manual fields or save their entered durations.
         menu_bar.add_command(label="Set Date", command=self.toggle_set_date_mode)  # Show/hide the backdated-session date editor.
@@ -390,12 +397,17 @@ class LearningClock:
             button = tk.Button(
                 row,                                                          # Parent row.
                 text=activity,                                                # Activity label on button.
-                font=("Arial", 12),                                           # Readable button font.
+                font=ACTIVITY_BUTTON_FONT,                                     # Bold white text stays visible against blue.
                 width=30,                                                     # Leaves a narrow trailing gap comparable to the timer-to-chart gap.
                 anchor="w",                                                   # Left-align activity text.
+                bg=BUTTON_BACKGROUND,                                         # Match the approved blue-button visual.
+                fg=BUTTON_FOREGROUND,                                         # Keep blue-button labels readable.
+                activebackground=BUTTON_BACKGROUND,                           # Preserve the approved blue while pressed.
+                activeforeground=BUTTON_FOREGROUND,                           # Preserve white text while pressed.
                 command=lambda a=activity: self.switch_to(a),                 # Capture activity for callback.
             )
             button.pack(side="left")                                          # Button starts each row.
+            self.activity_buttons[activity] = button                            # Keep the button available for active-state styling.
 
             label = tk.Label(row, text="00:00:00", font=("Consolas", 14), width=12)  # Live duration label.
             label.pack(side="left", padx=(10, 0))                              # Place label after button.
@@ -411,8 +423,12 @@ class LearningClock:
         stop_button = tk.Button(
             self.controls_frame,                                               # Parent controls row.
             text="Stop",                                                       # Stop current timer.
-            font=("Arial", 10),                                                # Compact button font.
+            font=CONTROL_BUTTON_FONT,                                          # Bold white text stays visible against blue.
             width=12,                                                          # Fixed width for alignment.
+            bg=BUTTON_BACKGROUND,                                              # Match the approved blue-button visual.
+            fg=BUTTON_FOREGROUND,                                              # Keep blue-button labels readable.
+            activebackground=BUTTON_BACKGROUND,                                # Preserve the approved blue while pressed.
+            activeforeground=BUTTON_FOREGROUND,                                # Preserve white text while pressed.
             command=self.stop_running_timer,                                   # Stop without resetting totals.
         )
         stop_button.pack(side="left", padx=(0, 6))                             # First command button.
@@ -420,8 +436,12 @@ class LearningClock:
         reset_button = tk.Button(
             self.controls_frame,                                               # Parent controls row.
             text="Reset Timer",                                                # Reset currently running activity.
-            font=("Arial", 10),                                                # Compact button font.
+            font=CONTROL_BUTTON_FONT,                                          # Bold white text stays visible against blue.
             width=12,                                                          # Fixed width for alignment.
+            bg=BUTTON_BACKGROUND,                                              # Match the approved blue-button visual.
+            fg=BUTTON_FOREGROUND,                                              # Keep blue-button labels readable.
+            activebackground=BUTTON_BACKGROUND,                                # Preserve the approved blue while pressed.
+            activeforeground=BUTTON_FOREGROUND,                                # Preserve white text while pressed.
             command=self.reset_running_timer,                                  # Reset active timer only.
         )
         reset_button.pack(side="left", padx=(0, 6))                            # Second command button.
@@ -853,6 +873,23 @@ class LearningClock:
 
     # Operational algorithm:
     #   What this method does:
+    #     Colors only the running activity button orange and restores all other activity buttons to blue.
+    #   Success:
+    #     The active timer has a clear visual state while inactive timer controls retain the standard color.
+    #   Error handling:
+    #     Tkinter reports invalid widget configuration if a button is unavailable.
+    def refresh_activity_button_colors(self):
+
+        for activity, button in self.activity_buttons.items():                  # Keep every activity button synchronized with timer state.
+            background = (
+                ACTIVE_TIMER_BUTTON_BACKGROUND
+                if activity == self.active_activity
+                else BUTTON_BACKGROUND
+            )
+            button.config(bg=background, activebackground=background)           # Match resting and pressed colors for the state.
+
+    # Operational algorithm:
+    #   What this method does:
     #     Handles an activity-button click by stopping any previous timer and starting a new one.
     #   Success:
     #     Elapsed time is credited to the old activity and the selected activity starts timing.
@@ -867,6 +904,7 @@ class LearningClock:
         self.close_active_timer(datetime.now())                                # Credit previous active timer.
         self.active_activity = activity                                        # Store new active activity.
         self.active_start = datetime.now()                                     # Start new timer now.
+        self.refresh_activity_button_colors()                                  # Highlight the new running timer orange.
         self.session_saved = False                                             # Session changed since last save.
         self.status.config(text=f"Running: {activity}")                        # Show running activity.
         self.write_diagnostic_log(
@@ -895,6 +933,7 @@ class LearningClock:
         )
         self.active_activity = None                                            # Clear active activity.
         self.active_start = None                                               # Clear active start time.
+        self.refresh_activity_button_colors()                                  # Restore the stopped activity button to blue.
 
     # Operational algorithm:
     #   What this method does:

@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Persistence
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v5.0
+# Version   : v5.2
 # Purpose:
 #   Provides CSV read, write, normalization, total calculation, and emergency
 #   session recovery for LearningClock.
@@ -82,7 +82,7 @@ from pathlib import Path
 #     Tests should fail if a new activity is added without a matching field mapping.
 ACTIVITIES = [
     "Reading",                           # Time spent reading source material.
-    "Audiobook",                         # Time spent listening to study material.
+    "Book Listening",                    # Time spent listening to study material.
     "Outlining",                         # Time spent structuring notes or plans.
     "Active Recall",                     # Time spent recall practice and self-testing.
     "Sandbox",                           # Time spent sandbox learning and prototypes.
@@ -119,7 +119,7 @@ FIELDNAMES = [
     "session_start",                                              # Session start time.
     "session_end",                                                # Session end time.
     "reading",                                                    # Reading duration.
-    "audiobook",                                                  # Audiobook duration.
+    "book_listening",                                             # Book-listening duration.
     "outlining",                                                  # Outlining duration.
     "active_recall",                                              # Active Recall duration.
     "sandbox",                                                    # Sandbox duration.
@@ -134,7 +134,7 @@ FIELDNAMES = [
 
 ACTIVITY_TO_FIELD = {
     "Reading": "reading",                                         # Map UI activity to CSV column.
-    "Audiobook": "audiobook",                                     # Map UI activity to CSV column.
+    "Book Listening": "book_listening",                           # Map UI activity to CSV column.
     "Outlining": "outlining",                                     # Map UI activity to CSV column.
     "Active Recall": "active_recall",                             # Map UI activity to CSV column.
     "Sandbox": "sandbox",                                         # Map UI activity to CSV column.
@@ -149,6 +149,7 @@ LEGACY_FIELD_MAPPINGS = {
     "document_in_diavgeia": "update_diavgeia",                    # Preserve older CSV column name.
     "memorizing": "active_recall",                                # Preserve pre-Active Recall CSV history.
     "experimenting": "sandbox",                                   # Preserve pre-Sandbox CSV history.
+    "audiobook": "book_listening",                                # Preserve pre-Book Listening CSV history.
 }
 
 # Data conversion:
@@ -293,7 +294,7 @@ class CsvStore:
             f"ai_assisted_engineering={session_row.get('ai_assisted_engineering')} | "
             f"ai_assisted_architecture_design={session_row.get('ai_assisted_architecture_design')} | "
             f"classical_software_engineering={session_row.get('classical_software_engineering')} | "
-            f"audiobook={session_row.get('audiobook')} | "
+            f"book_listening={session_row.get('book_listening')} | "
             f"update_diavgeia={session_row.get('update_diavgeia')} | "
             f"promote_stable_concept={session_row.get('promote_stable_concept')} | "
             f"pages_read={session_row.get('pages_read')} | "

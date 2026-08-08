@@ -1,12 +1,13 @@
-# LearningClock
+# LearningClock v5.2
 
 LearningClock project notes and deployment-facing content.
 
 ## Status
 
-- Project scaffold initialized.
-- Python source lives under `src/learningclock`.
-- Generated artifacts are kept under `build/`.
+- Version 5.2 uses bold menu and button labels for visibility.
+- Inactive activity buttons are blue (`#069bff`); the currently running timer is orange (`#FF6600`).
+- **Book Listening** is the listening timer and uses the `book_listening` CSV column. Legacy `audiobook` data is normalized during CSV reads and migration.
+- Python source lives under `src/learningclock`; generated artifacts are kept under `build/`.
 
 ## Pages
 

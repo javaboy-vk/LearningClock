@@ -1,4 +1,4 @@
-# LearningClock
+# LearningClock v5.2
 
 LearningClock is a Windows-friendly Python/Tkinter desktop timer for tracking focused learning sessions. It records time across named study activities, page counts, session metadata, recovered emergency saves, and a recalculated CSV `TOTAL` row that can feed reports and Diavgeia documentation.
 
@@ -9,6 +9,10 @@ The project is intentionally small and operational: the GUI owns timer behavior,
 ## Application And Dashboard
 
 The desktop app presents learning timers that map directly to the persisted CSV activity columns. The refreshed view includes **Set Date** for backdated entries, **Add Page Count**, and the **View Progress** toggle.
+
+### Version 5.2 interface
+
+The v5.2 desktop interface uses bold menu and button labels for better visibility. Inactive activity controls are blue (`#069bff`); the running activity is orange (`#FF6600`). **Book Listening** is the current listening timer and persists as the `book_listening` CSV column. Existing `audiobook` data is retained through CSV normalization and migration.
 
 ![LearningClock desktop UI with learning timers](docs/assets/learning-clock-ui.svg)
 
@@ -25,7 +29,7 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 | Category | Purpose |
 | --- | --- |
 | Reading | Reading books, articles, docs. |
-| Audiobook | Listening to technical learning material. |
+| Book Listening | Listening to technical learning material. |
 | Outlining | Structuring notes, chapters, designs. |
 | Active Recall | Recall practice, repetition, self-testing, and memory reinforcement. |
 | Sandbox | Trial-and-error sandbox work, examples, prototypes, technology probes, and book/example exercises. |

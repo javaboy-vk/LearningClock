@@ -181,7 +181,7 @@ class LearningClockCsvHarness:
             "session_start": "09:00:00",                                      # Default session start time.
             "session_end": "09:30:00",                                        # Default session end time.
             "reading": "00:00:00",                                            # Default reading duration.
-            "audiobook": "00:00:00",                                          # Default audiobook duration.
+            "book_listening": "00:00:00",                                          # Default book_listening duration.
             "outlining": "00:00:00",                                          # Default outlining duration.
             "active_recall": "00:00:00",                                      # Default active recall duration.
             "sandbox": "00:00:00",                                            # Default sandbox duration.

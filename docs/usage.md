@@ -45,7 +45,7 @@ logDir=<path where the app creates the .csv and .log files>\learning-clock-logs.
 - Use `Add Time` or `Add Page Count` again to hide its fields; press Enter in a visible field to submit, without an extra action button.
 - Use `View Progress` to toggle the saved CSV bar chart open or closed. Use `Refresh` after a new autosave.
 
-Tracked activities are `Reading`, `Audiobook`, `Outlining`, `Active Recall`, `Sandbox`, `AI-Assisted Architecture & Design`, `AI-Assisted Engineering`, `Classical Software Engineering`, `Update Diavgeia`, and `Promote Stable Concept`.
+Tracked activities are `Reading`, `Book Listening`, `Outlining`, `Active Recall`, `Sandbox`, `AI-Assisted Architecture & Design`, `AI-Assisted Engineering`, `Classical Software Engineering`, `Update Diavgeia`, and `Promote Stable Concept`.
 
 `Sandbox` is for sandbox learning, trial-and-error, book examples, technology probes, prototype exploration, and trying things out before they become stable engineering work. `AI-Assisted Engineering` is for work done by instructing ChatGPT, CODEX, or another AI assistant to generate, repair, explain, refactor, test, document, or debug code. `AI-Assisted Architecture & Design` is for architecture, system design, modeling, tradeoff analysis, and design documentation performed through AI-assisted conversation. `Classical Software Engineering` is for directly implementing software yourself with traditional engineering practices.
 

@@ -8,7 +8,7 @@ learning_path
 session_start
 session_end
 reading
-audiobook
+book_listening
 outlining
 active_recall
 sandbox

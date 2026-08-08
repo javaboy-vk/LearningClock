@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CLI Tests
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v0.1.0
+# Version   : v5.2
 # Purpose:
 #   Verifies the LearningClock CLI behavior.
 # =============================================================================
@@ -34,4 +34,4 @@ def test_main_prints_ready_message(capsys):
 def test_main_prints_version(capsys):
 
     assert main(["--version"]) == 0                                          # Version flag should succeed.
-    assert capsys.readouterr().out.strip() == "0.1.0"                        # Output matches package version.
+    assert capsys.readouterr().out.strip() == "5.2"                          # Output matches package version.

@@ -245,3 +245,7 @@ set PYTHONPATH=src
 ```
 
 The important invariant is: every visible activity in `ACTIVITIES` must have exactly one CSV field in `FIELDNAMES` and `ACTIVITY_TO_FIELD`. Once that is true, the UI, save path, totals, normalization, and regression tests mostly follow automatically.
+
+## Renaming an existing timer
+
+For a rename such as `Audiobook` to **Book Listening**, update `ACTIVITIES`, `FIELDNAMES`, and `ACTIVITY_TO_FIELD` to the new canonical pair (`Book Listening` / `book_listening`). Add the former column to `LEGACY_FIELD_MAPPINGS` so saved history is normalized instead of discarded, then update the Dataview dashboard field list and run the CSV migration script to rewrite existing headers with backups.

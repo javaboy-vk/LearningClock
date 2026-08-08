@@ -34,17 +34,29 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
 
     # Testing algorithm:
     #   What we test:
-    #     The public category list and CSV schema use Sandbox as the current name.
+    #     The public category list and CSV schema use the current user-facing activity names.
     #   Success:
-    #     The UI-facing activity list contains Sandbox, and future CSV writes use sandbox.
+    #     The UI-facing activity list contains Book Listening and Sandbox, and future CSV writes use their current fields.
     #   Error checks:
-    #     Assertions catch accidental reintroduction of the old Experimenting label or column.
-    def test_schema_uses_sandbox_category_and_column(self):
+    #     Assertions catch accidental reintroduction of old display labels or CSV columns.
+    def test_schema_uses_current_activity_categories_and_columns(self):
 
+        self.assertIn("Book Listening", learning_clock.ACTIVITIES)             # UI label is current.
+        self.assertNotIn("Audiobook", learning_clock.ACTIVITIES)               # Old display label is legacy only.
+        self.assertIn("book_listening", learning_clock.FIELDNAMES)             # CSV column is current.
+        self.assertNotIn("audiobook", learning_clock.FIELDNAMES)               # Old CSV column is legacy only.
         self.assertIn("Sandbox", learning_clock.ACTIVITIES)                    # UI label is current.
         self.assertNotIn("Experimenting", learning_clock.ACTIVITIES)           # Old display label is legacy only.
         self.assertIn("sandbox", learning_clock.FIELDNAMES)                    # CSV column is current.
         self.assertNotIn("experimenting", learning_clock.FIELDNAMES)           # Old CSV column is legacy only.
+
+    def test_legacy_audiobook_column_merges_into_book_listening(self):
+
+        legacy_row = self.row(book_listening="00:02:00", audiobook="00:01:30")
+
+        normalized = self.clock.normalize_existing_row(legacy_row)
+
+        self.assertEqual("00:03:30", normalized["book_listening"])
 
     # Testing algorithm:
     #   What we test:
@@ -113,7 +125,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
             ),
             self.row(
                 reading="00:20:00",
-                audiobook="00:07:30",
+                book_listening="00:07:30",
                 classical_software_engineering="00:04:00",
                 pages_read="4",
                 total="00:31:30",
@@ -129,7 +141,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("00:02:00", total["ai_assisted_engineering"])         # AI-assisted value carries forward.
         self.assertEqual("00:03:00", total["ai_assisted_architecture_design"])  # AI architecture/design value carries forward.
         self.assertEqual("00:04:00", total["classical_software_engineering"])  # Classical engineering value carries forward.
-        self.assertEqual("00:07:30", total["audiobook"])                       # Audiobook value carries forward.
+        self.assertEqual("00:07:30", total["book_listening"])                       # Book Listening value carries forward.
         self.assertEqual("7", total["pages_read"])                             # Page counts are summed.
         self.assertEqual("00:52:30", total["total"])                           # Grand total sums activity totals.
 
@@ -514,7 +526,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #     Assertions catch missing fallback files, schema drift, bad page values, and wrong totals.
     def test_save_emergency_session_file_uses_main_csv_schema(self):
 
-        self.clock.totals["Audiobook"] = 90                                # Seed audiobook duration.
+        self.clock.totals["Book Listening"] = 90                                # Seed book_listening duration.
         self.clock.pages_read = 1                                           # Seed page count.
 
         emergency_file = self.clock.save_emergency_session_file(
@@ -529,7 +541,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
             rows = list(reader)                                             # Materialize fallback rows.
 
         self.assertEqual(1, len(rows))                                      # One emergency session row.
-        self.assertEqual("00:01:30", rows[0]["audiobook"])                  # Audiobook duration is persisted.
+        self.assertEqual("00:01:30", rows[0]["book_listening"])                  # Book Listening duration is persisted.
         self.assertEqual("1", rows[0]["pages_read"])                        # Page count is persisted.
         self.assertEqual("00:01:30", rows[0]["total"])                      # Total matches activity duration.
 

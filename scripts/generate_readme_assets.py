@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - README Visual Asset Generator
 # Author    : javaboy-vk
 # Date      : 2026-06-09
-# Version   : v5.0
+# Version   : v5.2
 # Purpose:
 #   Generates stable SVG visuals used by README.md to show the app UI and
 #   Obsidian dashboard output.
@@ -188,17 +188,19 @@ def generate_ui_svg() -> str:
     row_height = 43
     top = 126
     controls_y = top + (len(ACTIVITIES) * row_height) + 7
+    active_activity = "Sandbox"
     rows = []
     for index, activity in enumerate(ACTIVITIES):
         y = top + index * row_height
-        status = "01:42:35" if activity == "Sandbox" else "00:00:00"
+        status = "01:42:35" if activity == active_activity else "00:00:00"
+        button_background = "#FF6600" if activity == active_activity else "#069bff"
         rows.append(
             f"""
             <g>
-              <rect x="38" y="{y}" width="{button_width}" height="37" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+              <rect x="38" y="{y}" width="{button_width}" height="37" fill="{button_background}" stroke="#8c8c8c" stroke-width="1.4"/>
               <line x1="40" y1="{y + 2}" x2="{38 + button_width - 2}" y2="{y + 2}" stroke="#ffffff" stroke-width="1"/>
               <line x1="40" y1="{y + 35}" x2="{38 + button_width - 2}" y2="{y + 35}" stroke="#777777" stroke-width="1"/>
-              <text x="45" y="{y + 26}" fill="#111111" font-size="18">{text(activity)}</text>
+              <text x="45" y="{y + 26}" fill="#ffffff" font-size="18" font-weight="700">{text(activity)}</text>
               <text x="{timer_x}" y="{y + 26}" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">{status}</text>
             </g>"""
         )
@@ -219,21 +221,21 @@ def generate_ui_svg() -> str:
   <text x="529" y="51" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="18">−</text>
   <rect x="588" y="40" width="10" height="10" fill="none" stroke="#d9d9d9"/>
   <text x="646" y="52" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="24">×</text>
-  <text x="26" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">About</text>
-  <text x="86" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Time</text>
-  <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Set Date</text>
-  <text x="235" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">Add Page Count</text>
-  <text x="347" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15">View Progress</text>
-  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">No timer running</text>
+  <text x="26" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">About</text>
+  <text x="86" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Add Time</text>
+  <text x="168" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Set Date</text>
+  <text x="235" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Add Page Count</text>
+  <text x="347" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">View Progress</text>
+  <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Running: {active_activity}</text>
   <g font-family="Segoe UI, Arial, sans-serif">
     {''.join(rows)}
   </g>
-  <rect x="38" y="{controls_y}" width="132" height="35" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+  <rect x="38" y="{controls_y}" width="132" height="35" fill="#069bff" stroke="#8c8c8c" stroke-width="1.4"/>
   <line x1="40" y1="{controls_y + 2}" x2="168" y2="{controls_y + 2}" stroke="#ffffff" stroke-width="1"/>
-  <text x="87" y="{controls_y + 24}" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16">Stop</text>
-  <rect x="178" y="{controls_y}" width="132" height="35" fill="#eeeeee" stroke="#8c8c8c" stroke-width="1.4"/>
+  <text x="87" y="{controls_y + 24}" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Stop</text>
+  <rect x="178" y="{controls_y}" width="132" height="35" fill="#069bff" stroke="#8c8c8c" stroke-width="1.4"/>
   <line x1="180" y1="{controls_y + 2}" x2="308" y2="{controls_y + 2}" stroke="#ffffff" stroke-width="1"/>
-  <text x="211" y="{controls_y + 24}" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16">Reset Timer</text>
+  <text x="211" y="{controls_y + 24}" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Reset Timer</text>
 </svg>
 """
 

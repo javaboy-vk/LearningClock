@@ -1,3 +1,7 @@
+# Learning Clock Dashboard v5.2
+
+The dashboard displays **Book Listening** from the `book_listening` CSV column and also reads legacy `audiobook` data. It uses the shared LearningClock v5.2 activity taxonomy.
+
 ```dataviewjs
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 let currentPage = null;
