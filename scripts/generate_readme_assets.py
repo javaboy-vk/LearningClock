@@ -309,13 +309,15 @@ def generate_progress_svg() -> str:
     gap = 9
     bar_width = (chart_width - gap * (len(ACTIVITIES) - 1)) / len(ACTIVITIES)
     max_seconds = max(totals.values()) or 1
+    active_activity = "Sandbox"
 
     timer_rows = []
     for index, activity in enumerate(ACTIVITIES):
         y = 85 + index * 34
+        button_background = "#FF6600" if activity == active_activity else "#069bff"
         timer_rows.append(
-            f'<rect x="12" y="{y}" width="278" height="31" fill="#eeeeee" stroke="#8c8c8c"/>'
-            f'<text x="18" y="{y + 21}" fill="#111111" font-size="16">{text(activity)}</text>'
+            f'<rect x="12" y="{y}" width="278" height="31" fill="{button_background}" stroke="#8c8c8c"/>'
+            f'<text x="18" y="{y + 21}" fill="#ffffff" font-size="16" font-weight="700">{text(activity)}</text>'
             f'<text x="322" y="{y + 21}" fill="#050505" font-family="Consolas, Cascadia Mono, Courier New, monospace" font-size="16">00:00:00</text>'
         )
 
@@ -338,17 +340,17 @@ def generate_progress_svg() -> str:
   <rect x="0" y="0" width="{width}" height="44" fill="#f8f8f8"/>
   <rect x="0" y="44" width="{width}" height="27" fill="#ffffff"/>
   <text x="16" y="28" fill="#8a8a8a" font-family="Segoe UI, Arial, sans-serif" font-size="15">Learning Clock - {APP_VERSION} - LearningClock</text>
-  <text x="5" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">About</text>
-  <text x="47" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">Add Time</text>
-  <text x="108" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">Set Date</text>
-  <text x="166" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">Add Page Count</text>
-  <text x="257" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13">View Progress</text>
+  <text x="5" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">About</text>
+  <text x="47" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Add Time</text>
+  <text x="108" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Set Date</text>
+  <text x="166" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Add Page Count</text>
+  <text x="257" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">View Progress</text>
   <text x="12" y="80" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Viewing CSV progress</text>
   <g font-family="Segoe UI, Arial, sans-serif">{''.join(timer_rows)}</g>
-  <rect x="12" y="430" width="104" height="28" fill="#eeeeee" stroke="#8c8c8c"/>
-  <text x="53" y="449" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="13">Stop</text>
-  <rect x="122" y="430" width="106" height="28" fill="#eeeeee" stroke="#8c8c8c"/>
-  <text x="141" y="449" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="13">Reset Timer</text>
+  <rect x="12" y="430" width="104" height="28" fill="#069bff" stroke="#8c8c8c"/>
+  <text x="53" y="449" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Stop</text>
+  <rect x="122" y="430" width="106" height="28" fill="#069bff" stroke="#8c8c8c"/>
+  <text x="141" y="449" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Reset Timer</text>
   <rect x="{panel_x}" y="85" width="{panel_width}" height="398" fill="#f4f8fc" stroke="#c5d8ec"/>
   <text x="{panel_x + 14}" y="115" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Progress</text>
   <rect x="{panel_x + panel_width - 59}" y="96" width="45" height="26" fill="#eeeeee" stroke="#8c8c8c"/>
