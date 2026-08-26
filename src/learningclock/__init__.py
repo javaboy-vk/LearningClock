@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Package Metadata
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v5.2
+# Version   : v5.3
 # Purpose:
 #   Defines package-level metadata for LearningClock.
 # =============================================================================
@@ -17,4 +17,4 @@
 #     No special error handling is needed because this module only defines static metadata.
 """LearningClock package."""
 
-__version__ = "5.2"                                                          # Package version exposed to callers.
+__version__ = "5.3"                                                          # Package version exposed to callers.

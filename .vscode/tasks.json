@@ -84,6 +84,33 @@
       "problemMatcher": []
     },
     {
+      "label": "Python: Run LearningClock API",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "api",
+        "--reload"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Export OpenAPI Schema",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "scripts\\dev.py",
+        "openapi"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Python: Run Diavgeia LearningPath",
       "type": "shell",
       "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",

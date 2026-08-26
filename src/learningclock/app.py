@@ -3,10 +3,10 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v5.2
+# Version   : v5.4
 # Purpose:
-#   Provides the Tkinter UI, timer state, manual entry workflow, and shutdown
-#   lifecycle for LearningClock.
+#   Provides the Tkinter UI, timer state, manual entry workflow, semantic
+#   application events, and shutdown lifecycle for LearningClock.
 #
 # Application call tree:
 #   main(argv)
@@ -18,7 +18,7 @@
 #   |-- tk.Tk()
 #   |-- LearningClock(root, ...)
 #   |   |-- CsvStore(log_dir, learning_path_name)
-#   |   |-- write_diagnostic_log("Application initialized ...")
+#   |   |-- emit APPLC-1002 application-initialized event
 #   |   |-- build_menu()
 #   |   |   |-- About -> show_about()
 #   |   |   |-- Add Time -> enter_add_time_mode()
@@ -38,7 +38,7 @@
 # Timer activity flow:
 #   switch_to(activity)
 #   |-- optional debug breakpoint
-#   |-- write_diagnostic_log("Switch requested ...")
+#   |-- emit TIMER-3001 switch-requested event
 #   |-- close_active_timer(now)
 #   |   |-- compute elapsed seconds
 #   |   |-- add elapsed seconds to totals[active_activity]
@@ -108,6 +108,18 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(script_dir))
     sys.path.insert(0, str(script_dir.parent))
 
+from learningclock.events import (
+    ApplicationEvents,
+    ConfigurationEvents,
+    TimerEvents,
+    UiEvents,
+)
+from learningclock.observability import (
+    configure_observability,
+    correlation_context,
+    shutdown_observability,
+)
+
 # Operational algorithm:
 #   What this block does:
 #     Imports CSV persistence contracts from the package first, then from the local module fallback.
@@ -120,6 +132,7 @@ try:
         ACTIVITIES,
         ACTIVITY_TO_FIELD,
         CSV_DATE_FORMAT_DESCRIPTION,
+        DIAGNOSTIC_LOG_FILE_NAME,
         CsvStore,
         format_seconds,
         parse_duration,
@@ -129,6 +142,7 @@ except ModuleNotFoundError:
         ACTIVITIES,
         ACTIVITY_TO_FIELD,
         CSV_DATE_FORMAT_DESCRIPTION,
+        DIAGNOSTIC_LOG_FILE_NAME,
         CsvStore,
         format_seconds,
         parse_duration,
@@ -142,7 +156,7 @@ except ModuleNotFoundError:
 #   Error handling:
 #     No special error handling is needed because the values are static strings.
 APP_TITLE = "Learning Clock"
-APP_VERSION = "v5.2"
+APP_VERSION = "v5.3"
 BUTTON_BACKGROUND = "#069bff"
 ACTIVE_TIMER_BUTTON_BACKGROUND = "#FF6600"
 BUTTON_FOREGROUND = "#ffffff"
@@ -164,7 +178,10 @@ DEFAULT_AUTOSAVE_MINUTES = 5
 AUTOSAVE_PROPERTIES_FILE = Path(__file__).resolve().with_name("clock.properties")
 
 
-def load_autosave_minutes(properties_file: Path = AUTOSAVE_PROPERTIES_FILE) -> int:
+def load_autosave_minutes(
+    properties_file: Path = AUTOSAVE_PROPERTIES_FILE,
+    configuration_logger=None,
+) -> int:
 
     """Return the positive autosave interval configured beside this application."""
     try:
@@ -176,13 +193,33 @@ def load_autosave_minutes(properties_file: Path = AUTOSAVE_PROPERTIES_FILE) -> i
             if key == "autosave_minutes":
                 minutes = int(value)
                 if minutes > 0:
+                    if configuration_logger is not None:
+                        configuration_logger.info(
+                            ConfigurationEvents.AUTOSAVE_LOADED,
+                            str(properties_file),
+                            minutes,
+                        )
                     return minutes
                 raise ValueError("autosave_minutes must be greater than zero")
     except (OSError, ValueError) as exc:
-        print(
-            f"LearningClock autosave configuration ignored ({exc}); "
-            f"using {DEFAULT_AUTOSAVE_MINUTES} minutes.",
-            file=sys.stderr,
+        if configuration_logger is not None:
+            configuration_logger.warning(
+                ConfigurationEvents.AUTOSAVE_FALLBACK,
+                DEFAULT_AUTOSAVE_MINUTES,
+                type(exc).__name__,
+                exc_info=(type(exc), exc, exc.__traceback__),
+            )
+        else:
+            print(
+                f"LearningClock autosave configuration ignored ({exc}); "
+                f"using {DEFAULT_AUTOSAVE_MINUTES} minutes.",
+                file=sys.stderr,
+            )
+        return DEFAULT_AUTOSAVE_MINUTES
+    if configuration_logger is not None:
+        configuration_logger.info(
+            ConfigurationEvents.AUTOSAVE_DEFAULT,
+            DEFAULT_AUTOSAVE_MINUTES,
         )
     return DEFAULT_AUTOSAVE_MINUTES
 
@@ -259,6 +296,7 @@ class LearningClock:
         log_dir=None,
         debug_break_on_click=False,
         debug_break_on_close=False,
+        loggers=None,
     ):
 
         self.root = root                                                            # Tk root window owned by this app.
@@ -270,23 +308,25 @@ class LearningClock:
         self.root.resizable(False, False)                                           # Keep fixed geometry predictable.
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)                       # Route window close through save flow.
 
-        self.store = CsvStore(log_dir or Path.cwd(), self.learning_path_name)       # Configure CSV persistence.
+        self.store = CsvStore(
+            log_dir or Path.cwd(),
+            self.learning_path_name,
+            loggers=loggers,
+        )                                                                           # Configure CSV persistence.
+        self.loggers = self.store.loggers                                            # Share semantic application loggers.
         self.log_dir = self.store.log_dir                                           # Expose resolved log directory.
         self.log_file = self.store.log_file                                         # Expose resolved CSV file path.
         self.diagnostic_log_file = self.store.diagnostic_log_file                   # Expose diagnostic log path.
-        self.autosave_minutes = load_autosave_minutes()                             # Read deployed app-local setting.
+        self.autosave_minutes = load_autosave_minutes(
+            configuration_logger=self.loggers.configuration,
+        )                                                                           # Read deployed app-local setting.
 
-        self.write_diagnostic_log(
-            "Application initialized\n"
-            f"learning_path={self.learning_path_name}\n"
-            f"cwd={Path.cwd()}\n"
-            f"log_dir={self.log_dir}\n"
-            f"log_file={self.log_file}\n"
-            f"diagnostic_log_file={self.diagnostic_log_file}\n"
-            f"autosave_properties_file={AUTOSAVE_PROPERTIES_FILE}\n"
-            f"autosave_minutes={self.autosave_minutes}\n"
-            f"python={sys.executable}\n"
-            f"csv_date_format={CSV_DATE_FORMAT_DESCRIPTION}"
+        self.loggers.application.info(
+            ApplicationEvents.INITIALIZED,
+            self.learning_path_name,
+            str(self.log_file),
+            str(self.diagnostic_log_file),
+            self.autosave_minutes,
         )
 
         self.session_start = datetime.now()                                         # Timestamp this app session.
@@ -326,17 +366,6 @@ class LearningClock:
         self.build_main_ui()                                                        # Create timer controls.
         self.update_display()                                                       # Start recurring label updates.
         self.schedule_autosave()                                                    # Start recurring session checkpoints.
-
-    # Operational algorithm:
-    #   What this method does:
-    #     Delegates diagnostic logging to the CsvStore so the app and persistence share one log.
-    #   Success:
-    #     App events appear in the same log file as CSV read/write events.
-    #   Error handling:
-    #     CsvStore absorbs logging failures so app actions are not blocked by diagnostics.
-    def write_diagnostic_log(self, message, exc=None):
-
-        self.store.write_diagnostic_log(message, exc)                              # Share CsvStore diagnostic log.
 
     # Operational algorithm:
     #   What this method does:
@@ -517,6 +546,9 @@ class LearningClock:
         try:
             self.selected_session_date = parse_session_date(self.date_entry.get())
         except ValueError:
+            self.loggers.ui.warning(
+                UiEvents.SESSION_DATE_VALIDATION_FAILED,
+            )
             messagebox.showerror("Set Date", "Use a valid date in MM/DD/YYYY format.")
             self.date_entry.focus_set()
             return False
@@ -524,6 +556,12 @@ class LearningClock:
             self.date_entry.delete(0, tk.END)
             self.date_entry.insert(0, self.selected_session_date.strftime("%m/%d/%Y"))
             self.status.config(text=f"Session date set to {self.date_entry.get()}")
+        self.loggers.ui.info(
+            UiEvents.SESSION_DATE_APPLIED,
+            self.selected_session_date.isoformat()
+            if self.selected_session_date is not None
+            else "current session date",
+        )
         return True
 
     def open_date_picker(self):
@@ -531,6 +569,9 @@ class LearningClock:
         try:
             initial_date = parse_session_date(self.date_entry.get()) or self.selected_session_date or date.today()
         except ValueError:
+            self.loggers.ui.warning(
+                UiEvents.SESSION_DATE_VALIDATION_FAILED,
+            )
             initial_date = self.selected_session_date or date.today()
 
         picker = tk.Toplevel(self.root)
@@ -550,6 +591,10 @@ class LearningClock:
             self.date_entry.delete(0, tk.END)
             self.date_entry.insert(0, selected.strftime("%m/%d/%Y"))
             self.status.config(text=f"Session date set to {self.date_entry.get()}")
+            self.loggers.ui.info(
+                UiEvents.SESSION_DATE_APPLIED,
+                selected.isoformat(),
+            )
             picker.destroy()
 
         def render_calendar():
@@ -770,8 +815,10 @@ class LearningClock:
             return
         try:
             summary = build_progress_summary(self.store.read_existing_session_rows())
-        except Exception as exc:
-            self.write_diagnostic_log("Progress chart CSV read failed.", exc)
+        except Exception:
+            self.loggers.ui.exception(
+                UiEvents.PROGRESS_READ_FAILED,
+            )
             self.progress_canvas.delete("all")
             self.progress_canvas.create_text(355, 150, text="Unable to read the progress CSV.", font=("Arial", 12))
             self.render_progress_footer(message="Unable to read the progress CSV.")
@@ -811,13 +858,16 @@ class LearningClock:
         session_end = datetime.now()
         try:
             saved = self.save_session_summary(session_end, replace_session=True)
-            self.write_diagnostic_log(
-                f"Progress checkpoint completed | saved={saved} | "
-                f"session_end={session_end:%Y-%m-%d %H:%M:%S}"
+            self.loggers.ui.info(
+                UiEvents.PROGRESS_CHECKPOINT_COMPLETED,
+                saved,
+                f"{session_end:%Y-%m-%d %H:%M:%S}",
             )
             return True
-        except Exception as exc:
-            self.write_diagnostic_log("Progress checkpoint CSV write failed.", exc)
+        except Exception:
+            self.loggers.ui.exception(
+                UiEvents.PROGRESS_CHECKPOINT_FAILED,
+            )
             messagebox.showerror("View Progress", "Unable to save the current session before showing progress.")
             return False
 
@@ -900,16 +950,20 @@ class LearningClock:
         if self.debug_break_on_click:                                         # Developer debugging hook.
             breakpoint()
 
-        self.write_diagnostic_log(f"Switch requested | activity={activity}")   # Record requested activity.
+        self.loggers.timer.info(
+            TimerEvents.SWITCH_REQUESTED,
+            activity,
+        )
         self.close_active_timer(datetime.now())                                # Credit previous active timer.
         self.active_activity = activity                                        # Store new active activity.
         self.active_start = datetime.now()                                     # Start new timer now.
         self.refresh_activity_button_colors()                                  # Highlight the new running timer orange.
         self.session_saved = False                                             # Session changed since last save.
         self.status.config(text=f"Running: {activity}")                        # Show running activity.
-        self.write_diagnostic_log(
-            f"Timer started | activity={activity} | "
-            f"active_start={self.active_start:%H:%M:%S}"                       # Record start time.
+        self.loggers.timer.info(
+            TimerEvents.STARTED,
+            activity,
+            f"{self.active_start:%H:%M:%S}",
         )
 
     # Operational algorithm:
@@ -925,11 +979,11 @@ class LearningClock:
             return
         elapsed_seconds = (now - self.active_start).total_seconds()            # Compute elapsed runtime.
         self.totals[self.active_activity] += elapsed_seconds                   # Add time to active activity total.
-        self.write_diagnostic_log(
-            "Timer closed | "
-            f"activity={self.active_activity} | "
-            f"elapsed={format_seconds(round(elapsed_seconds))} | "
-            f"activity_total={format_seconds(round(self.totals[self.active_activity]))}"  # Record new total.
+        self.loggers.timer.info(
+            TimerEvents.CLOSED,
+            self.active_activity,
+            format_seconds(round(elapsed_seconds)),
+            format_seconds(round(self.totals[self.active_activity])),
         )
         self.active_activity = None                                            # Clear active activity.
         self.active_start = None                                               # Clear active start time.
@@ -945,11 +999,13 @@ class LearningClock:
     def stop_running_timer(self):
 
         if self.active_activity is None:                                       # Nothing to stop.
+            self.loggers.timer.info(TimerEvents.STOP_REJECTED)
             self.status.config(text="No timer running")                        # Keep idle status visible.
             return
         stopped_activity = self.active_activity                                # Remember label before clearing state.
         self.close_active_timer(datetime.now())                                # Credit elapsed time and clear active state.
         self.status.config(text=f"Stopped: {stopped_activity}")                # Tell user what stopped.
+        self.loggers.timer.info(TimerEvents.STOPPED)
 
     # Operational algorithm:
     #   What this method does:
@@ -961,6 +1017,7 @@ class LearningClock:
     def reset_running_timer(self):
 
         if self.active_activity is None:                                       # Reset requires an active timer.
+            self.loggers.timer.warning(TimerEvents.RESET_REJECTED)
             messagebox.showwarning("Reset Timer", "No timer is currently running.")  # Explain no-op to user.
             return
         activity = self.active_activity                                        # Capture active activity name.
@@ -968,6 +1025,7 @@ class LearningClock:
         self.active_start = datetime.now()                                     # Restart timing from now.
         self.session_saved = False                                             # Session changed since last save.
         self.status.config(text=f"Reset running timer: {activity}")            # Show reset result.
+        self.loggers.timer.info(TimerEvents.RESET, activity)
         self.update_display()                                                  # Refresh labels immediately.
 
     # Operational algorithm:
@@ -996,6 +1054,10 @@ class LearningClock:
             additions.append((activity, seconds))                              # Keep valid addition for batch apply.
 
         if errors:                                                             # Do not partially apply invalid form.
+            self.loggers.ui.warning(
+                UiEvents.MANUAL_TIME_VALIDATION_FAILED,
+                len(errors),
+            )
             messagebox.showerror("Invalid Manual Time", "\n".join(errors))     # Show all errors at once.
             return
         if not additions:                                                      # Blank/zero-only submission is an accepted no-op.
@@ -1022,8 +1084,10 @@ class LearningClock:
                 session_date=session_date,
             )
             self.store.save_session_summary(manual_row, replace_session=True)
-        except Exception as exc:
-            self.write_diagnostic_log("Manual time CSV write failed.", exc)
+        except Exception:
+            self.loggers.ui.exception(
+                UiEvents.MANUAL_TIME_SAVE_FAILED,
+            )
             messagebox.showerror("Add Time", "Unable to save the manual time. No time was added.")
             return
 
@@ -1032,9 +1096,12 @@ class LearningClock:
         for activity, seconds in additions:                                    # Reflect successfully persisted additions in the UI.
             self.totals[activity] += seconds
             self.persisted_manual_totals[activity] += seconds                  # Keep later checkpoints from duplicating this row.
-            self.write_diagnostic_log(
-                f"Manual time saved | activity={activity} | date={manual_row['date']} | added={format_seconds(seconds)} | "
-                f"activity_total={format_seconds(round(self.totals[activity]))}"  # Record updated activity total.
+            self.loggers.ui.info(
+                UiEvents.MANUAL_TIME_SAVED,
+                activity,
+                manual_row["date"],
+                format_seconds(seconds),
+                format_seconds(round(self.totals[activity])),
             )
 
         for entry in self.manual_entries.values():                             # Clear all manual fields after success.
@@ -1063,6 +1130,9 @@ class LearningClock:
             self.status.config(text="No pages added")                          # Confirm the harmless no-op.
             return
         if not raw_value.isdigit():                                            # Only whole-number pages are supported.
+            self.loggers.ui.warning(
+                UiEvents.PAGE_COUNT_VALIDATION_FAILED,
+            )
             messagebox.showerror("Add Page Count", "Page count must be a whole number.")  # Explain invalid value.
             return
 
@@ -1090,8 +1160,10 @@ class LearningClock:
                 session_date=session_date,
             )
             self.store.save_session_summary(page_row, replace_session=True)
-        except Exception as exc:
-            self.write_diagnostic_log("Manual page-count CSV write failed.", exc)
+        except Exception:
+            self.loggers.ui.exception(
+                UiEvents.PAGE_COUNT_SAVE_FAILED,
+            )
             messagebox.showerror("Add Page Count", "Unable to save the page count. No pages were added.")
             return
 
@@ -1099,8 +1171,11 @@ class LearningClock:
         self.manual_session_starts[session_date] = manual_session_start       # Reuse the same dated row identity.
         self.pages_read += pages                                               # Reflect the saved pages in the session counter.
         self.persisted_manual_pages += pages                                   # Keep later checkpoints from duplicating these pages.
-        self.write_diagnostic_log(
-            f"Pages saved | added={pages} | date={page_row['date']} | pages_read_session_total={self.pages_read}"  # Record page total.
+        self.loggers.ui.info(
+            UiEvents.PAGE_COUNT_SAVED,
+            pages,
+            page_row["date"],
+            self.pages_read,
         )
         self.page_count_entry.delete(0, tk.END)                                # Clear input field.
         self.session_saved = False                                             # Session changed since last save.
@@ -1212,17 +1287,26 @@ class LearningClock:
         session_end = datetime.now()
         try:
             saved = self.save_session_summary(session_end, replace_session=True)
-            self.write_diagnostic_log(
-                f"Autosave completed | interval_minutes={self.autosave_minutes} | "
-                f"saved={saved} | session_end={session_end:%Y-%m-%d %H:%M:%S}"
+            self.loggers.ui.info(
+                UiEvents.AUTOSAVE_COMPLETED,
+                self.autosave_minutes,
+                saved,
+                f"{session_end:%Y-%m-%d %H:%M:%S}",
             )
         except Exception as exc:
-            self.write_diagnostic_log("Autosave CSV write failed.", exc)
+            self.loggers.ui.exception(
+                UiEvents.AUTOSAVE_FAILED,
+            )
             try:
                 emergency_file = self.save_emergency_session_file(session_end, exc)
-                self.write_diagnostic_log(f"Autosave emergency file created | file={emergency_file}")
-            except Exception as emergency_exc:
-                self.write_diagnostic_log("Autosave emergency save failed.", emergency_exc)
+                self.loggers.ui.warning(
+                    UiEvents.AUTOSAVE_EMERGENCY_CREATED,
+                    str(emergency_file),
+                )
+            except Exception:
+                self.loggers.ui.exception(
+                    UiEvents.AUTOSAVE_EMERGENCY_FAILED,
+                )
         finally:
             self.schedule_autosave()
 
@@ -1273,9 +1357,11 @@ class LearningClock:
 
         self.is_closing = True                                                 # Stop display loop and duplicate close.
         session_end = datetime.now()                                           # Timestamp the end of this session.
-        self.write_diagnostic_log(
-            f"Close requested | session_start={self.session_start:%Y-%m-%d %H:%M:%S} | "
-            f"session_end={session_end:%Y-%m-%d %H:%M:%S} | session_saved={self.session_saved}"  # Record close state.
+        self.loggers.application.info(
+            ApplicationEvents.CLOSE_REQUESTED,
+            f"{self.session_start:%Y-%m-%d %H:%M:%S}",
+            f"{session_end:%Y-%m-%d %H:%M:%S}",
+            self.session_saved,
         )
 
         try:
@@ -1296,12 +1382,16 @@ class LearningClock:
             try:
                 self.save_session_summary(session_end, replace_session=True)   # Replace latest autosave with final totals.
             except Exception as exc:
-                self.write_diagnostic_log("Normal CSV save failed.", exc)  # Preserve failure details.
+                self.loggers.ui.exception(
+                    UiEvents.SHUTDOWN_SAVE_FAILED,
+                )
                 emergency_file = None                                      # Track fallback result.
                 try:
                     emergency_file = self.save_emergency_session_file(session_end, exc)  # Fallback persistence.
-                except Exception as emergency_exc:
-                    self.write_diagnostic_log("Emergency save failed.", emergency_exc)  # Preserve fallback failure.
+                except Exception:
+                    self.loggers.ui.exception(
+                        UiEvents.SHUTDOWN_EMERGENCY_FAILED,
+                    )
                     emergency_file = None                                  # No fallback file available.
 
                 error_message = (
@@ -1317,7 +1407,9 @@ class LearningClock:
                     )
                 messagebox.showerror("Learning Clock Save Warning", error_message)  # Surface save problem.
         finally:
-            self.write_diagnostic_log("Application shutdown finalization started.")  # Record final teardown.
+            self.loggers.application.info(
+                ApplicationEvents.SHUTDOWN_FINALIZING,
+            )
             try:
                 self.root.quit()                                                # Exit Tk main loop.
             except tk.TclError:
@@ -1338,16 +1430,36 @@ class LearningClock:
 def main(argv: list[str] | None = None) -> int:
 
     args = parse_args(argv)                                                     # Parse CLI/debug launch arguments.
-    root = tk.Tk()                                                              # Create root Tk window.
-    LearningClock(
-        root,                                                                   # Window root.
-        learning_path_name=args.learning_path,                                  # Optional configured path name.
-        log_dir=args.log_dir,                                                   # Optional CSV/log output directory.
-        debug_break_on_click=args.debug_break_on_click,                         # Developer click breakpoint.
-        debug_break_on_close=args.debug_break_on_close,                         # Developer close breakpoint.
-    )
-    root.mainloop()                                                             # Run UI event loop.
-    return 0                                                                    # Successful process exit code.
+    resolved_log_dir = Path(args.log_dir or Path.cwd())                         # Resolve the app persistence boundary.
+    loggers = configure_observability(
+        resolved_log_dir / DIAGNOSTIC_LOG_FILE_NAME,
+    )                                                                           # Configure file/optional Seq sinks.
+    try:
+        with correlation_context():                                             # Correlate one desktop application session.
+            loggers.application.info(
+                ApplicationEvents.STARTING,
+                args.learning_path or Path.cwd().name,
+                str(resolved_log_dir),
+            )
+            root = tk.Tk()                                                      # Create root Tk window.
+            LearningClock(
+                root,                                                           # Window root.
+                learning_path_name=args.learning_path,                          # Optional configured path name.
+                log_dir=resolved_log_dir,                                       # Resolved CSV/log output directory.
+                debug_break_on_click=args.debug_break_on_click,                 # Developer click breakpoint.
+                debug_break_on_close=args.debug_break_on_close,                 # Developer close breakpoint.
+                loggers=loggers,                                                # Shared semantic logging composition.
+            )
+            root.mainloop()                                                     # Run UI event loop.
+            loggers.application.info(ApplicationEvents.STOPPED)
+        return 0                                                                # Successful process exit code.
+    except Exception:
+        loggers.application.exception(
+            ApplicationEvents.STARTUP_FAILED,
+        )
+        raise
+    finally:
+        shutdown_observability()                                                # Flush/close framework-owned sinks.
 
 
 if __name__ == "__main__":

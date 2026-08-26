@@ -5,8 +5,11 @@ src\learningclock\
   __init__.py          Package metadata and version.
   __main__.py          Implements python -m learningclock.
   cli.py               Lightweight non-GUI CLI and version/readiness checks.
+  api.py               FastAPI health endpoint and automatic OpenAPI documentation.
   app.py               Tkinter application, timer state, UI workflow, shutdown flow.
   csv_store.py         CSV schema, normalization, persistence, totals, emergency recovery.
+  events.py            Product-owned semantic event catalogs and stable event IDs.
+  observability.py     protepo.log configuration, logger composition, and correlation.
   learning-clock.py    Compatibility launcher for older script/debug paths.
 ```
 
@@ -23,7 +26,7 @@ Main responsibilities:
 - Validate and apply page-count entries.
 - Create a session row at shutdown and hand persistence to `CsvStore`.
 - Attempt emergency save when normal CSV persistence fails.
-- Keep diagnostic events in the same log used by CSV persistence.
+- Call the native application, UI, and timer loggers supplied by `protepo.log`.
 
 ## `learningclock.csv_store`
 
@@ -40,16 +43,30 @@ Main responsibilities:
 - Recalculate per-row totals when old data is incomplete.
 - Recalculate the final aggregate `TOTAL` row.
 - Write one clean CSV with session rows plus exactly one final `TOTAL` row.
-- Write diagnostic log entries without allowing logging failures to break timer operation.
+- Call the native `protepo.log` storage logger for semantic persistence events.
 
 ## `learningclock.cli`
 
 `cli.py` provides a fast, non-GUI command surface for automation and health checks.
+Its user-facing response remains on stdout; semantic `CMDLN-*` events use stderr.
 
 ```cmd
 .\.venv\Scripts\python.exe -m learningclock
 .\.venv\Scripts\python.exe -m learningclock --version
 ```
+
+## `learningclock.api`
+
+`api.py` owns the HTTP contract. FastAPI publishes `GET /health`, the OpenAPI schema at
+`/openapi.json`, Swagger UI at `/docs`, and ReDoc at `/redoc`. `scripts/export_openapi.py`
+generates the tracked `docs/openapi.json` contract from the same application object.
+
+## `learningclock.events` and `learningclock.observability`
+
+`events.py` owns stable event codes for application lifecycle, UI workflows, timers, storage,
+configuration, and CLI behavior. `observability.py` configures console, file, and optional Seq
+sinks, registers every LearningClock event catalog with `Log`, creates one native logger per
+catalog through `Log.get_logger(...)`, and supplies correlation contexts.
 
 ## Compatibility Launcher
 

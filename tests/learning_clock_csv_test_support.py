@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Test Support
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v5.0
+# Version   : v5.1
 # Purpose:
 #   Provides shared helpers for Learning Clock CSV unit and regression tests.
 # =============================================================================
@@ -17,6 +17,7 @@ from tempfile import TemporaryDirectory
 
 from learningclock import csv_store as learning_clock
 from learningclock.csv_store import ACTIVITIES, CsvStore
+from learningclock.observability import shutdown_observability
 
 
 # Testing algorithm:
@@ -42,10 +43,11 @@ class CsvStoreTtestHarness(CsvStore):
         diagnostic_log_file: Path | None = None,
     ):
 
-        super().__init__(log_dir, learning_path_name)                         # Reuse production CsvStore setup.
-        if diagnostic_log_file is not None:                                   # Optional shared diagnostic log for regression tests.
-            self.diagnostic_log_file = Path(diagnostic_log_file)              # Store resolved diagnostic log path.
-            self.diagnostic_log_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure diagnostic directory exists.
+        super().__init__(
+            log_dir,
+            learning_path_name,
+            diagnostic_log_file=diagnostic_log_file,
+        )                                                                      # Reuse production CsvStore and semantic logging setup.
         self.session_start = datetime(2026, 6, 5, 9, 0, 0)                    # Fixed start keeps expected rows stable.
         self.session_saved = False                                            # Mirror app save state for tests.
         self.totals = {activity: 0 for activity in ACTIVITIES}                # Start every activity at zero seconds.
@@ -127,6 +129,7 @@ class LearningClockCsvHarness:
     #     TemporaryDirectory cleanup errors surface through unittest teardown.
     def tearDown(self):
 
+        shutdown_observability()                                               # Close the temp diagnostic file handler.
         self.temp_dir.cleanup()                                                # Remove isolated workspace.
 
     # Testing algorithm:

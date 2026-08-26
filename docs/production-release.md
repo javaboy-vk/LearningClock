@@ -18,8 +18,19 @@ Files copied by release:
 - `launcher\Learning-Clock.ico`
 - `launcher\Learning-clock.vbs`
 - `src\learningclock\__init__.py`
+- `src\learningclock\api.py`
 - `src\learningclock\app.py`
 - `src\learningclock\csv_store.py`
+- `src\learningclock\events.py`
+- `src\learningclock\observability.py`
+
+The Python interpreter configured by each launcher properties file must contain FastAPI, Uvicorn,
+and the pinned `protepo-log` runtime dependency. Verify that interpreter before release with:
+
+```cmd
+path\to\python.exe -c "import fastapi, uvicorn, protepo.log; print(fastapi.__version__, uvicorn.__version__, protepo.log.__version__)"
+path\to\python.exe -m pip check
+```
 
 Release also reads `D:\LearningPath\*.properties` and exports the shared dashboard component beside each configured `LearningPath` CSV folder:
 

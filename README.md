@@ -1,4 +1,4 @@
-# LearningClock v5.2
+# LearningClock v5.3
 
 LearningClock is a Windows-friendly Python/Tkinter desktop timer for tracking focused learning sessions. It records time across named study activities, page counts, session metadata, recovered emergency saves, and a recalculated CSV `TOTAL` row that can feed reports and Diavgeia documentation.
 
@@ -10,9 +10,9 @@ The project is intentionally small and operational: the GUI owns timer behavior,
 
 The desktop app presents learning timers that map directly to the persisted CSV activity columns. The refreshed view includes **Set Date** for backdated entries, **Add Page Count**, and the **View Progress** toggle.
 
-### Version 5.2 interface
+### Version 5.3 interface
 
-The v5.2 desktop interface uses bold menu and button labels for better visibility. Inactive activity controls are blue (`#069bff`); the running activity is orange (`#FF6600`). **Book Listening** is the current listening timer and persists as the `book_listening` CSV column. Existing `audiobook` data is retained through CSV normalization and migration.
+The v5.3 desktop interface uses bold menu and button labels for better visibility. Inactive activity controls are blue (`#069bff`); the running activity is orange (`#FF6600`). **Book Listening** is the current listening timer and persists as the `book_listening` CSV column. Existing `audiobook` data is retained through CSV normalization and migration.
 
 ![LearningClock desktop UI with learning timers](docs/assets/learning-clock-ui.svg)
 
@@ -53,7 +53,9 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 - CSV persistence with a stable schema, canonical date formatting, activity-to-column mapping, page totals, and final aggregate `TOTAL` row.
 - Existing CSV normalization for legacy dates and legacy field names.
 - Emergency CSV save/recovery path for shutdown failures.
-- Diagnostic logging beside the configured CSV output.
+- Semantic application-level logging through `protepo.log`, with stable event codes, correlation
+  context, a file sink beside the configured CSV, and optional Seq delivery.
+- FastAPI readiness endpoint with automatic Swagger UI, ReDoc, and a tracked OpenAPI contract.
 - Package CLI health check and version command.
 - Compatibility launcher for the historical `learning-clock.py` entry path.
 - Unit tests for CSV behavior and focused regression tests for real/app-style CSV inputs.
@@ -76,6 +78,8 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 - [Production Release, Packaging, and Generated Output Policy](docs/production-release.md)
 - [Obsidian-Diavgeia Documentation](docs/obsidian-diavgeia-documentation.md)
 - [VS Code Support](docs/vscode-support.md)
+- [Application Logging](docs/application-logging.md)
+- [HTTP API, Swagger UI, and OpenAPI Export](docs/api.md)
 - [Automated Code Inventory](docs/code-inventory-automation.md)
 
 ## Code Inventory

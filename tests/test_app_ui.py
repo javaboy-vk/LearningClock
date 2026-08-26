@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter UI State Tests
 # Author    : javaboy-vk
 # Date      : 2026-08-08
-# Version   : v5.2
+# Version   : v5.3
 # Purpose:
 #   Verifies activity-button colors follow the active timer without a display.
 # =============================================================================

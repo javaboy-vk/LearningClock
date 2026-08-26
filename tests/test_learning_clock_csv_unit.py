@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Unit Tests
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v5.4
+# Version   : v5.5
 # Purpose:
 #   Verifies CSV save, normalization, emergency recovery, and total calculations.
 # =============================================================================
@@ -234,6 +234,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
 
         clock = LearningClock.__new__(LearningClock)
         clock.store = learning_clock.CsvStore(self.log_dir, "UnitTestPath")
+        clock.loggers = clock.store.loggers
         clock.session_start = datetime(2026, 6, 5, 9, 0, 0)
         clock.active_activity = None
         clock.active_start = None

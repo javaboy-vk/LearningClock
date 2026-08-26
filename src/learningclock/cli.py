@@ -3,9 +3,10 @@
 # Artifact  : LearningClock - CLI Entrypoint
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v0.1.0
+# Version   : v0.1.2
 # Purpose:
-#   Provides the command-line entrypoint for the LearningClock package.
+#   Provides the command-line entrypoint and semantic command events for the
+#   LearningClock package.
 #
 # Why this file exists:
 #   The LearningClock project has more than one way to start or inspect the package. The Tkinter
@@ -48,6 +49,12 @@ from __future__ import annotations
 import argparse
 
 from learningclock import __version__
+from learningclock.events import CliEvents
+from learningclock.observability import (
+    configure_observability,
+    correlation_context,
+    shutdown_observability,
+)
 
 
 # Operational algorithm:
@@ -77,10 +84,31 @@ def build_parser() -> argparse.ArgumentParser:
 #     argparse raises SystemExit for malformed arguments, preserving standard command-line behavior.
 def main(argv: list[str] | None = None) -> int:
 
-    args = build_parser().parse_args(argv)                                    # Parse supplied args or sys.argv via argparse.
-    if args.version:                                                          # Version-only command path.
-        print(__version__)                                                    # Emit package version for scripts/users.
-        return 0                                                              # Successful version command.
+    loggers = configure_observability(
+        None,
+        console_enabled=True,
+        include_seq=False,
+    )                                                                          # Keep CLI stdout stable; semantic events use stderr.
+    try:
+        with correlation_context():
+            try:
+                args = build_parser().parse_args(argv)                         # Parse supplied args or sys.argv via argparse.
+            except SystemExit as exc:
+                if exc.code:
+                    loggers.cli.warning(CliEvents.ARGUMENT_PARSE_EXITED, exc.code)
+                else:
+                    loggers.cli.info(CliEvents.ARGUMENT_PARSE_EXITED, exc.code)
+                raise
+            if args.version:                                                   # Version-only command path.
+                print(__version__)                                             # Emit package version for scripts/users.
+                loggers.cli.info(
+                    CliEvents.VERSION_EMITTED,
+                    __version__,
+                )
+                return 0                                                       # Successful version command.
 
-    print("LearningClock is ready.")                                          # Default health-check/readiness message.
-    return 0                                                                  # Successful default command.
+            print("LearningClock is ready.")                                   # Default health-check/readiness message.
+            loggers.cli.info(CliEvents.READY_EMITTED)
+            return 0                                                           # Successful default command.
+    finally:
+        shutdown_observability()

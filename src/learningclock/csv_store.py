@@ -3,10 +3,10 @@
 # Artifact  : LearningClock - CSV Persistence
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v5.2
+# Version   : v5.4
 # Purpose:
-#   Provides CSV read, write, normalization, total calculation, and emergency
-#   session recovery for LearningClock.
+#   Provides CSV read, write, normalization, total calculation, emergency
+#   session recovery, and semantic persistence events for LearningClock.
 #
 # Persistence call tree:
 #   CsvStore.__init__(log_dir, learning_path_name)
@@ -16,7 +16,7 @@
 #
 #   LearningClock shutdown / regression test save path
 #   `-- CsvStore.save_session_summary(session_row)
-#       |-- write_diagnostic_log("Save started ...")
+#       |-- emit STORG-4002 save-started event
 #       |-- read_existing_session_rows()
 #       |   |-- open learning_time_log.csv when it exists
 #       |   |-- skip stale TOTAL rows
@@ -26,12 +26,12 @@
 #       |   |   |-- fill missing activity durations with 00:00:00
 #       |   |   |-- fill missing pages_read with 0
 #       |   |   `-- recalculate_row_total(row) when total is missing
-#       |   `-- write_diagnostic_log("Main CSV read completed ...")
+#       |   `-- emit STORG-4010 main-file-read event
 #       |-- read_emergency_session_rows()
 #       |   |-- find learning_time_log_emergency_*.csv files
 #       |   |-- normalize_existing_row(row)
 #       |   |-- has_session_data(normalized_row)
-#       |   `-- write_diagnostic_log("Emergency CSV scan completed ...")
+#       |   `-- emit STORG-4012 emergency-scan event
 #       |-- has_session_data(session_row)
 #       |   |-- parse_duration(session_row["total"])
 #       |   `-- check pages_read when total duration is zero
@@ -48,7 +48,7 @@
 #       |   |-- writer.writerows(session rows)
 #       |   `-- writer.writerow(TOTAL row)
 #       |-- mark_emergency_files_merged(emergency_files)
-#       `-- write_diagnostic_log("Save completed successfully.")
+#       `-- emit STORG-4008 save-completed event
 #
 #   LearningClock emergency save path
 #   `-- CsvStore.save_emergency_session_file(session_row, session_end, error)
@@ -56,7 +56,7 @@
 #       |-- csv.DictWriter(... FIELDNAMES ...)
 #       |-- writer.writeheader()
 #       |-- writer.writerow(session_row)
-#       `-- write_diagnostic_log("Emergency session file created ...")
+#       `-- emit STORG-4016 emergency-file-created event
 #
 #   Row construction path
 #   `-- CsvStore.create_session_row(session_start, session_end, activity_seconds, pages_read)
@@ -69,9 +69,11 @@
 from __future__ import annotations
 
 import csv
-import traceback
 from datetime import datetime
 from pathlib import Path
+
+from learningclock.events import StorageEvents
+from learningclock.observability import configure_observability
 
 # Data model:
 #   What this defines:
@@ -175,7 +177,7 @@ def parse_duration(duration):
 
 # Operational algorithm:
 #   What this class does:
-#     Owns all CSV persistence, CSV normalization, total-row math, and diagnostic logging.
+    #     Owns all CSV persistence, CSV normalization, total-row math, and semantic storage logging.
 #   Success:
 #     The app can read existing rows, append valid sessions, recover emergency rows, and write
 #     one clean CSV with a final recalculated TOTAL row.
@@ -196,33 +198,32 @@ class CsvStore:
     #     The log directory exists and the store knows the main CSV and diagnostic log paths.
     #   Error handling:
     #     Directory creation errors propagate because the app cannot persist without the log folder.
-    def __init__(self, log_dir: str | Path, learning_path_name: str):
+    def __init__(
+        self,
+        log_dir: str | Path,
+        learning_path_name: str,
+        diagnostic_log_file: str | Path | None = None,
+        loggers=None,
+    ):
 
         self.learning_path_name = learning_path_name                         # Persisted learning path label.
         self.log_dir = Path(log_dir)                                         # Directory for CSV and diagnostic logs.
         self.log_dir.mkdir(parents=True, exist_ok=True)                      # Ensure persistence directory exists.
         self.log_file = self.log_dir / LOG_FILE_NAME                         # Main CSV file path.
-        self.diagnostic_log_file = self.log_dir / DIAGNOSTIC_LOG_FILE_NAME   # Diagnostic log file path.
-
-    # Operational algorithm:
-    #   What this method does:
-    #     Appends one diagnostic entry, plus an optional exception traceback, to the debug log.
-    #   Success:
-    #     The log contains timestamped evidence for app/test troubleshooting.
-    #   Error handling:
-    #     Logging failures are swallowed so diagnostic output never breaks timer operation.
-    def write_diagnostic_log(self, message, exc=None):
-
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")              # Timestamp this diagnostic event.
-            lines = [f"[{timestamp}] {message}"]                                  # Start with the caller's message.
-            if exc is not None:                                                   # Include traceback when supplied.
-                lines.extend(traceback.format_exception(type(exc), exc, exc.__traceback__))
-            with self.diagnostic_log_file.open("a", encoding="utf-8") as log:     # Append to the diagnostic log.
-                log.write("\n".join(line.rstrip() for line in lines))             # Strip traceback line endings.
-                log.write("\n")                                                   # End each event cleanly.
-        except Exception:
-            pass                                                                  # Logging must never break the timer.
+        self.diagnostic_log_file = (
+            Path(diagnostic_log_file)
+            if diagnostic_log_file is not None
+            else self.log_dir / DIAGNOSTIC_LOG_FILE_NAME
+        )                                                                     # Diagnostic log file path.
+        self.loggers = loggers or configure_observability(
+            self.diagnostic_log_file,
+            console_enabled=False,
+        )                                                                     # Use shared or standalone logging.
+        self.loggers.storage.info(
+            StorageEvents.INITIALIZED,
+            str(self.log_file),
+            str(self.diagnostic_log_file),
+        )
 
     # Operational algorithm:
     #   What this method does:
@@ -268,38 +269,31 @@ class CsvStore:
     #     merged only after the main CSV write succeeds.
     def save_session_summary(self, session_row, replace_session=False):
 
-        self.write_diagnostic_log(
-            f"Save started | session_end={session_row.get('session_end')} | "
-            f"log_file={self.log_file}"                                      # Record target CSV path.
+        self.loggers.storage.info(
+            StorageEvents.SAVE_STARTED,
+            session_row.get("session_end"),
+            str(self.log_file),
         )
 
         existing_rows = self.read_existing_session_rows()                     # Load normalized main CSV rows.
         emergency_rows, emergency_files = self.read_emergency_session_rows()  # Load recoverable emergency rows.
 
-        self.write_diagnostic_log(
-            f"Rows loaded | existing_rows={len(existing_rows)} | "
-            f"emergency_rows={len(emergency_rows)} | emergency_files={len(emergency_files)}"  # Record input counts.
+        self.loggers.storage.info(
+            StorageEvents.ROWS_LOADED,
+            len(existing_rows),
+            len(emergency_rows),
+            len(emergency_files),
         )
 
         has_data = self.has_session_data(session_row)                         # Decide whether current row is useful.
-        self.write_diagnostic_log(
-            "Session row created | "                                          # Record the row about to be considered.
-            f"date={session_row.get('date')} | "
-            f"start={session_row.get('session_start')} | "
-            f"end={session_row.get('session_end')} | "
-            f"reading={session_row.get('reading')} | "
-            f"outlining={session_row.get('outlining')} | "
-            f"active_recall={session_row.get('active_recall')} | "
-            f"sandbox={session_row.get('sandbox')} | "
-            f"ai_assisted_engineering={session_row.get('ai_assisted_engineering')} | "
-            f"ai_assisted_architecture_design={session_row.get('ai_assisted_architecture_design')} | "
-            f"classical_software_engineering={session_row.get('classical_software_engineering')} | "
-            f"book_listening={session_row.get('book_listening')} | "
-            f"update_diavgeia={session_row.get('update_diavgeia')} | "
-            f"promote_stable_concept={session_row.get('promote_stable_concept')} | "
-            f"pages_read={session_row.get('pages_read')} | "
-            f"total={session_row.get('total')} | "
-            f"has_data={has_data}"
+        self.loggers.storage.info(
+            StorageEvents.SESSION_PREPARED,
+            session_row.get("date"),
+            session_row.get("session_start"),
+            session_row.get("session_end"),
+            session_row.get("total"),
+            session_row.get("pages_read"),
+            has_data,
         )
 
         if has_data and replace_session:                                       # Replace an earlier checkpoint for this app session.
@@ -314,21 +308,25 @@ class CsvStore:
         if has_data:                                                           # Only persist meaningful sessions.
             existing_rows.append(session_row)                                  # Add current session to existing rows.
         else:
-            self.write_diagnostic_log("Session row skipped because it had no time or pages.")  # Explain skipped row.
+            self.loggers.storage.info(
+                StorageEvents.SESSION_SKIPPED,
+            )
 
         existing_rows.extend(emergency_rows)                                   # Merge recovered emergency rows.
 
         if not existing_rows:                                                  # Avoid creating an empty CSV file.
-            self.write_diagnostic_log("Save skipped because there were no rows to write.")  # Explain skipped save.
+            self.loggers.storage.info(StorageEvents.SAVE_SKIPPED)
             return False                                                       # Caller can tell nothing was written.
 
         existing_rows.sort(key=self.session_row_sort_key)                     # Keep saved/backdated sessions chronological.
         total_row = self.create_total_row(existing_rows)                       # Recalculate aggregate from sessions.
         rows_to_write = len(existing_rows) + 1                                 # Include final TOTAL row.
 
-        self.write_diagnostic_log(
-            f"Writing CSV | rows_to_write_including_total={rows_to_write} | "
-            f"total={total_row.get('total')} | pages_total={total_row.get('pages_read')}"  # Record output summary.
+        self.loggers.storage.info(
+            StorageEvents.WRITE_STARTED,
+            rows_to_write,
+            total_row.get("total"),
+            total_row.get("pages_read"),
         )
 
         with self.log_file.open("w", newline="", encoding="utf-8") as f:       # Rewrite the main CSV atomically enough for this app.
@@ -338,7 +336,7 @@ class CsvStore:
             writer.writerow(total_row)                                         # Write exactly one final TOTAL row.
 
         self.mark_emergency_files_merged(emergency_files)                      # Mark emergency files after successful rewrite.
-        self.write_diagnostic_log("Save completed successfully.")              # Record success.
+        self.loggers.storage.info(StorageEvents.SAVE_COMPLETED)
         return True                                                            # Caller can tell rows were written.
 
     @staticmethod
@@ -375,7 +373,10 @@ class CsvStore:
     def read_existing_session_rows(self):
 
         if not self.log_file.exists():                                        # First run may not have a CSV yet.
-            self.write_diagnostic_log(f"Main CSV does not exist yet | log_file={self.log_file}")  # Record empty source.
+            self.loggers.storage.info(
+                StorageEvents.MAIN_FILE_MISSING,
+                str(self.log_file),
+            )
             return []                                                         # No rows to merge.
 
         rows = []                                                             # Accumulate normalized session rows.
@@ -385,7 +386,10 @@ class CsvStore:
                 if row.get("date") == "TOTAL":                                # Ignore stale summary rows.
                     continue
                 rows.append(self.normalize_existing_row(row))                 # Normalize legacy/current row.
-        self.write_diagnostic_log(f"Main CSV read completed | session_rows={len(rows)}")  # Record read result.
+        self.loggers.storage.info(
+            StorageEvents.MAIN_FILE_READ,
+            len(rows),
+        )
         return rows                                                           # Return session rows only.
 
     # Operational algorithm:
@@ -411,15 +415,18 @@ class CsvStore:
                         if self.has_session_data(normalized_row):                  # Keep only useful rows.
                             rows.append(normalized_row)
                 files.append(emergency_file)                                      # Mark this source file as consumed.
-            except OSError as exc:
-                self.write_diagnostic_log(f"Emergency CSV read failed | file={emergency_file}", exc)  # Preserve failure evidence.
+            except OSError:
+                self.loggers.storage.exception(
+                    StorageEvents.EMERGENCY_FILE_READ_FAILED,
+                    str(emergency_file),
+                )
                 continue                                                          # Continue with other emergency files.
 
-        summary = (
-            f"Emergency CSV scan completed | rows={len(rows)} "
-            f"| files={len(files)}"                                               # Summarize recovery result.
+        self.loggers.storage.info(
+            StorageEvents.EMERGENCY_SCAN_COMPLETED,
+            len(rows),
+            len(files),
         )
-        self.write_diagnostic_log(summary)                                        # Record recovery summary.
         return rows, files                                                        # Return rows and source files.
 
     # Operational algorithm:
@@ -437,8 +444,17 @@ class CsvStore:
                 if merged_file.exists():                                        # Remove stale marker before rename.
                     merged_file.unlink()
                 emergency_file.rename(merged_file)                              # Mark source as merged.
-            except OSError:
-                pass                                                            # Do not fail after successful CSV write.
+            except OSError as exc:
+                self.loggers.storage.warning(
+                    StorageEvents.EMERGENCY_FILE_MARK_FAILED,
+                    str(emergency_file),
+                    exc_info=(type(exc), exc, exc.__traceback__),
+                )                                                               # Do not fail after successful CSV write.
+        if emergency_files:
+            self.loggers.storage.info(
+                StorageEvents.EMERGENCY_FILES_MERGED,
+                len(emergency_files),
+            )
 
     # Operational algorithm:
     #   What this method does:
@@ -544,18 +560,20 @@ class CsvStore:
                 parsed_date = datetime.strptime(raw_value, date_format).date()  # Parse raw date text.
                 normalized_value = parsed_date.strftime(CSV_DATE_FORMAT)       # Convert to canonical format.
                 if normalized_value != raw_value:                              # Log only actual changes.
-                    self.write_diagnostic_log(
-                        "CSV date normalized | "
-                        f"original={raw_value} | normalized={normalized_value} | "
-                        f"canonical_format={CSV_DATE_FORMAT_DESCRIPTION}"
+                    self.loggers.storage.info(
+                        StorageEvents.DATE_NORMALIZED,
+                        raw_value,
+                        normalized_value,
+                        CSV_DATE_FORMAT_DESCRIPTION,
                     )
                 return normalized_value                                        # Return canonical date.
             except ValueError:
                 continue                                                       # Try the next supported date format.
 
-        self.write_diagnostic_log(
-            "CSV date could not be normalized; preserving original value | "
-            f"value={raw_value} | canonical_format={CSV_DATE_FORMAT_DESCRIPTION}"
+        self.loggers.storage.warning(
+            StorageEvents.DATE_PRESERVED,
+            raw_value,
+            CSV_DATE_FORMAT_DESCRIPTION,
         )                                                                      # Preserve evidence for manual cleanup.
         return raw_value                                                       # Do not destroy unknown date text.
 
@@ -579,9 +597,10 @@ class CsvStore:
             writer.writeheader()                                               # Include header for recovery reader.
             writer.writerow(session_row)                                       # Preserve only this session row.
 
-        self.write_diagnostic_log(
-            f"Emergency session file created | file={emergency_file} | "
-            f"original_error={error}"                                          # Keep the original save failure visible.
+        self.loggers.storage.warning(
+            StorageEvents.EMERGENCY_FILE_CREATED,
+            str(emergency_file),
+            type(error).__name__,
         )
         return emergency_file                                                  # Return file path for caller/tests.
 

@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - External CSV Category Migration Utility
 # Author    : javaboy-vk
 # Date      : 2026-07-03
-# Version   : v0.1.0
+# Version   : v0.1.1
 # Purpose:
 #   Migrates LearningClock CSV files selected by launcher-style .properties files
 #   to the current category schema.
@@ -51,6 +51,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from learningclock.csv_store import FIELDNAMES, LOG_FILE_NAME, CsvStore  # noqa: E402
+from learningclock.observability import shutdown_observability  # noqa: E402
 
 
 # Configuration parsing:
@@ -166,4 +167,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    finally:
+        shutdown_observability()

@@ -10,6 +10,8 @@ scripts\dev.cmd test
 scripts\dev.cmd coverage
 scripts\dev.cmd pygount-summary
 scripts\dev.cmd readme-assets
+scripts\dev.cmd api --reload
+scripts\dev.cmd openapi
 scripts\dev.cmd unittest-csv
 scripts\dev.cmd unittest-csv-file
 scripts\dev.cmd csv-test test1
@@ -45,6 +47,8 @@ scripts\release.cmd
 - `coverage`: run the complete pytest suite with terminal and HTML coverage.
 - `pygount-summary`: generate the ignored `build\reports` Pages asset without changing the README.
 - `readme-assets`: generate README SVG visuals for the desktop UI and Obsidian dashboard.
+- `api`: run the FastAPI development server; Swagger UI is available at `/docs`.
+- `openapi`: regenerate the tracked `docs\openapi.json` contract from the FastAPI application.
 - `unittest-csv`: run the isolated CSV unit test file.
 - `unittest-csv-file`: run the CSV regression suite against a properties-selected or explicitly supplied CSV.
 - `csv-test`: run one focused CSV regression selector through the default fixture properties.

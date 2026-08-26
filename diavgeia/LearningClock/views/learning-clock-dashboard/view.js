@@ -3,7 +3,7 @@ File Name : view.js
 Artifact  : LearningClock - Learning Clock Dashboard Dataview View
 Author    : javaboy-vk
 Date      : 2026-06-05
-Version   : v5.2
+Version   : v5.3
 Purpose:
   Renders the LearningClock learning-time dashboard from the vault CSV.
 */

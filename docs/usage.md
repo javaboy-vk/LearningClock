@@ -67,4 +67,5 @@ Use `Add Page Count` to add a positive whole-number page count to the current se
 
 LearningClock checkpoints the current session at the configured interval and replaces that checkpoint with final totals when the app closes. The CSV includes one row per session, one column for each activity, a `pages_read` value, and a recalculated final `TOTAL` row.
 
-If the normal CSV write fails, LearningClock attempts an emergency save file in the same log area and records diagnostics in `learning_clock_debug.log`.
+If the normal CSV write fails, LearningClock attempts an emergency save file in the same log area
+and records semantic `USRIF-*` and `STORG-*` recovery events in `learning_clock_debug.log`.

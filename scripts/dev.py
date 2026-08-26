@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Developer Command Runner
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v5.0
+# Version   : v5.2
 # Purpose:
 #   Provides Maven-style lifecycle commands for the Python project.
 # =============================================================================
@@ -223,6 +223,35 @@ def readme_assets(_args: list[str] | None = None) -> None:
     run([require_venv(), str(ROOT / "scripts" / "generate_readme_assets.py")])
 
 
+def api(args: list[str] | None = None) -> None:
+
+    parser = argparse.ArgumentParser(prog="dev.py api")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--reload", action="store_true")
+    parsed_args = parser.parse_args(args or [])
+    command = [
+        require_venv(),
+        "-m",
+        "uvicorn",
+        "learningclock.api:app",
+        "--app-dir",
+        str(ROOT / "src"),
+        "--host",
+        parsed_args.host,
+        "--port",
+        str(parsed_args.port),
+    ]
+    if parsed_args.reload:
+        command.append("--reload")
+    run(command)
+
+
+def openapi(_args: list[str] | None = None) -> None:
+
+    run([require_venv(), str(ROOT / "scripts" / "export_openapi.py")])
+
+
 def unittest_csv(args: list[str] | None = None) -> None:
 
     run([require_venv(), "tests/test_learning_clock_csv_unit.py", *(args or [])])
@@ -309,8 +338,20 @@ def release(args: list[str] | None = None) -> None:
             production_dir / "app.py",
         ),
         (
+            ROOT / "src" / "learningclock" / "api.py",
+            production_dir / "api.py",
+        ),
+        (
             ROOT / "src" / "learningclock" / "csv_store.py",
             production_dir / "csv_store.py",
+        ),
+        (
+            ROOT / "src" / "learningclock" / "events.py",
+            production_dir / "events.py",
+        ),
+        (
+            ROOT / "src" / "learningclock" / "observability.py",
+            production_dir / "observability.py",
         ),
     ]
 
@@ -356,6 +397,8 @@ TARGETS = {
     "coverage": coverage,
     "pygount-summary": pygount_summary,
     "readme-assets": readme_assets,
+    "api": api,
+    "openapi": openapi,
     "unittest-csv": unittest_csv,
     "unittest-csv-file": unittest_csv_file,
     "csv-test": csv_test,
