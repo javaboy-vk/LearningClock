@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -30,7 +32,16 @@ jobs:
           cache: pip
 
       - name: Install project
-        run: python -m pip install -e ".[dev]"
+        env:
+          GH_TOKEN: ${{ secrets.PROTEPO_LOG_READ_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::PROTEPO_LOG_READ_TOKEN is required to install protepo-log from the private Python-Engineering-Lab repository."
+            exit 1
+          fi
+          gh auth setup-git --hostname github.com
+          python -m pip install -e ".[dev]"
 
       - name: Generate HTML coverage
         run: python -m pytest --cov=learningclock --cov-report=term-missing --cov-report=html:build/coverage/html
