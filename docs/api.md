@@ -44,6 +44,6 @@ checked-in contract and the runtime Swagger UI use the same source.
 ```json
 {
   "status": "ready",
-  "version": "5.3"
+  "version": "6.0"
 }
 ```

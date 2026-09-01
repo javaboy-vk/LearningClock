@@ -1,4 +1,4 @@
-# LearningClock v5.3
+# LearningClock v6.0
 
 LearningClock is a Windows-friendly Python/Tkinter desktop timer for tracking focused learning sessions. It records time across named study activities, page counts, session metadata, recovered emergency saves, and a recalculated CSV `TOTAL` row that can feed reports and Diavgeia documentation.
 
@@ -9,6 +9,12 @@ The project is intentionally small and operational: the GUI owns timer behavior,
 ## Application And Dashboard
 
 The desktop app presents learning timers that map directly to the persisted CSV activity columns. The refreshed view includes **Set Date** for backdated entries, **Add Page Count**, and the **View Progress** toggle.
+
+### Version 6.0 LauncherPad
+
+`learningclock-gui.exe` opens **LearningClock LauncherPad 1.0**, discovers `D:\LearningPath\*.properties`, and creates one control per valid configured clock. Different clocks run as independent GUI processes. Each LearningClock owns `Local\Protepo.LearningClock.<clock-id>` for its whole lifetime, so a second process for the same configuration exits before CSV initialization. LauncherPad observes those mutexes every 1.5 seconds and does not own or terminate clock processes.
+
+Normal startup no longer uses VBS, WScript, CMD, or PowerShell. Source launches use the active environment's sibling `pythonw.exe`; installed GUI entry points and frozen builds relaunch their GUI executable directly. The date selector also restores an explicitly raised and focused calendar popup on Windows.
 
 ### Version 5.3 interface
 
@@ -53,8 +59,10 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 - CSV persistence with a stable schema, canonical date formatting, activity-to-column mapping, page totals, and final aggregate `TOTAL` row.
 - Existing CSV normalization for legacy dates and legacy field names.
 - Emergency CSV save/recovery path for shutdown failures.
-- Semantic application-level logging through `protepo.log`, with stable event codes, correlation
-  context, a file sink beside the configured CSV, and optional Seq delivery.
+- Primary LauncherPad GUI with dynamic configuration discovery, running-state controls, independent process launch, and malformed-file isolation.
+- Per-configuration Windows named-mutex protection inside LearningClock before persistence initialization.
+- Semantic application-level logging through `protepo.log` 2.0, including formal structured LauncherPad, configuration, launch, mutex, runtime, and calendar events with cross-process correlation.
+- Version-controlled LearningClock Seq workspace, saved tail query, Operations dashboard, and idempotent `dev seq-dashboard` installer.
 - FastAPI readiness endpoint with automatic Swagger UI, ReDoc, and a tracked OpenAPI contract.
 - Package CLI health check and version command.
 - Compatibility launcher for the historical `learning-clock.py` entry path.
@@ -79,6 +87,7 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 - [Obsidian-Diavgeia Documentation](docs/obsidian-diavgeia-documentation.md)
 - [VS Code Support](docs/vscode-support.md)
 - [Application Logging](docs/application-logging.md)
+- [LauncherPad Architecture and Operations](docs/launcherpad.md)
 - [HTTP API, Swagger UI, and OpenAPI Export](docs/api.md)
 - [Automated Code Inventory](docs/code-inventory-automation.md)
 

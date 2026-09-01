@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "learningclock"
-version = "5.3"
+version = "6.0"
 description = "LearningClock Python project."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,7 +13,7 @@ authors = [
 ]
 dependencies = [
   "fastapi>=0.115",
-  "protepo-log @ git+https://github.com/javaboy-vk/Python-Engineering-Lab.git@protepo-log-v0.1.1#subdirectory=packaging/protepo-log",
+  "protepo-log @ git+https://github.com/javaboy-vk/Python-Engineering-Lab.git@protepo-log-v2.0.0#subdirectory=packaging/protepo-log",
   "uvicorn[standard]>=0.30",
 ]
 
@@ -29,6 +29,9 @@ dev = [
 
 [project.scripts]
 learningclock = "learningclock.cli:main"
+
+[project.gui-scripts]
+learningclock-gui = "learningclock.desktop:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

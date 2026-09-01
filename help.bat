@@ -5,7 +5,7 @@ rem ============================================================================
 rem File Name : help.bat
 rem Artifact  : LearningClock - Project Command Help
 rem Author    : javaboy-vk
-rem Version   : v0.1.1
+rem Version   : v1.0.0
 rem Purpose:
 rem   Shows the local command-line contract for LearningClock.
 rem =============================================================================
@@ -25,6 +25,7 @@ echo   dev pygount-summary              Generate pygount summary reports
 echo   dev readme-assets                Regenerate README SVG assets
 echo   dev api --reload                 Run FastAPI with Swagger UI and ReDoc
 echo   dev openapi                      Export docs\openapi.json from FastAPI
+echo   dev seq-dashboard                Install/update the LearningClock Seq workspace
 echo   dev unittest-csv                 Run isolated CSV unit tests
 echo   dev unittest-csv-file            Run CSV regression tests
 echo   dev csv-test test1               Run one focused CSV regression selector
@@ -38,13 +39,16 @@ echo   dev dev clean                    Dispatch dev.cmd directly when needed
 echo.
 echo Runtime commands:
 echo   set PYTHONPATH=src
-echo   .\.venv\Scripts\python.exe src\learningclock\app.py --learning-path LearningClock --log-dir build\learning-clock-logs
+echo   .\.venv\Scripts\pythonw.exe -m learningclock.desktop --config-dir D:\LearningPath
+echo   .\.venv\Scripts\pythonw.exe -m learningclock.desktop --clock launcher\dev.properties
 echo   dev api --reload
 echo   Swagger UI: http://127.0.0.1:8000/docs
-echo   wscript.exe //nologo launcher\Learning-clock.vbs launcher\dev.properties
 echo.
 echo Important files:
 echo   src\learningclock\app.py          Tkinter desktop timer UI
+echo   src\learningclock\launcherpad.py  Primary multi-clock GUI launcher
+echo   src\learningclock\singleton.py    Windows named-mutex integrity guard
+echo   monitoring\seq                    Seq workspace, dashboard, and installer
 echo   src\learningclock\api.py          FastAPI and OpenAPI application
 echo   src\learningclock\csv_store.py    CSV schema, persistence, totals, recovery
 echo   docs\api.md                        HTTP API and Swagger documentation

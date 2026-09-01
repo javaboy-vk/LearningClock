@@ -1,0 +1,27 @@
+{
+  "$entity": "signal",
+  "Title": "LearningClock - All Events",
+  "Description": "All structured LearningClock and LauncherPad events.",
+  "Filters": [
+    {
+      "Description": "Canonical LearningClock application identity",
+      "DescriptionIsExcluded": false,
+      "Filter": "Application = 'LearningClock'",
+      "FilterNonStrict": "Application = 'LearningClock'"
+    }
+  ],
+  "Columns": [
+    { "Expression": "EventCode" },
+    { "Expression": "Module" },
+    { "Expression": "Environment" },
+    { "Expression": "properties.clock_id" },
+    { "Expression": "ProcessId" },
+    { "Expression": "CorrelationId" }
+  ],
+  "IsProtected": false,
+  "IsIndexSuppressed": false,
+  "Grouping": "Explicit",
+  "ExplicitGroupName": "LearningClock",
+  "OwnerId": null
+}
+

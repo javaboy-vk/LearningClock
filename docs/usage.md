@@ -1,21 +1,21 @@
 # Usage
 
-LearningClock tracks one learning session at a time. Start it from source during development:
+LearningClock LauncherPad is the normal GUI entry point. Start it from source without a console:
 
 ```cmd
 set PYTHONPATH=src
-.\.venv\Scripts\python.exe src\learningclock\app.py --learning-path LearningClock --log-dir build\learning-clock-logs
+.\.venv\Scripts\pythonw.exe -m learningclock.desktop
 ```
 
-The desktop launcher reads a `.properties` file and passes the configured learning path and log directory to the app:
+LauncherPad discovers `D:\LearningPath\*.properties` by default. Override the directory for development:
 
 ```cmd
-wscript.exe //nologo launcher\Learning-clock.vbs launcher\dev.properties
+.\.venv\Scripts\pythonw.exe -m learningclock.desktop --config-dir launcher
 ```
 There is an option to manually add time and record also the number of pages you process in each session.
 There are also timers for sandbox exploration, updating documentation, and even promote any cool code to a production version. A user doesn't have to use all of the timers, but just the ones that fit his needs.
 
-I typically create a shortcut on my desktop, pointing to the "...\LearningClock\Learning-clock.vbs" and pass as a single parameter the location of the <learning path>.properties file.
+An installed package exposes `.venv\Scripts\learningclock-gui.exe`. Create one Desktop or Start Menu shortcut to that GUI executable; it requires no per-clock arguments. Old per-clock VBS shortcuts can be removed manually after LauncherPad validation.
 
 The logDir parameter is where the application will generate 2 files: the .csv that tracks all the sessions and the debug log, which is the application level logging output.
 The Learning-Clock-Dashboard.md file is designed to run inside the Obsidian runtime, and renders the .csv file into a graph.
@@ -30,10 +30,13 @@ Common launcher properties:
 
 ```properties
 learning-path-name=LearningClock
-pythonExe=<path of the python runtime>pythonw.exe
-pyScriptPath=< path where you install the runtime>\learningclock\app.py
-logDir=<path where the app creates the .csv and .log files>\learning-clock-logs.
+logDir=<path where the app creates the .csv and .log files>\learning-clock-logs
+clock-id=learningclock
+display-name=LearningClock
+order=10
 ```
+
+`learning-path-name` and `logDir` remain required. `clock-id`, `display-name`, and `order` are optional. Without `clock-id`, the stable normalized properties filename is used. Legacy `pythonExe` and `pyScriptPath` values may remain in existing files but LauncherPad deliberately ignores them.
 
 ## Timer Workflow
 
@@ -41,7 +44,7 @@ logDir=<path where the app creates the .csv and .log files>\learning-clock-logs.
 - Click a different activity to stop the previous timer and start the new one.
 - Use `Stop Timer` to pause the active timer.
 - Use `Reset Timer` to clear only the currently running activity.
-- Use `Set Date` to show or hide the unlabeled `MM/DD/YYYY` session-date field directly below the last timer in the timer-value column. It shares the Stop/Reset row without moving those buttons. Select a date with the embedded calendar icon or type it directly to record missed work against a previous day.
+- Use `Set Date` to show the unlabeled `MM/DD/YYYY` session-date field and immediately open its calendar. The embedded calendar icon, `Alt+Down`, and `F4` reopen the popup; it is raised above the LearningClock window and accepts mouse or keyboard selection.
 - Use `Add Time` or `Add Page Count` again to hide its fields; press Enter in a visible field to submit, without an extra action button.
 - Use `View Progress` to toggle the saved CSV bar chart open or closed. Use `Refresh` after a new autosave.
 

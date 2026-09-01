@@ -16,21 +16,22 @@ D:\LearningPath\Tools\LearningClock
 Files copied by release:
 
 - `launcher\Learning-Clock.ico`
-- `launcher\Learning-clock.vbs`
-- `src\learningclock\__init__.py`
-- `src\learningclock\api.py`
-- `src\learningclock\app.py`
-- `src\learningclock\csv_store.py`
-- `src\learningclock\events.py`
-- `src\learningclock\observability.py`
+- every `src\learningclock\*.py` module under `learningclock\`
+- the default `clock.properties`, while preserving an existing deployed copy
 
-The Python interpreter configured by each launcher properties file must contain FastAPI, Uvicorn,
-and the pinned `protepo-log` runtime dependency. Verify that interpreter before release with:
+VBS is no longer released. `D:\LearningPath\*.properties` remains the configuration-data directory; legacy `pythonExe` and `pyScriptPath` properties are ignored by LauncherPad.
+
+The production environment must contain FastAPI, Uvicorn, and pinned `protepo-log` 2.0.0. Build and install the wheel to create the no-console GUI entry executable:
 
 ```cmd
-path\to\python.exe -c "import fastapi, uvicorn, protepo.log; print(fastapi.__version__, uvicorn.__version__, protepo.log.__version__)"
+dev package
+path\to\python.exe -m pip install --upgrade --no-deps "D:\LocalPackages\protepo-log\2.0.0\protepo_log-2.0.0-py3-none-any.whl"
+path\to\python.exe -m pip install --upgrade build\dist\learningclock-6.0-py3-none-any.whl
+path\to\python.exe -I -c "import protepo.log; print(protepo.log.__version__)"
 path\to\python.exe -m pip check
 ```
+
+Create one Desktop/Start Menu shortcut to that environment's `Scripts\learningclock-gui.exe`. The generated GUI entry point opens LauncherPad without a console or arguments. Do not create per-clock shortcuts.
 
 Release also reads `D:\LearningPath\*.properties` and exports the shared dashboard component beside each configured `LearningPath` CSV folder:
 
@@ -61,7 +62,7 @@ Output:
 build\dist
 ```
 
-The build uses `setuptools` through `pyproject.toml`.
+The build uses `setuptools` through `pyproject.toml`. `[project.gui-scripts]` produces `learningclock-gui.exe`; `[project.scripts]` retains the non-GUI `learningclock` health/version CLI. PyInstaller is not part of this repository.
 
 ## Generated Output Policy
 

@@ -1,0 +1,24 @@
+{
+  "$entity": "workspace",
+  "Title": "LearningClock",
+  "Description": "LearningClock LauncherPad, configured-clock runtime, singleton, and persistence operations.",
+  "OwnerId": null,
+  "IsProtected": false,
+  "DefaultSignalExpression": {
+    "Kind": "Signal",
+    "SignalId": ref("signal-LearningClock - All Events.template")
+  },
+  "Content": {
+    "SignalIds": [
+      ref("signal-LearningClock - All Events.template")
+    ],
+    "QueryIds": [
+      ref("sqlquery-LearningClock Events - Log Format.template")
+    ],
+    "DashboardIds": [
+      ref("dashboard-LearningClock.template")
+    ],
+    "ViewIds": []
+  }
+}
+

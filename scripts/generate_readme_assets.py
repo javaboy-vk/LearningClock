@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - README Visual Asset Generator
 # Author    : javaboy-vk
 # Date      : 2026-06-09
-# Version   : v5.3
+# Version   : v6.0
 # Purpose:
 #   Generates stable SVG visuals used by README.md to show the app UI and
 #   Obsidian dashboard output.

@@ -1,0 +1,9 @@
+{
+  "$entity": "sqlquery",
+  "Title": "LearningClock Events - Log Format",
+  "Description": "Latest LearningClock events with canonical component, clock, process, environment, and correlation fields.",
+  "Sql": "select\n    Replace(Substring(ToIsoString(@Timestamp, OffsetIn('America/Chicago', @Timestamp)), 0, 23), 'T', ' ') as Timestamp,\n    if @Level = 'Information' then 'INFO' else if @Level = 'Warning' then 'WARN' else if @Level = 'Verbose' then 'VERB' else if @Level = 'Debug' then 'DEBUG' else if @Level = 'Error' then 'ERROR' else if @Level = 'Fatal' then 'FATAL' else Substring(ToUpper(@Level), 0, 5) as Level,\n    EventCode as EventId,\n    @Message as Message,\n    Module as Component,\n    properties.clock_id as ClockId,\n    properties.clock_name as ClockName,\n    ProcessId,\n    Environment,\n    CorrelationId\nfrom stream\nwhere Application = 'LearningClock'\norder by Timestamp desc\nlimit 200",
+  "IsProtected": false,
+  "OwnerId": null
+}
+

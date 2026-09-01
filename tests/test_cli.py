@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CLI Tests
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v5.3
+# Version   : v6.0
 # Purpose:
 #   Verifies the LearningClock CLI behavior.
 # =============================================================================
@@ -37,5 +37,5 @@ def test_main_prints_version(capsys):
 
     assert main(["--version"]) == 0                                          # Version flag should succeed.
     captured = capsys.readouterr()
-    assert captured.out.strip() == "5.3"                                     # Output matches package version.
-    assert "CMDLN-6002 CLI version response emitted for 5.3" in captured.err  # Semantic event uses stderr.
+    assert captured.out.strip() == "6.0"                                     # Output matches package version.
+    assert "CMDLN-6002 CLI version response emitted for 6.0" in captured.err  # Semantic event uses stderr.

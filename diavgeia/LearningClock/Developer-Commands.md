@@ -92,7 +92,8 @@ Lifecycle mapping:
 - `package`: build package artifacts into `build\dist` and remove source-tree package metadata.
 - `install`: install runtime and development requirements into `.venv` without installing the local project in editable mode.
 - `deploy`: export Diavgeia content to the local vault.
-- `release`: copy the production launcher and runtime Python files to `D:\LearningPath\Tools\LearningClock`.
+- `release`: copy the production icon and complete runtime Python package to `D:\LearningPath\Tools\LearningClock`.
+- `seq-dashboard`: install or update the LearningClock Seq workspace and Operations dashboard.
 
 ## Production Release
 
@@ -113,7 +114,10 @@ scripts\release.cmd
 The release target copies these files:
 
 - `launcher\Learning-Clock.ico` -> `D:\LearningPath\Tools\LearningClock\Learning-Clock.ico`
-- `launcher\Learning-clock.vbs` -> `D:\LearningPath\Tools\LearningClock\Learning-clock.vbs`
+- `launcher\Learning-Clock.ico` -> `D:\LearningPath\Tools\LearningClock\Learning-Clock.ico`
+- `src\learningclock\*.py` -> `D:\LearningPath\Tools\LearningClock\learningclock\`
+
+The v6.0 release no longer deploys VBS. Install the built wheel to obtain the single no-console `learningclock-gui.exe` entry point.
 - `src\learningclock\__init__.py` -> `D:\LearningPath\Tools\LearningClock\__init__.py`
 - `src\learningclock\app.py` -> `D:\LearningPath\Tools\LearningClock\app.py`
 - `src\learningclock\csv_store.py` -> `D:\LearningPath\Tools\LearningClock\csv_store.py`

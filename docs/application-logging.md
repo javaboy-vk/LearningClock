@@ -1,68 +1,64 @@
-# Application Logging
+# Application Logging and Seq Operations
 
-LearningClock uses the internal `protepo-log` distribution through the `protepo.log` import
-namespace. Application events are semantic: each event belongs to a product-owned catalog and has
-a stable code rather than an arbitrary message-only identity.
+LearningClock requires distribution `protepo-log` 2.0.0 and imports it as `protepo.log`. The dependency is pinned to immutable tag `protepo-log-v2.0.0`; the application refuses to configure observability if the imported runtime version differs.
 
-## Event catalogs
+## Protepo Logging Standard v2
 
-| Catalog | Range | Responsibility |
-| --- | ---: | --- |
-| `APPLC` | 1000-1099 | Desktop process startup, close, shutdown, and fatal execution failures. |
-| `USRIF` | 2000-2199 | Progress, manual entry, page count, autosave, and UI save failures. |
-| `TIMER` | 3000-3199 | Timer switch, start, close, stop, and reset transitions. |
-| `STORG` | 4000-4299 | CSV reads, writes, normalization, totals, and emergency recovery. |
-| `CONFG` | 5000-5099 | Autosave and observability configuration decisions. |
-| `CMDLN` | 6000-6099 | Readiness, version, and argument-parser outcomes. |
+LauncherPad and new runtime boundaries use formal `define_event(...)` definitions from `telemetry.py`, named component loggers from `Log.get_logger(...)`, and `logger.event(...)`. Engineering audience mode preserves internal operational detail while Seq receives the independently configured engineering representation. Existing timer and CSV catalogs remain supported through protepo.log's compatible semantic catalog API.
 
-The catalog definitions are authoritative in `src/learningclock/events.py`. Event IDs are unique,
-validated at startup, and tested for range compliance.
+| Family | Component | Responsibility |
+| --- | --- | --- |
+| `LPLCL-1xxx` | `LauncherPad` | LauncherPad lifecycle and running-state transitions. |
+| `CONFG-2xxx` | `Configuration` | Discovery, validation, malformed files, and duplicate IDs. |
+| `LPCRP-3xxx` | `ProcessLauncher` | Launch requests, commands, created processes, and failures. |
+| `MUTEX-4xxx` | `InstanceGuard` | Mutex identity, acquisition, duplicate rejection, observation, and cleanup. |
+| `LIFCL-5xxx` | `Runtime` | Configured LearningClock startup, initialization, close, and fatal failures. |
+| `CLNDR-6xxx` | `Calendar` | Calendar initialization and popup failures. |
+| `APPLC`, `USRIF`, `TIMER`, `STORG`, `CONFG`, `CMDLN` | Existing components | Desktop, UI, timer, persistence, configuration, and CLI behavior. |
 
-## Local file and console output
+Formal event properties use the v2 canonical `snake_case` property contract. Representative fields are `clock_id`, `clock_name`, `configuration_path`, `runtime_mode`, `launch_mode`, `parent_process_id`, `child_process_id`, `mutex_name`, `operation_id`, `error_type`, `error_message`, and `application_version`. Protepo adds `Application`, `Environment`, `Module`, `EventCode`, `ProcessId`, `CorrelationId`, severity, visibility, schema version, thread identity, and exception details to Seq's CLEF envelope.
 
-The desktop application writes semantic events to `learning_clock_debug.log` beside its configured
-`learning_time_log.csv`. This preserves the existing diagnostic-file location while changing its
-contents to the Protepo event format:
+Complete CSV contents, arbitrary environment contents, credentials, and ordinary polling observations are not logged. LauncherPad emits information events only for state transitions, not every 1.5-second mutex check.
+
+## Correlation
+
+Each LauncherPad button action creates a correlation ID. The same ID surrounds the launch-request events and is passed through the internal `--correlation-id` argument to the new process. LearningClock restores that protepo.log context around configuration resolution, mutex acquisition, and runtime initialization. Seq can therefore follow:
 
 ```text
-20:14:08.123  TIMER-3002 Timer started for Reading at 20:14:08
+LPCRP-3001 -> LPCRP-3003 -> LIFCL-5001 -> MUTEX-4002 -> LIFCL-5002
 ```
 
-Set `LEARNINGCLOCK_LOG_CONSOLE=true` to also emit desktop events to stderr. The lightweight CLI
-always keeps its user response on stdout and writes its semantic events to stderr.
+## Local files and Seq
 
-## Optional Seq delivery
-
-Seq is disabled unless `LEARNINGCLOCK_SEQ_URL` is set. Supported environment settings are:
+Each configured clock writes `learning_clock_debug.log` and offline CLEF beside its CSV. LauncherPad writes diagnostics under `D:\LearningPath\Tools\LearningClock` by default.
 
 | Variable | Purpose |
 | --- | --- |
-| `LEARNINGCLOCK_ENVIRONMENT` | Event environment; defaults to `local`. |
-| `LEARNINGCLOCK_LOG_CONSOLE` | Enables desktop stderr output with `true`, `1`, `yes`, or `on`. |
-| `LEARNINGCLOCK_SEQ_URL` | Seq root URL or `/ingest/clef` endpoint. |
-| `LEARNINGCLOCK_SEQ_API_KEY` | Optional Seq ingestion API key. Never store it in source. |
+| `LEARNINGCLOCK_ENVIRONMENT` | Environment label; default `local`. |
+| `LEARNINGCLOCK_LOG_CONSOLE` | Enables engineering console output. Normal GUI launch leaves it disabled. |
+| `LEARNINGCLOCK_SEQ_URL` or `SEQ_URL` | Seq base URL or CLEF endpoint; default `http://localhost:5341`. |
+| `LEARNINGCLOCK_SEQ_API_KEY` or `SEQ_API_KEY` | Optional ingestion key; never stored in source. |
+| `SEQ_ADMIN_API_KEY` | Session-only administrative key used by the dashboard installer. |
 
-When Seq is enabled, failed CLEF deliveries are spooled beside the diagnostic log as
-`learning_clock_seq_offline.clef`. `protepo-log` 0.1.1 sends synchronously, so Seq should be enabled
-for the Tkinter application only after its endpoint latency and unavailable-server behavior have
-been tested. A local spool proves fallback persistence, not live Seq receipt.
+Seq delivery is failure-isolated. When an initialized clock cannot reach Seq, protepo.log appends ingest-ready CLEF to `learning_clock_seq_offline.clef`; LauncherPad uses `launcherpad_seq_offline.clef`. A spool proves local fallback, not live receipt.
 
-## Correlation and native API
+## Dashboard installation and diagnosis
 
-One `protepo.log` correlation context spans each desktop run or CLI command. Native event metadata
-is projected consistently to file, console, and Seq sinks. Application modules call the native
-semantic loggers returned by `Log.get_logger(...)` through their `info()`, `warning()`, and
-`exception()` methods; LearningClock does not wrap or dynamically dispatch those calls.
+The assets in `monitoring/seq` follow the Python Engineering Lab workspace/signal/saved-query/dashboard layout. Installation is repeatable through `seqcli template import --merge`:
 
-Do not place credentials, complete CSV rows, arbitrary user-entered text, or exception messages in
-event templates or arguments. Exceptions are attached only at explicit error boundaries, and
-emergency-file events record the error type rather than interpolating the original exception text.
+```cmd
+dev seq-dashboard
+```
+
+The **LearningClock Operations** dashboard includes recent events, application health, recently active clocks, launch activity, duplicate-instance protection, configuration health, persistence health, consolidated warnings/errors, and events by component. Filter the Events workspace with `properties.clock_id`, `properties.clock_name`, `Module`, `EventCode`, `ProcessId`, `Environment`, or `CorrelationId`.
+
+Use `MUTEX-4003` and `MUTEX-4004` to diagnose duplicate rejection. Use `LPCRP-3004` for process failures, `CONFG-2004`/`CONFG-2005` for invalid discovery results, and `STORG-*` warning/error events for persistence problems. Seq telemetry is historical/operational evidence; LauncherPad's direct mutex observation remains the live authority.
 
 ## Verification
 
 ```cmd
-.\.venv\Scripts\python.exe -c "import protepo.log; from importlib.metadata import version; print(protepo.log.__version__); print(version('protepo-log'))"
+.\.venv\Scripts\python.exe -I -c "from importlib.metadata import version; import protepo.log; assert version('protepo-log') == protepo.log.__version__ == '2.0.0'; print(protepo.log.__version__)"
 .\.venv\Scripts\python.exe -m pip check
-.\dev.bat test
-.\dev.bat all
+dev test
+dev seq-dashboard
 ```

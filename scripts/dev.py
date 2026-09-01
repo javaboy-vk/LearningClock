@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Developer Command Runner
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v5.2
+# Version   : v6.0
 # Purpose:
 #   Provides Maven-style lifecycle commands for the Python project.
 # =============================================================================
@@ -252,6 +252,21 @@ def openapi(_args: list[str] | None = None) -> None:
     run([require_venv(), str(ROOT / "scripts" / "export_openapi.py")])
 
 
+def seq_dashboard(args: list[str] | None = None) -> None:
+
+    run(
+        [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(ROOT / "monitoring" / "seq" / "Install-LearningClockSeqDashboard.ps1"),
+            *(args or []),
+        ]
+    )
+
+
 def unittest_csv(args: list[str] | None = None) -> None:
 
     run([require_venv(), "tests/test_learning_clock_csv_unit.py", *(args or [])])
@@ -325,35 +340,11 @@ def release(args: list[str] | None = None) -> None:
             ROOT / "launcher" / "Learning-Clock.ico",
             production_dir / "Learning-Clock.ico",
         ),
-        (
-            ROOT / "launcher" / "Learning-clock.vbs",
-            production_dir / "Learning-clock.vbs",
-        ),
-        (
-            ROOT / "src" / "learningclock" / "__init__.py",
-            production_dir / "__init__.py",
-        ),
-        (
-            ROOT / "src" / "learningclock" / "app.py",
-            production_dir / "app.py",
-        ),
-        (
-            ROOT / "src" / "learningclock" / "api.py",
-            production_dir / "api.py",
-        ),
-        (
-            ROOT / "src" / "learningclock" / "csv_store.py",
-            production_dir / "csv_store.py",
-        ),
-        (
-            ROOT / "src" / "learningclock" / "events.py",
-            production_dir / "events.py",
-        ),
-        (
-            ROOT / "src" / "learningclock" / "observability.py",
-            production_dir / "observability.py",
-        ),
     ]
+    release_files.extend(
+        (source, production_dir / "learningclock" / source.name)
+        for source in sorted((ROOT / "src" / "learningclock").glob("*.py"))
+    )
 
     for source, target in release_files:
         if not source.exists():
@@ -366,7 +357,7 @@ def release(args: list[str] | None = None) -> None:
         print(f"released: {source.relative_to(ROOT)} -> {target}")
 
     default_clock_properties = ROOT / "src" / "learningclock" / "clock.properties"
-    deployed_clock_properties = production_dir / "clock.properties"
+    deployed_clock_properties = production_dir / "learningclock" / "clock.properties"
     if not default_clock_properties.exists():
         raise SystemExit(f"Release source file was not found: {default_clock_properties}")
     if deployed_clock_properties.exists():
@@ -399,6 +390,7 @@ TARGETS = {
     "readme-assets": readme_assets,
     "api": api,
     "openapi": openapi,
+    "seq-dashboard": seq_dashboard,
     "unittest-csv": unittest_csv,
     "unittest-csv-file": unittest_csv_file,
     "csv-test": csv_test,

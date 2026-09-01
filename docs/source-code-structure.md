@@ -7,6 +7,12 @@ src\learningclock\
   cli.py               Lightweight non-GUI CLI and version/readiness checks.
   api.py               FastAPI health endpoint and automatic OpenAPI documentation.
   app.py               Tkinter application, timer state, UI workflow, shutdown flow.
+  configuration.py     Properties discovery, validation, ordering, and stable clock identity.
+  desktop.py           Primary no-console GUI dispatcher; LauncherPad default and --clock mode.
+  launcherpad.py       Dynamic configured-clock grid and mutex-based running-state UI.
+  process_launcher.py  Detached source/packaged GUI process construction and launch.
+  singleton.py         Windows named-mutex ownership and observation.
+  telemetry.py         Formal protepo.log 2.0 event definitions for new runtime boundaries.
   csv_store.py         CSV schema, normalization, persistence, totals, emergency recovery.
   events.py            Product-owned semantic event catalogs and stable event IDs.
   observability.py     protepo.log configuration, logger composition, and correlation.
@@ -15,11 +21,12 @@ src\learningclock\
 
 ## `learningclock.app`
 
-`app.py` owns the desktop experience. It builds the Tkinter window, menu, timer rows, manual-entry controls, page-count controls, and shutdown lifecycle.
+`desktop.py` is the primary GUI entry. It opens LauncherPad by default and dispatches `--clock <properties>` to `app.py`. `app.py` owns one configured timer experience and acquires its process-level singleton guard before persistence initialization.
 
 Main responsibilities:
 
 - Parse desktop launch arguments such as `--learning-path`, `--log-dir`, and debug-break flags.
+- Resolve `--config`, acquire `Local\Protepo.LearningClock.<clock-id>`, and reject duplicates before `CsvStore` creation.
 - Track active activity, active start time, accumulated activity totals, and page count.
 - Switch, stop, and reset timers.
 - Validate and apply manual time entries.

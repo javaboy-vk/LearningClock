@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v5.4
+# Version   : v6.0
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, semantic
 #   application events, and shutdown lifecycle for LearningClock.
@@ -89,6 +89,7 @@ from __future__ import annotations
 
 import argparse
 import calendar
+import os
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
@@ -108,6 +109,11 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(script_dir))
     sys.path.insert(0, str(script_dir.parent))
 
+from learningclock.configuration import (
+    ConfigurationError,
+    legacy_clock_configuration,
+    load_clock_configuration,
+)
 from learningclock.events import (
     ApplicationEvents,
     ConfigurationEvents,
@@ -118,6 +124,16 @@ from learningclock.observability import (
     configure_observability,
     correlation_context,
     shutdown_observability,
+)
+from learningclock.singleton import SingleInstanceGuard
+from learningclock.telemetry import (
+    CALENDAR_INITIALIZED,
+    CALENDAR_OPEN_FAILED,
+    CLOCK_CLOSED,
+    CLOCK_INITIALIZED,
+    CLOCK_STARTING,
+    CLOCK_STARTUP_FAILED,
+    DUPLICATE_CLOCK_REJECTED,
 )
 
 # Operational algorithm:
@@ -156,7 +172,7 @@ except ModuleNotFoundError:
 #   Error handling:
 #     No special error handling is needed because the values are static strings.
 APP_TITLE = "Learning Clock"
-APP_VERSION = "v5.3"
+APP_VERSION = "v6.0"
 BUTTON_BACKGROUND = "#069bff"
 ACTIVE_TIMER_BUTTON_BACKGROUND = "#FF6600"
 BUTTON_FOREGROUND = "#ffffff"
@@ -233,6 +249,16 @@ def parse_session_date(value: str) -> date | None:
     return datetime.strptime(normalized, "%m/%d/%Y").date()
 
 
+def present_calendar_popup(picker) -> None:
+    """Map, raise, focus, and grab a transient calendar only after Windows makes it visible."""
+
+    picker.deiconify()
+    picker.lift()
+    picker.wait_visibility()
+    picker.focus_force()
+    picker.grab_set()
+
+
 def build_progress_summary(rows):
 
     """Aggregate normalized CSV session rows for the in-app progress chart."""
@@ -268,6 +294,9 @@ def parse_args(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(description="Learning Clock")      # Create CLI parser for app launch.
     parser.add_argument("--learning-path", default=None)                 # Optional display/persisted path name.
     parser.add_argument("--log-dir", default=None)                       # Optional CSV/log output directory.
+    parser.add_argument("--config", type=Path, default=None)             # Preferred configured-clock properties path.
+    parser.add_argument("--clock-id", default=None)                      # Stable direct-run singleton identity.
+    parser.add_argument("--correlation-id", default=None)                # LauncherPad-to-clock correlation propagation.
     parser.add_argument("--debug-break-on-click", action="store_true")   # Developer breakpoint on activity click.
     parser.add_argument("--debug-break-on-close", action="store_true")   # Developer breakpoint on close.
     return parser.parse_args(argv)                                       # Return parsed launch settings.
@@ -293,6 +322,7 @@ class LearningClock:
         self,
         root,
         learning_path_name=None,
+        clock_id=None,
         log_dir=None,
         debug_break_on_click=False,
         debug_break_on_close=False,
@@ -301,6 +331,7 @@ class LearningClock:
 
         self.root = root                                                            # Tk root window owned by this app.
         self.learning_path_name = learning_path_name or Path.cwd().name             # Default to current folder name.
+        self.clock_id = clock_id or self.learning_path_name.casefold()               # Stable telemetry identity supplied by startup.
         self.debug_break_on_click = debug_break_on_click                            # Developer click breakpoint flag.
         self.debug_break_on_close = debug_break_on_close                            # Developer close breakpoint flag.
         self.root.title(self.build_window_title())                                  # Put app/version/path in title.
@@ -357,6 +388,8 @@ class LearningClock:
         self.date_frame = None                                                      # Hidden Set Date controls below the timer buttons.
         self.date_entry = None                                                      # Optional MM/DD/YYYY session date entry.
         self.date_picker_field = None                                               # Date field used to anchor the calendar popup.
+        self.date_picker = None                                                     # Retained Toplevel prevents hidden duplicate popups.
+        self.calendar_initialized = False                                           # Emit one initialization event, not one per click.
         self.progress_panel = None                                                  # Right-side CSV chart panel.
         self.progress_canvas = None                                                 # Canvas used to render progress bars.
         self.progress_footer = None                                                 # Obsidian-style progress summary row.
@@ -486,7 +519,16 @@ class LearningClock:
         self.date_entry = tk.Entry(self.date_picker_field, font=("Arial", 10), width=12, bd=0)
         self.date_entry.pack(side="left", padx=(3, 0), pady=2)
         self.date_entry.bind("<Return>", lambda _event: self.apply_session_date())
-        tk.Button(self.date_picker_field, text="▦", width=2, bd=0, command=self.open_date_picker).pack(side="left", padx=(2, 1), pady=1)
+        tk.Button(
+            self.date_picker_field,
+            text="▦",
+            width=2,
+            bd=0,
+            command=self.open_date_picker,
+            takefocus=True,
+        ).pack(side="left", padx=(2, 1), pady=1)
+        self.date_entry.bind("<Alt-Down>", lambda _event: self.open_date_picker())
+        self.date_entry.bind("<F4>", lambda _event: self.open_date_picker())
 
 
     # Operational algorithm:
@@ -529,6 +571,7 @@ class LearningClock:
             self.date_entry.insert(0, self.selected_session_date.strftime("%m/%d/%Y"))
         self.show_control_at_timer_column(self.date_frame)
         self.date_entry.focus_set()
+        self.root.after_idle(self.open_date_picker)
 
     def show_control_at_timer_column(self, control):
 
@@ -566,67 +609,148 @@ class LearningClock:
 
     def open_date_picker(self):
 
+        if self.date_picker is not None:
+            try:
+                if self.date_picker.winfo_exists():
+                    self.date_picker.deiconify()
+                    self.date_picker.lift()
+                    self.date_picker.focus_force()
+                    return
+            except tk.TclError:
+                self.date_picker = None
+
         try:
-            initial_date = parse_session_date(self.date_entry.get()) or self.selected_session_date or date.today()
-        except ValueError:
-            self.loggers.ui.warning(
-                UiEvents.SESSION_DATE_VALIDATION_FAILED,
+            try:
+                initial_date = (
+                    parse_session_date(self.date_entry.get())
+                    or self.selected_session_date
+                    or date.today()
+                )
+            except ValueError:
+                self.loggers.ui.warning(UiEvents.SESSION_DATE_VALIDATION_FAILED)
+                initial_date = self.selected_session_date or date.today()
+
+            picker = tk.Toplevel(self.root)
+            self.date_picker = picker
+            picker.title("Select Session Date")
+            picker.transient(self.root)
+            picker.resizable(False, False)
+            picker.protocol("WM_DELETE_WINDOW", self.close_date_picker)
+            picker.bind("<Escape>", lambda _event: self.close_date_picker())
+            state = {"year": initial_date.year, "month": initial_date.month}
+            header = tk.Frame(picker)
+            header.pack(fill="x", padx=8, pady=(8, 4))
+            calendar_frame = tk.Frame(picker)
+            calendar_frame.pack(padx=8, pady=(0, 8))
+            month_label = tk.Label(header, font=("Arial", 11, "bold"))
+
+            def select_day(day):
+                selected = date(state["year"], state["month"], day)
+                self.selected_session_date = selected
+                self.date_entry.delete(0, tk.END)
+                self.date_entry.insert(0, selected.strftime("%m/%d/%Y"))
+                self.status.config(text=f"Session date set to {self.date_entry.get()}")
+                self.loggers.ui.info(UiEvents.SESSION_DATE_APPLIED, selected.isoformat())
+                self.close_date_picker()
+
+            def render_calendar():
+                for child in calendar_frame.winfo_children():
+                    child.destroy()
+                month_label.config(
+                    text=f"{calendar.month_name[state['month']]} {state['year']}"
+                )
+                for column, weekday in enumerate(
+                    ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                ):
+                    tk.Label(
+                        calendar_frame,
+                        text=weekday,
+                        width=4,
+                        font=("Arial", 9, "bold"),
+                    ).grid(row=0, column=column)
+                for row, week in enumerate(
+                    calendar.monthcalendar(state["year"], state["month"]), start=1
+                ):
+                    for column, day_number in enumerate(week):
+                        if day_number:
+                            tk.Button(
+                                calendar_frame,
+                                text=str(day_number),
+                                width=3,
+                                command=lambda day=day_number: select_day(day),
+                            ).grid(row=row, column=column)
+                        else:
+                            tk.Label(calendar_frame, text="", width=4).grid(
+                                row=row, column=column
+                            )
+
+            def change_month(delta):
+                state["month"] += delta
+                if state["month"] == 0:
+                    state["year"] -= 1
+                    state["month"] = 12
+                elif state["month"] == 13:
+                    state["year"] += 1
+                    state["month"] = 1
+                render_calendar()
+
+            tk.Button(header, text="<", width=3, command=lambda: change_month(-1)).pack(
+                side="left"
             )
-            initial_date = self.selected_session_date or date.today()
-
-        picker = tk.Toplevel(self.root)
-        picker.title("Select Session Date")
-        picker.transient(self.root)
-        picker.resizable(False, False)
-        state = {"year": initial_date.year, "month": initial_date.month}
-        header = tk.Frame(picker)
-        header.pack(fill="x", padx=8, pady=(8, 4))
-        calendar_frame = tk.Frame(picker)
-        calendar_frame.pack(padx=8, pady=(0, 8))
-        month_label = tk.Label(header, font=("Arial", 11, "bold"))
-
-        def select_day(day):
-            selected = date(state["year"], state["month"], day)
-            self.selected_session_date = selected
-            self.date_entry.delete(0, tk.END)
-            self.date_entry.insert(0, selected.strftime("%m/%d/%Y"))
-            self.status.config(text=f"Session date set to {self.date_entry.get()}")
-            self.loggers.ui.info(
-                UiEvents.SESSION_DATE_APPLIED,
-                selected.isoformat(),
+            month_label.pack(side="left", expand=True)
+            tk.Button(header, text=">", width=3, command=lambda: change_month(1)).pack(
+                side="right"
             )
-            picker.destroy()
-
-        def render_calendar():
-            for child in calendar_frame.winfo_children():
-                child.destroy()
-            month_label.config(text=f"{calendar.month_name[state['month']]} {state['year']}")
-            for column, weekday in enumerate(("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")):
-                tk.Label(calendar_frame, text=weekday, width=4, font=("Arial", 9, "bold")).grid(row=0, column=column)
-            for row, week in enumerate(calendar.monthcalendar(state["year"], state["month"]), start=1):
-                for column, day_number in enumerate(week):
-                    if day_number:
-                        tk.Button(calendar_frame, text=str(day_number), width=3, command=lambda day=day_number: select_day(day)).grid(row=row, column=column)
-                    else:
-                        tk.Label(calendar_frame, text="", width=4).grid(row=row, column=column)
-
-        def change_month(delta):
-            state["month"] += delta
-            if state["month"] == 0:
-                state["year"] -= 1
-                state["month"] = 12
-            elif state["month"] == 13:
-                state["year"] += 1
-                state["month"] = 1
             render_calendar()
+            picker.update_idletasks()
+            picker.geometry(
+                f"+{self.date_picker_field.winfo_rootx()}+"
+                f"{self.date_picker_field.winfo_rooty() + self.date_picker_field.winfo_height()}"
+            )
+            # Windows can map a transient Toplevel behind its parent. Waiting for visibility and
+            # explicitly raising/focusing it restores the calendar-popup contract before grab_set.
+            present_calendar_popup(picker)
+            if not self.calendar_initialized:
+                self.loggers.calendar.event(
+                    CALENDAR_INITIALIZED,
+                    clock_id=self.clock_id,
+                    clock_name=self.learning_path_name,
+                    process_id=os.getpid(),
+                    operation_id="open_date_picker",
+                )
+                self.calendar_initialized = True
+        except tk.TclError as exc:
+            self.date_picker = None
+            self.loggers.calendar.event(
+                CALENDAR_OPEN_FAILED,
+                exc_info=exc,
+                clock_id=self.clock_id,
+                clock_name=self.learning_path_name,
+                process_id=os.getpid(),
+                operation_id="open_date_picker",
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+            )
+            messagebox.showerror(
+                "Set Date",
+                "The calendar could not be displayed. Try opening it again.",
+                parent=self.root,
+            )
 
-        tk.Button(header, text="<", width=3, command=lambda: change_month(-1)).pack(side="left")
-        month_label.pack(side="left", expand=True)
-        tk.Button(header, text=">", width=3, command=lambda: change_month(1)).pack(side="right")
-        render_calendar()
-        picker.update_idletasks()
-        picker.geometry(f"+{self.date_picker_field.winfo_rootx()}+{self.date_picker_field.winfo_rooty() + self.date_picker_field.winfo_height()}")
-        picker.grab_set()
+    def close_date_picker(self):
+
+        """Release the calendar grab and destroy the retained popup safely."""
+        picker, self.date_picker = self.date_picker, None
+        if picker is None:
+            return
+        try:
+            picker.grab_release()
+        except tk.TclError:
+            pass
+        try:
+            picker.destroy()
+        except tk.TclError:
+            pass
 
     def toggle_add_time_mode(self):
 
@@ -1430,36 +1554,142 @@ class LearningClock:
 def main(argv: list[str] | None = None) -> int:
 
     args = parse_args(argv)                                                     # Parse CLI/debug launch arguments.
-    resolved_log_dir = Path(args.log_dir or Path.cwd())                         # Resolve the app persistence boundary.
-    loggers = configure_observability(
-        resolved_log_dir / DIAGNOSTIC_LOG_FILE_NAME,
-    )                                                                           # Configure file/optional Seq sinks.
+    bootstrap_loggers = configure_observability(None)                           # Seq-only logging cannot touch clock persistence.
     try:
-        with correlation_context():                                             # Correlate one desktop application session.
+        if args.config is not None:
+            configured_clock = load_clock_configuration(args.config)
+        else:
+            resolved_log_dir = Path(args.log_dir or Path.cwd())
+            configured_clock = legacy_clock_configuration(
+                learning_path_name=args.learning_path or Path.cwd().name,
+                log_dir=resolved_log_dir,
+                clock_id=args.clock_id,
+            )
+    except (ConfigurationError, OSError) as exc:
+        with correlation_context(args.correlation_id):
+            bootstrap_loggers.runtime.event(
+                CLOCK_STARTUP_FAILED,
+                exc_info=exc,
+                clock_id=args.clock_id or "unknown",
+                clock_name=args.learning_path or "unknown",
+                configuration_path=args.config or "<direct>",
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+                process_id=os.getpid(),
+                operation_id="resolve_configuration",
+            )
+        try:
+            error_root = tk.Tk()
+            error_root.withdraw()
+            messagebox.showerror("LearningClock Configuration", str(exc), parent=error_root)
+            error_root.destroy()
+        except tk.TclError:
+            pass
+        shutdown_observability()
+        return 2
+
+    guard = SingleInstanceGuard(
+        configured_clock.clock_id,
+        logger=bootstrap_loggers.instance_guard,
+    )
+    with correlation_context(args.correlation_id):
+        bootstrap_loggers.runtime.event(
+            CLOCK_STARTING,
+            clock_id=configured_clock.clock_id,
+            clock_name=configured_clock.display_name,
+            configuration_path=configured_clock.configuration_path,
+            process_id=os.getpid(),
+            parent_process_id=os.getppid(),
+            runtime_mode="packaged" if getattr(sys, "frozen", False) else "source",
+            launch_mode="configured" if args.config is not None else "direct",
+            application_version=APP_VERSION.removeprefix("v"),
+        )
+        if not guard.acquire():
+            bootstrap_loggers.instance_guard.event(
+                DUPLICATE_CLOCK_REJECTED,
+                clock_id=configured_clock.clock_id,
+                clock_name=configured_clock.display_name,
+                configuration_path=configured_clock.configuration_path,
+                mutex_name=guard.name,
+                process_id=os.getpid(),
+                operation_id="startup_integrity_guard",
+            )
+            try:
+                duplicate_root = tk.Tk()
+                duplicate_root.withdraw()
+                messagebox.showinfo(
+                    "LearningClock Already Running",
+                    f"{configured_clock.display_name} is already running.",
+                    parent=duplicate_root,
+                )
+                duplicate_root.destroy()
+            except tk.TclError:
+                pass
+            shutdown_observability()
+            return 0
+
+    # From this point onward, this process is the sole configured-clock persistence writer.
+    shutdown_observability()
+    loggers = configure_observability(
+        configured_clock.log_dir / DIAGNOSTIC_LOG_FILE_NAME,
+        seq_spool_path=configured_clock.log_dir / "learning_clock_seq_offline.clef",
+    )
+    guard.set_logger(loggers.instance_guard)
+    try:
+        with correlation_context(args.correlation_id):
             loggers.application.info(
                 ApplicationEvents.STARTING,
-                args.learning_path or Path.cwd().name,
-                str(resolved_log_dir),
+                configured_clock.learning_path_name,
+                str(configured_clock.log_dir),
             )
-            root = tk.Tk()                                                      # Create root Tk window.
+            root = tk.Tk()
             LearningClock(
-                root,                                                           # Window root.
-                learning_path_name=args.learning_path,                          # Optional configured path name.
-                log_dir=resolved_log_dir,                                       # Resolved CSV/log output directory.
-                debug_break_on_click=args.debug_break_on_click,                 # Developer click breakpoint.
-                debug_break_on_close=args.debug_break_on_close,                 # Developer close breakpoint.
-                loggers=loggers,                                                # Shared semantic logging composition.
+                root,
+                learning_path_name=configured_clock.learning_path_name,
+                clock_id=configured_clock.clock_id,
+                log_dir=configured_clock.log_dir,
+                debug_break_on_click=args.debug_break_on_click,
+                debug_break_on_close=args.debug_break_on_close,
+                loggers=loggers,
             )
-            root.mainloop()                                                     # Run UI event loop.
+            loggers.runtime.event(
+                CLOCK_INITIALIZED,
+                clock_id=configured_clock.clock_id,
+                clock_name=configured_clock.display_name,
+                configuration_path=configured_clock.configuration_path,
+                process_id=os.getpid(),
+                runtime_mode="packaged" if getattr(sys, "frozen", False) else "source",
+                launch_mode="configured" if args.config is not None else "direct",
+                application_version=APP_VERSION.removeprefix("v"),
+            )
+            root.mainloop()
             loggers.application.info(ApplicationEvents.STOPPED)
-        return 0                                                                # Successful process exit code.
-    except Exception:
-        loggers.application.exception(
-            ApplicationEvents.STARTUP_FAILED,
+            loggers.runtime.event(
+                CLOCK_CLOSED,
+                clock_id=configured_clock.clock_id,
+                clock_name=configured_clock.display_name,
+                configuration_path=configured_clock.configuration_path,
+                process_id=os.getpid(),
+                operation_id="normal_shutdown",
+            )
+        return 0
+    except Exception as exc:
+        loggers.application.exception(ApplicationEvents.STARTUP_FAILED)
+        loggers.runtime.event(
+            CLOCK_STARTUP_FAILED,
+            exc_info=exc,
+            clock_id=configured_clock.clock_id,
+            clock_name=configured_clock.display_name,
+            configuration_path=configured_clock.configuration_path,
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+            process_id=os.getpid(),
+            operation_id="runtime",
         )
         raise
     finally:
-        shutdown_observability()                                                # Flush/close framework-owned sinks.
+        guard.close()
+        shutdown_observability()
 
 
 if __name__ == "__main__":

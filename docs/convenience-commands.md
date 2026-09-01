@@ -12,6 +12,7 @@ scripts\dev.cmd pygount-summary
 scripts\dev.cmd readme-assets
 scripts\dev.cmd api --reload
 scripts\dev.cmd openapi
+scripts\dev.cmd seq-dashboard
 scripts\dev.cmd unittest-csv
 scripts\dev.cmd unittest-csv-file
 scripts\dev.cmd csv-test test1
@@ -49,10 +50,11 @@ scripts\release.cmd
 - `readme-assets`: generate README SVG visuals for the desktop UI and Obsidian dashboard.
 - `api`: run the FastAPI development server; Swagger UI is available at `/docs`.
 - `openapi`: regenerate the tracked `docs\openapi.json` contract from the FastAPI application.
+- `seq-dashboard`: install or update the version-controlled LearningClock Seq workspace and Operations dashboard with `seqcli template import --merge`.
 - `unittest-csv`: run the isolated CSV unit test file.
 - `unittest-csv-file`: run the CSV regression suite against a properties-selected or explicitly supplied CSV.
 - `csv-test`: run one focused CSV regression selector through the default fixture properties.
 - `package`: build package artifacts under `build\dist`.
 - `install`: install runtime and development requirements into `.venv`.
 - `deploy`: export Diavgeia content to the local vault.
-- `release`: copy the production launcher and runtime Python files.
+- `release`: stage the icon and complete GUI/runtime Python package without VBS.

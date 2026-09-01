@@ -261,32 +261,20 @@
       "problemMatcher": []
     },
     {
-      "label": "Launcher: Run Learning Clock VBS",
-      "type": "shell",
-      "command": "wscript.exe",
+      "label": "LauncherPad: Run",
+      "type": "process",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\pythonw.exe",
       "args": [
-        "//nologo",
-        "${workspaceFolder}\\launcher\\Learning-clock.vbs",
-        "${workspaceFolder}\\launcher\\dev.properties"
+        "-m",
+        "learningclock.desktop",
+        "--config-dir",
+        "D:\\LearningPath"
       ],
       "options": {
-        "cwd": "${workspaceFolder}\\launcher"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Launcher: Debug Learning Clock VBS",
-      "type": "shell",
-      "command": "cscript.exe",
-      "args": [
-        "//nologo",
-        "//D",
-        "//X",
-        "${workspaceFolder}\\launcher\\Learning-clock.vbs",
-        "${workspaceFolder}\\launcher\\vbs-debug.properties"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}\\launcher"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}\\src"
+        }
       },
       "problemMatcher": []
     }

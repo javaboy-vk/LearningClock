@@ -28,6 +28,7 @@ junit.xml
 
 # Build and packaging output
 build/
+tmp/
 dist/
 *.egg-info/
 *.egg

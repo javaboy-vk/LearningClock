@@ -2,14 +2,48 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launcher: Learning Clock VBS",
-      "type": "node-terminal",
+      "name": "LauncherPad: Debug",
+      "type": "debugpy",
       "request": "launch",
-      "command": "wscript.exe //nologo \"${workspaceFolder}\\launcher\\Learning-clock.vbs\" \"${workspaceFolder}\\launcher\\dev.properties\"",
-      "cwd": "${workspaceFolder}\\launcher",
+      "module": "learningclock.desktop",
+      "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": [
+        "--config-dir",
+        "D:\\LearningPath"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "console": "internalConsole",
+      "justMyCode": true,
+      "subProcess": false,
       "presentation": {
         "group": "01-app",
         "order": 1
+      }
+    },
+    {
+      "name": "LauncherPad: Run (No Debugging)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "learningclock.desktop",
+      "python": "${workspaceFolder}\\.venv\\Scripts\\pythonw.exe",
+      "args": [
+        "--config-dir",
+        "D:\\LearningPath"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "console": "internalConsole",
+      "justMyCode": true,
+      "subProcess": false,
+      "noDebug": true,
+      "presentation": {
+        "group": "01-app",
+        "order": 2
       }
     },
     {
@@ -33,7 +67,7 @@
       "justMyCode": true,
       "presentation": {
         "group": "01-app",
-        "order": 2
+        "order": 3
       }
     },
     {
@@ -49,7 +83,7 @@
       "justMyCode": true,
       "presentation": {
         "group": "01-app",
-        "order": 3
+        "order": 4
       }
     },
     {
@@ -67,18 +101,6 @@
         "group": "02-tools",
         "order": 1
       }
-    },
-    {
-      "name": "Launcher: Debug VBS Only",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "cscript.exe //nologo //D //X \"${workspaceFolder}\\launcher\\Learning-clock.vbs\" \"${workspaceFolder}\\launcher\\vbs-debug.properties\"",
-      "cwd": "${workspaceFolder}\\launcher",
-      "presentation": {
-        "group": "02-tools",
-        "order": 2
-      },
-      "internalConsoleOptions": "neverOpen"
     },
     {
       "name": "Python: Diavgeia LearningPath GUI",
@@ -100,7 +122,7 @@
       "justMyCode": true,
       "presentation": {
         "group": "01-app",
-        "order": 4
+        "order": 5
       }
     },
     {

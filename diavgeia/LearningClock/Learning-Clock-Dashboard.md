@@ -1,6 +1,6 @@
-# Learning Clock Dashboard v5.3
+# Learning Clock Dashboard v6.0
 
-The dashboard displays **Book Listening** from the `book_listening` CSV column and also reads legacy `audiobook` data. It uses the shared LearningClock v5.3 activity taxonomy.
+The dashboard displays **Book Listening** from the `book_listening` CSV column and also reads legacy `audiobook` data. It uses the shared LearningClock v6.0 activity taxonomy.
 
 ```dataviewjs
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));

@@ -1,0 +1,147 @@
+{
+  "$entity": "dashboard",
+  "OwnerId": null,
+  "Title": "LearningClock Operations",
+  "IsProtected": false,
+  "SignalExpression": null,
+  "Charts": [
+    {
+      "Title": "Recent LearningClock Events",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [
+          {"Value": "Replace(Substring(ToIsoString(@Timestamp, OffsetIn('America/Chicago', @Timestamp)), 0, 23), 'T', ' ')", "Label": "Timestamp"},
+          {"Value": "if @Level = 'Information' then 'INFO' else if @Level = 'Warning' then 'WARN' else if @Level = 'Error' then 'ERROR' else if @Level = 'Fatal' then 'FATAL' else Substring(ToUpper(@Level), 0, 5)", "Label": "Level"},
+          {"Value": "EventCode", "Label": "EventId"},
+          {"Value": "@Message", "Label": "Message"},
+          {"Value": "Module", "Label": "Component"},
+          {"Value": "properties.clock_id", "Label": "ClockId"},
+          {"Value": "ProcessId", "Label": "ProcessId"},
+          {"Value": "Environment", "Label": "Environment"},
+          {"Value": "CorrelationId", "Label": "CorrelationId"}
+        ],
+        "Where": "Application = 'LearningClock' ci",
+        "SignalExpression": null,
+        "GroupBy": [],
+        "DisplayStyle": {"Type": "Table", "LineFillToZeroY": false, "LineShowMarkers": false, "BarOverlaySum": false, "SuppressLegend": true, "Palette": "Default"},
+        "Having": null,
+        "OrderBy": ["Timestamp desc"],
+        "Limit": 200
+      }],
+      "DisplayStyle": {"WidthColumns": 12, "HeightRows": 4},
+      "Description": "Latest 200 structured LearningClock events. Use the Events workspace with Tail for continuous arrival."
+    },
+    {
+      "Title": "Application Health",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [{"Value": "count(*)", "Label": "events"}],
+        "Where": "Application = 'LearningClock' ci and (StartsWith(EventCode, 'LPLCL-') or StartsWith(EventCode, 'LIFCL-'))",
+        "SignalExpression": null,
+        "GroupBy": ["EventCode"],
+        "DisplayStyle": {"Type": "Bar", "LineFillToZeroY": true, "LineShowMarkers": false, "BarOverlaySum": false, "SuppressLegend": false, "Palette": "Default"},
+        "Having": null, "OrderBy": [], "Limit": 12
+      }],
+      "DisplayStyle": {"WidthColumns": 8, "HeightRows": 1},
+      "Description": "LauncherPad and LearningClock lifecycle activity."
+    },
+    {
+      "Title": "Recently Active Clocks",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [{"Value": "count(*)", "Label": "events"}],
+        "Where": "Application = 'LearningClock' ci and properties.clock_id is not null",
+        "SignalExpression": null,
+        "GroupBy": ["properties.clock_id"],
+        "DisplayStyle": {"Type": "Bar", "LineFillToZeroY": true, "LineShowMarkers": false, "BarOverlaySum": false, "SuppressLegend": false, "Palette": "Default"},
+        "Having": null, "OrderBy": [], "Limit": 20
+      }],
+      "DisplayStyle": {"WidthColumns": 4, "HeightRows": 1},
+      "Description": "Recently emitting configured clocks; mutex inspection, not Seq, remains the live ownership authority."
+    },
+    {
+      "Title": "Launch Activity",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [{"Value": "count(*)", "Label": "launches"}],
+        "Where": "Application = 'LearningClock' ci and StartsWith(EventCode, 'LPCRP-')",
+        "SignalExpression": null,
+        "GroupBy": ["EventCode"],
+        "DisplayStyle": {"Type": "Bar", "LineFillToZeroY": true, "LineShowMarkers": false, "BarOverlaySum": false, "SuppressLegend": false, "Palette": "Default"},
+        "Having": null, "OrderBy": [], "Limit": 10
+      }],
+      "DisplayStyle": {"WidthColumns": 6, "HeightRows": 1},
+      "Description": "Launch requests, command construction, created processes, and launch failures."
+    },
+    {
+      "Title": "Duplicate-Instance Protection",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [{"Value": "count(*)", "Label": "rejections"}],
+        "Where": "Application = 'LearningClock' ci and EventCode in ['MUTEX-4003', 'MUTEX-4004'] ci",
+        "SignalExpression": null,
+        "GroupBy": ["properties.clock_id"],
+        "DisplayStyle": {"Type": "Bar", "LineFillToZeroY": true, "LineShowMarkers": false, "BarOverlaySum": false, "SuppressLegend": false, "Palette": "Reds"},
+        "Having": null, "OrderBy": [], "Limit": 20
+      }],
+      "DisplayStyle": {"WidthColumns": 6, "HeightRows": 1},
+      "Description": "Mutex conflicts and duplicate processes rejected before persistence initialization."
+    },
+    {
+      "Title": "Configuration Health",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [{"Value": "count(*)", "Label": "events"}],
+        "Where": "Application = 'LearningClock' ci and StartsWith(EventCode, 'CONFG-')",
+        "SignalExpression": null,
+        "GroupBy": ["EventCode"],
+        "DisplayStyle": {"Type": "Pie", "LineFillToZeroY": false, "LineShowMarkers": false, "BarOverlaySum": false, "SuppressLegend": false, "Palette": "Default"},
+        "Having": null, "OrderBy": [], "Limit": 12
+      }],
+      "DisplayStyle": {"WidthColumns": 6, "HeightRows": 1},
+      "Description": "Discovery, validation, malformed files, and duplicate clock identities."
+    },
+    {
+      "Title": "Persistence Health",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [{"Value": "count(*)", "Label": "problems"}],
+        "Where": "Application = 'LearningClock' ci and StartsWith(EventCode, 'STORG-') and @Level in ['Warning', 'Error', 'Fatal'] ci",
+        "SignalExpression": null,
+        "GroupBy": ["EventCode"],
+        "DisplayStyle": {"Type": "Bar", "LineFillToZeroY": true, "LineShowMarkers": false, "BarOverlaySum": true, "SuppressLegend": false, "Palette": "Reds"},
+        "Having": null, "OrderBy": [], "Limit": 12
+      }],
+      "DisplayStyle": {"WidthColumns": 6, "HeightRows": 1},
+      "Description": "CSV read, write, recovery, and persistence-integrity failures."
+    },
+    {
+      "Title": "Warnings and Errors",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [{"Value": "count(*)", "Label": "problems"}],
+        "Where": "Application = 'LearningClock' ci and @Level in ['Warning', 'Error', 'Fatal'] ci",
+        "SignalExpression": null,
+        "GroupBy": ["@Level"],
+        "DisplayStyle": {"Type": "Bar", "LineFillToZeroY": true, "LineShowMarkers": false, "BarOverlaySum": true, "SuppressLegend": false, "Palette": "Reds"},
+        "Having": null, "OrderBy": [], "Limit": null
+      }],
+      "DisplayStyle": {"WidthColumns": 6, "HeightRows": 1},
+      "Description": "Consolidated warning, error, and fatal events."
+    },
+    {
+      "Title": "Events by Component",
+      "SignalExpression": null,
+      "Queries": [{
+        "Measurements": [{"Value": "count(*)", "Label": "events"}],
+        "Where": "Application = 'LearningClock' ci and Module is not null",
+        "SignalExpression": null,
+        "GroupBy": ["Module"],
+        "DisplayStyle": {"Type": "Pie", "LineFillToZeroY": false, "LineShowMarkers": false, "BarOverlaySum": false, "SuppressLegend": false, "Palette": "Default"},
+        "Having": null, "OrderBy": [], "Limit": 16
+      }],
+      "DisplayStyle": {"WidthColumns": 6, "HeightRows": 1},
+      "Description": "Events grouped by LauncherPad, Configuration, ProcessLauncher, InstanceGuard, Runtime, Persistence, UI, and Calendar."
+    }
+  ]
+}
