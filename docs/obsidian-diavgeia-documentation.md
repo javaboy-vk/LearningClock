@@ -6,11 +6,39 @@ Diavgeia source pages live under:
 diavgeia\LearningClock
 ```
 
-Current pages:
+The root separates version-independent material from controlled product
+baselines. The current structure is:
 
-- `WebHome.md`
-- `Learning-Clock-Dashboard.md`
-- `Developer-Commands.md`
+```text
+diavgeia\LearningClock\
+  WebHome.md
+  Documentation Versioning.md
+  Developer-Commands.md
+  How-to-add-a-new-timer.md
+  Learning-Clock-Dashboard.md
+  LauncherPad-and-Observability.md
+  Reference\
+    Overview.md
+  6.0\
+    Overview.md
+    Architecture\
+      Overview.md
+      Diagrams.md
+    Configuration\
+      Overview.md
+      Seq Setup.md
+    Implementation\
+      Overview.md
+      Python Source Code.md
+  views\
+    learning-clock-dashboard\
+      view.js
+```
+
+`WebHome.md`, documentation policy, reference, developer commands, maintenance
+guidance, and the deployable dashboard are version-independent. Architecture,
+configuration, implementation, controlled diagrams, and Seq setup for the
+current product live under `6.0\` and carry `6.0.R<n>` document metadata.
 
 Dashboard viewing:
 
@@ -46,3 +74,8 @@ D:\DiavgeiaVault\Engineering\MAGPAI\views\
 ```
 
 The `release` target performs the same dashboard export after updating the runnable desktop application files.
+
+The export command copies the complete `diavgeia\LearningClock` source tree to
+the vault. The per-learning-path dashboard copy is a separate deployment step
+that preserves the root `Learning-Clock-Dashboard.md` and `views\` locations
+expected by the Dataview loader.

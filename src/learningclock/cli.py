@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CLI Entrypoint
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v0.1.2
+# Version   : v0.1.3
 # Purpose:
 #   Provides the command-line entrypoint and semantic command events for the
 #   LearningClock package.
@@ -65,14 +65,15 @@ from learningclock.observability import (
 #   Error handling:
 #     argparse owns invalid-option reporting when parse_args is called by main.
 def build_parser() -> argparse.ArgumentParser:
-
-    parser = argparse.ArgumentParser(prog="learningclock")                    # Create parser with stable command name.
+    parser = argparse.ArgumentParser(
+        prog="learningclock"
+    )  # Create parser with stable command name.
     parser.add_argument(
-        "--version",                                                          # Optional metadata command.
-        action="store_true",                                                  # Store True when the flag is present.
-        help="Print the application version.",                                # Help text shown by argparse.
+        "--version",  # Optional metadata command.
+        action="store_true",  # Store True when the flag is present.
+        help="Print the application version.",  # Help text shown by argparse.
     )
-    return parser                                                             # Return parser for main/tests.
+    return parser  # Return parser for main/tests.
 
 
 # Operational algorithm:
@@ -83,32 +84,33 @@ def build_parser() -> argparse.ArgumentParser:
 #   Error handling:
 #     argparse raises SystemExit for malformed arguments, preserving standard command-line behavior.
 def main(argv: list[str] | None = None) -> int:
-
     loggers = configure_observability(
         None,
         console_enabled=True,
         include_seq=False,
-    )                                                                          # Keep CLI stdout stable; semantic events use stderr.
+    )  # Keep CLI stdout stable; semantic events use stderr.
     try:
         with correlation_context():
             try:
-                args = build_parser().parse_args(argv)                         # Parse supplied args or sys.argv via argparse.
+                args = build_parser().parse_args(
+                    argv
+                )  # Parse supplied args or sys.argv via argparse.
             except SystemExit as exc:
                 if exc.code:
                     loggers.cli.warning(CliEvents.ARGUMENT_PARSE_EXITED, exc.code)
                 else:
                     loggers.cli.info(CliEvents.ARGUMENT_PARSE_EXITED, exc.code)
                 raise
-            if args.version:                                                   # Version-only command path.
-                print(__version__)                                             # Emit package version for scripts/users.
+            if args.version:  # Version-only command path.
+                print(__version__)  # Emit package version for scripts/users.
                 loggers.cli.info(
                     CliEvents.VERSION_EMITTED,
                     __version__,
                 )
-                return 0                                                       # Successful version command.
+                return 0  # Successful version command.
 
-            print("LearningClock is ready.")                                   # Default health-check/readiness message.
+            print("LearningClock is ready.")  # Default health-check/readiness message.
             loggers.cli.info(CliEvents.READY_EMITTED)
-            return 0                                                           # Successful default command.
+            return 0  # Successful default command.
     finally:
         shutdown_observability()

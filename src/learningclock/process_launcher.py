@@ -3,10 +3,23 @@
 # Artifact  : LearningClock - Independent Windows GUI Process Launcher
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v1.0.1
+# Version   : v1.0.2
 # Purpose:
 #   Constructs and starts source or packaged LearningClock GUI commands without
 #   VBS, shells, console windows, pipes, or LauncherPad-owned process lifetime.
+#
+# Launch flow:
+#   launch_clock(clock, correlation_id)
+#   |-- build_clock_command(...)
+#   |   |-- packaged: relaunch the GUI executable with --clock
+#   |   `-- source: select adjacent pythonw.exe and run learningclock.desktop
+#   |-- propagate the source root through PYTHONPATH when required
+#   |-- start a detached process with standard streams connected to DEVNULL
+#   `-- emit PROCESS_CREATED or PROCESS_LAUNCH_FAILED with structured context
+#
+# Safety contract:
+#   Commands are argument lists, never shell strings. No pipe is retained, and
+#   the returned process ID is diagnostic information rather than ownership.
 # =============================================================================
 
 from __future__ import annotations
@@ -30,9 +43,12 @@ CREATE_BREAKAWAY_FROM_JOB = 0x01000000
 PACKAGED_EXECUTABLE_NAMES = {"learningclock.exe", "learningclock-gui.exe"}
 
 
+# Source documentation:
+#   What it does: Selects the GUI interpreter beside the active Python executable.
+#   Why it exists: Source launches must avoid a console while honoring the active environment.
+#   Designed use: Source-mode command construction calls it; Windows prefers a sibling
+#     pythonw.exe and other environments fall back to the supplied/current interpreter.
 def select_gui_python(python_executable: Path | str | None = None) -> Path:
-    """Select pythonw.exe beside the active interpreter without hard-coded installations."""
-
     executable = Path(python_executable or sys.executable).resolve()
     if os.name == "nt":
         candidate = executable.with_name("pythonw.exe")
@@ -41,9 +57,12 @@ def select_gui_python(python_executable: Path | str | None = None) -> Path:
     return executable
 
 
+# Source documentation:
+#   What it does: Detects a GUI executable that can safely relaunch itself.
+#   Why it exists: Packaged deployments should not assume a source checkout or Python exists.
+#   Designed use: build_clock_command calls it when no executable is injected; it accepts only
+#     frozen runtimes or known installed GUI names and otherwise enables source mode.
 def detect_packaged_executable(argv0: str | None = None) -> Path | None:
-    """Detect a frozen or installed GUI entry executable suitable for self-relaunch."""
-
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve()
     candidate = Path(argv0 or sys.argv[0])
@@ -52,6 +71,12 @@ def detect_packaged_executable(argv0: str | None = None) -> Path | None:
     return None
 
 
+# Source documentation:
+#   What it does: Builds the packaged or source command for one configured clock.
+#   Why it exists: Central list-based construction keeps paths safe and gives telemetry a stable
+#     packaged/source runtime classification.
+#   Designed use: launch_clock supplies a validated clock and correlation ID; tests can inject
+#     executables, and the returned list goes directly to subprocess.Popen without a shell.
 def build_clock_command(
     clock: ConfiguredClock,
     correlation_id: str,
@@ -59,8 +84,6 @@ def build_clock_command(
     packaged_executable: Path | None = None,
     python_executable: Path | str | None = None,
 ) -> tuple[list[str], str]:
-    """Build a quoted-argument-safe command for packaged or source execution."""
-
     packaged = packaged_executable or detect_packaged_executable()
     common = [
         "--clock",
@@ -74,6 +97,12 @@ def build_clock_command(
     return [str(pythonw), "-m", "learningclock.desktop", *common], "source"
 
 
+# Source documentation:
+#   What it does: Starts one independent GUI clock and returns its process ID.
+#   Why it exists: Clocks must survive LauncherPad or IDE shutdown without inherited pipes or
+#     parent job-object lifetime.
+#   Designed use: LauncherPad passes a discovered clock, correlation ID, and logger; the function
+#     detaches streams/lifetime, emits telemetry, and returns only the PID rather than ownership.
 def launch_clock(
     clock: ConfiguredClock,
     correlation_id: str,
@@ -82,8 +111,6 @@ def launch_clock(
     packaged_executable: Path | None = None,
     python_executable: Path | str | None = None,
 ) -> int:
-    """Start one detached GUI process and return its process ID without retaining ownership."""
-
     command, runtime_mode = build_clock_command(
         clock,
         correlation_id,

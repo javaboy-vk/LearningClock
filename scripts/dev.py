@@ -3,9 +3,21 @@
 # Artifact  : LearningClock - Developer Command Runner
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v6.0
+# Version   : v6.0.1
 # Purpose:
 #   Provides Maven-style lifecycle commands for the Python project.
+#
+# Command flow:
+#   main(argv)
+#   |-- select one TARGETS entry
+#   |-- run repository-local clean, compile, test, coverage, documentation,
+#   |   packaging, API, Seq, deployment, release, or CSV validation work
+#   `-- propagate subprocess failures as a nonzero command result
+#
+# Safety contract:
+#   safe_remove() refuses paths outside the repository. Build products remain
+#   under build/ where possible. deploy and release are explicit targets because
+#   they write to configured external LearningPath or Diavgeia locations.
 # =============================================================================
 
 from __future__ import annotations
@@ -30,8 +42,11 @@ DASHBOARD_MARKDOWN = ROOT / "diavgeia" / "LearningClock" / "Learning-Clock-Dashb
 DASHBOARD_VIEWS_DIR = ROOT / "diavgeia" / "LearningClock" / "views"
 
 
+# Source documentation:
+#   What it does: Removes generated content only after proving it is inside this repository.
+#   Why it exists: Lifecycle cleanup must never expand into user or production data.
+#   Designed use: clean and metadata cleanup pass explicit generated paths; outside paths fail.
 def safe_remove(path: Path) -> None:
-
     resolved = path.resolve()
     if not str(resolved).startswith(str(ROOT.resolve())):
         raise RuntimeError(f"Refusing to remove outside repository: {resolved}")
@@ -41,8 +56,11 @@ def safe_remove(path: Path) -> None:
         resolved.unlink()
 
 
+# Source documentation:
+#   What it does: Runs one lifecycle subprocess from the repository with imports enabled.
+#   Why it exists: Every command needs the same working directory, PYTHONPATH, and failure policy.
+#   Designed use: Targets pass argument lists, never shell strings; nonzero exits raise.
 def run(args: list[str], *, env: dict[str, str] | None = None) -> None:
-
     merged_env = os.environ.copy()
     merged_env["PYTHONPATH"] = str(ROOT / "src")
     if env:
@@ -57,8 +75,11 @@ def python_executable() -> str:
     return sys.executable
 
 
+# Source documentation:
+#   What it does: Returns the project interpreter or stops with bootstrap guidance.
+#   Why it exists: Stateful commands must not mutate or depend on an unrelated Python.
+#   Designed use: Dependency, test, package, and report targets call it before dispatch.
 def require_venv() -> str:
-
     if not VENV_PYTHON.exists():
         raise SystemExit(
             "Missing .venv. Create it first from Command Prompt with: python -m venv .venv"
@@ -66,8 +87,11 @@ def require_venv() -> str:
     return str(VENV_PYTHON)
 
 
+# Source documentation:
+#   What it does: Removes generated build, cache, bytecode, and package metadata.
+#   Why it exists: Reproducible compilation and packaging need a clean evidence area.
+#   Designed use: dev clean and all call it; every deletion is constrained by safe_remove.
 def clean(_args: list[str] | None = None) -> None:
-
     for path in [
         BUILD_DIR,
         ROOT / "dist",
@@ -88,8 +112,11 @@ def remove_python_metadata() -> None:
         safe_remove(path)
 
 
+# Source documentation:
+#   What it does: Reads launcher properties needed by deployment tooling.
+#   Why it exists: Dashboard export must resolve learning paths without importing GUI code.
+#   Designed use: Export helpers call it on trusted .properties files; comments/blanks are ignored.
 def load_properties(path: Path) -> dict[str, str]:
-
     values = {}
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
@@ -110,8 +137,11 @@ def resolve_config_path(value: str, base_dir: Path) -> Path:
     return (base_dir / path).resolve()
 
 
+# Source documentation:
+#   What it does: Resolves dashboard destinations from configured clock log directories.
+#   Why it exists: Each dashboard location must derive from configuration, not guessed names.
+#   Designed use: export_dashboard_components consumes the source/destination pairs.
 def learning_path_dashboard_destinations(properties_dir: Path) -> list[tuple[Path, Path]]:
-
     destinations = []
     for properties_path in sorted(properties_dir.glob("*.properties")):
         properties = load_properties(properties_path)
@@ -124,8 +154,11 @@ def learning_path_dashboard_destinations(properties_dir: Path) -> list[tuple[Pat
     return destinations
 
 
+# Source documentation:
+#   What it does: Copies shared dashboard Markdown and view beside each configured path.
+#   Why it exists: The Dataview loader expects a self-contained component near each clock's CSV.
+#   Designed use: deploy/release call it; dry_run reports writes, and missing inputs stop early.
 def export_dashboard_components(properties_dir: Path, *, dry_run: bool = False) -> None:
-
     if not DASHBOARD_MARKDOWN.exists():
         raise SystemExit(f"Dashboard source file was not found: {DASHBOARD_MARKDOWN}")
     if not DASHBOARD_VIEWS_DIR.exists():
@@ -154,8 +187,11 @@ def export_dashboard_components(properties_dir: Path, *, dry_run: bool = False) 
         print(f"exported dashboard from {properties_path.name} -> {destination}")
 
 
+# Source documentation:
+#   What it does: Reads runtime and development dependencies from pyproject.toml.
+#   Why it exists: dev install must use the package manifest as its single authority.
+#   Designed use: Returns PEP 508 strings directly to pip without duplicated versions.
 def dependency_requirements() -> list[str]:
-
     with (ROOT / "pyproject.toml").open("rb") as handle:
         config = tomllib.load(handle)
 
@@ -165,8 +201,11 @@ def dependency_requirements() -> list[str]:
     return requirements
 
 
+# Source documentation:
+#   What it does: Byte-compiles product and test Python into the ignored build workflow.
+#   Why it exists: Compilation catches syntax problems before slower tests or packaging.
+#   Designed use: dev compile and all invoke it; a failed tree produces exit status 1.
 def compile_sources(_args: list[str] | None = None) -> None:
-
     BUILD_DIR.mkdir(exist_ok=True)
     ok = compileall.compile_dir(ROOT / "src", quiet=1)
     ok = compileall.compile_dir(ROOT / "tests", quiet=1) and ok
@@ -174,8 +213,11 @@ def compile_sources(_args: list[str] | None = None) -> None:
         raise SystemExit(1)
 
 
+# Source documentation:
+#   What it does: Validates repository-owned VS Code and workspace JSON files.
+#   Why it exists: Malformed editor configuration can break supported workflows unnoticed by tests.
+#   Designed use: dev validate-config parses each known file and reports exact diagnostics.
 def validate_config(_args: list[str] | None = None) -> None:
-
     config_files = [
         ROOT / ".vscode" / "launch.json",
         ROOT / ".vscode" / "tasks.json",
@@ -199,8 +241,11 @@ def test(_args: list[str] | None = None) -> None:
     run([require_venv(), "-m", "pytest"])
 
 
+# Source documentation:
+#   What it does: Runs the suite with terminal and HTML product coverage reports.
+#   Why it exists: Coverage is separate evidence from a plain correctness run.
+#   Designed use: dev coverage uses the project venv and writes under build/coverage.
 def coverage(_args: list[str] | None = None) -> None:
-
     run(
         [
             require_venv(),
@@ -223,8 +268,11 @@ def readme_assets(_args: list[str] | None = None) -> None:
     run([require_venv(), str(ROOT / "scripts" / "generate_readme_assets.py")])
 
 
+# Source documentation:
+#   What it does: Runs the local FastAPI readiness and documentation server.
+#   Why it exists: Developers need one command for health, Swagger UI, ReDoc, and OpenAPI.
+#   Designed use: Pass optional host, port, and reload after dev api; defaults use loopback.
 def api(args: list[str] | None = None) -> None:
-
     parser = argparse.ArgumentParser(prog="dev.py api")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
@@ -252,8 +300,11 @@ def openapi(_args: list[str] | None = None) -> None:
     run([require_venv(), str(ROOT / "scripts" / "export_openapi.py")])
 
 
+# Source documentation:
+#   What it does: Invokes the version-controlled Seq workspace installer.
+#   Why it exists: Signals, queries, workspace, and dashboard must update together.
+#   Designed use: dev seq-dashboard forwards installer arguments and propagates failures.
 def seq_dashboard(args: list[str] | None = None) -> None:
-
     run(
         [
             "powershell",
@@ -277,8 +328,11 @@ def unittest_csv_file(args: list[str] | None = None) -> None:
     run([require_venv(), "tests/test_learning_clock_csv_regression.py", *(args or [])])
 
 
+# Source documentation:
+#   What it does: Runs one named CSV regression selector against a properties file.
+#   Why it exists: Persistence debugging benefits from a fast fixture path beside the full suite.
+#   Designed use: dev csv-test accepts a selector and optional properties/CSV paths.
 def csv_test(args: list[str] | None = None) -> None:
-
     parser = argparse.ArgumentParser(prog="dev.py csv-test")
     parser.add_argument("selector", nargs="?", default="test1")
     parser.add_argument("--properties", default=str(REGRESSION_PROPERTIES))
@@ -296,15 +350,21 @@ def csv_test(args: list[str] | None = None) -> None:
     run(command)
 
 
+# Source documentation:
+#   What it does: Builds wheel and source artifacts into the ignored distribution area.
+#   Why it exists: Consumers need reproducible artifacts without source-tree egg metadata.
+#   Designed use: dev package requires the venv and removes metadata after the build.
 def package(_args: list[str] | None = None) -> None:
-
     (BUILD_DIR / "dist").mkdir(parents=True, exist_ok=True)
     run([require_venv(), "-m", "build", "--outdir", str(BUILD_DIR / "dist")])
     remove_python_metadata()
 
 
+# Source documentation:
+#   What it does: Installs manifest-declared runtime/development dependencies into .venv.
+#   Why it exists: The repository needs a predictable environment without editable installation.
+#   Designed use: Run after creating .venv; failures stop immediately and metadata is cleaned.
 def install(_args: list[str] | None = None) -> None:
-
     py = require_venv()
     run([py, "-m", "pip", "install", "--upgrade", "pip"])
     requirements = dependency_requirements()
@@ -313,8 +373,11 @@ def install(_args: list[str] | None = None) -> None:
     remove_python_metadata()
 
 
+# Source documentation:
+#   What it does: Publishes Diavgeia content and configured dashboard components.
+#   Why it exists: The central vault and per-LearningPath dashboards must refresh together.
+#   Designed use: Invoke explicitly through dev deploy because it writes outside the repository.
 def deploy(_args: list[str] | None = None) -> None:
-
     run(
         [
             "powershell",
@@ -328,8 +391,11 @@ def deploy(_args: list[str] | None = None) -> None:
     export_dashboard_components(LEARNING_PATH_PROPERTIES_DIR)
 
 
+# Source documentation:
+#   What it does: Stages the complete runtime, icon, properties, and dashboards.
+#   Why it exists: Production needs every package module while preserving autosave configuration.
+#   Designed use: Run dev release --dry-run first, then release to an explicit/default directory.
 def release(args: list[str] | None = None) -> None:
-
     parser = argparse.ArgumentParser(prog="dev.py release")
     parser.add_argument("--production-dir", default=str(PRODUCTION_APP_DIR))
     parser.add_argument("--dry-run", action="store_true")
@@ -363,17 +429,24 @@ def release(args: list[str] | None = None) -> None:
     if deployed_clock_properties.exists():
         print(f"preserved configured autosave file: {deployed_clock_properties}")
     elif parsed_args.dry_run:
-        print(f"would release: {default_clock_properties.relative_to(ROOT)} -> {deployed_clock_properties}")
+        print(
+            f"would release: {default_clock_properties.relative_to(ROOT)} -> {deployed_clock_properties}"
+        )
     else:
         deployed_clock_properties.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(default_clock_properties, deployed_clock_properties)
-        print(f"released: {default_clock_properties.relative_to(ROOT)} -> {deployed_clock_properties}")
+        print(
+            f"released: {default_clock_properties.relative_to(ROOT)} -> {deployed_clock_properties}"
+        )
 
     export_dashboard_components(LEARNING_PATH_PROPERTIES_DIR, dry_run=parsed_args.dry_run)
 
 
+# Source documentation:
+#   What it does: Runs the local clean, compile, test, and package sequence.
+#   Why it exists: Contributors need one deterministic local gate.
+#   Designed use: dev all excludes external deployment, release, and live Seq installation.
 def all_targets(_args: list[str] | None = None) -> None:
-
     clean()
     compile_sources()
     test()
@@ -402,8 +475,11 @@ TARGETS = {
 }
 
 
+# Source documentation:
+#   What it does: Parses one lifecycle target and dispatches remaining arguments.
+#   Why it exists: dev.bat and direct Python use need one authoritative command map.
+#   Designed use: Put target first and its options afterward; exceptions preserve nonzero exits.
 def main(argv: list[str] | None = None) -> int:
-
     parser = argparse.ArgumentParser(prog="dev.py")
     parser.add_argument("target", choices=TARGETS)
     parser.add_argument("args", nargs=argparse.REMAINDER)

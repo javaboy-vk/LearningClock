@@ -3,10 +3,28 @@
 # Artifact  : LearningClock - Configured Clock Discovery
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v1.0.0
+# Version   : v1.0.1
 # Purpose:
 #   Loads, validates, identifies, and deterministically discovers LearningClock
 #   properties files without coupling configuration data to launch code.
+#
+# Configuration flow:
+#   discover_clock_configurations(configuration_dir)
+#   |-- enumerate *.properties in case-insensitive filename order
+#   |-- load_clock_configuration(path)
+#   |   |-- load_properties(path)
+#   |   |-- require learning-path-name and logDir
+#   |   |-- validate explicit clock-id or normalize the filename fallback
+#   |   `-- resolve relative logDir values beside the properties file
+#   |-- isolate malformed files as ConfigurationIssue values
+#   |-- reject duplicate clock IDs without hiding other valid clocks
+#   `-- order valid clocks by explicit order, display name, and clock ID
+#
+# Boundary contract:
+#   This module returns immutable configuration data. It does not create UI,
+#   launch processes, acquire mutexes, create log directories, or open CSV files.
+#   Per-file failures remain visible in DiscoveryResult so LauncherPad can keep
+#   operating with the remaining valid configurations.
 # =============================================================================
 
 from __future__ import annotations
@@ -61,9 +79,13 @@ class DiscoveryResult:
     issues: tuple[ConfigurationIssue, ...]
 
 
+# Source documentation:
+#   What it does: Loads Java-style key/value properties used by LearningClock launchers.
+#   Why it exists: Existing learning paths already use properties files, so this preserves
+#     compatibility without coupling discovery to a UI.
+#   Designed use: Call with one candidate file. It returns trimmed string values and raises
+#     ConfigurationError for unreadable files or malformed non-comment lines.
 def load_properties(path: Path) -> dict[str, str]:
-    """Load Java-style key/value properties used by existing LearningClock launchers."""
-
     try:
         lines = path.read_text(encoding="utf-8-sig").splitlines()
     except OSError as exc:
@@ -80,9 +102,12 @@ def load_properties(path: Path) -> dict[str, str]:
     return values
 
 
+# Source documentation:
+#   What it does: Returns a stable, mutex-safe clock ID.
+#   Why it exists: Discovery, Windows mutexes, logs, and Seq filters share this identity.
+#   Designed use: Keep fallback disabled for explicit clock-id values; enable it only when
+#     normalizing legacy filenames or display names before validation.
 def stable_clock_id(value: str, *, fallback: bool = False) -> str:
-    """Return a stable mutex-safe clock ID, normalizing legacy filename identities."""
-
     normalized = value.strip().lower()
     if fallback:
         normalized = re.sub(r"[^a-z0-9._-]+", "-", normalized).strip("-._")
@@ -100,9 +125,13 @@ def _required(values: dict[str, str], key: str) -> str:
     return value
 
 
+# Source documentation:
+#   What it does: Loads and validates one LauncherPad clock configuration.
+#   Why it exists: Launch code needs one immutable resolved object instead of repeatedly
+#     interpreting raw properties at different boundaries.
+#   Designed use: Discovery and --clock startup call it before UI or storage initialization;
+#     invalid extensions or values raise ConfigurationError for the caller to handle.
 def load_clock_configuration(path: Path) -> ConfiguredClock:
-    """Load and validate one existing or v1 LauncherPad clock configuration."""
-
     resolved_path = path.expanduser().resolve()
     if resolved_path.suffix.lower() != ".properties":
         raise ConfigurationError("configuration must use the .properties extension")
@@ -110,8 +139,10 @@ def load_clock_configuration(path: Path) -> ConfiguredClock:
     learning_path_name = _required(values, "learning-path-name")
     log_dir_value = _required(values, "logDir")
     explicit_id = values.get("clock-id", "").strip()
-    clock_id = stable_clock_id(explicit_id) if explicit_id else stable_clock_id(
-        resolved_path.stem, fallback=True
+    clock_id = (
+        stable_clock_id(explicit_id)
+        if explicit_id
+        else stable_clock_id(resolved_path.stem, fallback=True)
     )
     display_name = values.get("display-name", "").strip() or learning_path_name
     log_dir = Path(log_dir_value)
@@ -134,13 +165,19 @@ def load_clock_configuration(path: Path) -> ConfiguredClock:
     )
 
 
+# Source documentation:
+#   What it does: Builds a compatible identity for direct execution without a properties file.
+#   Why it exists: Historical developer/debugger commands pass name and log directory directly,
+#     while the v6.0 runtime still requires a clock identity.
+#   Designed use: Use only for app.main's legacy argument path; LauncherPad launches should load
+#     a real configuration with load_clock_configuration.
 def legacy_clock_configuration(
     *, learning_path_name: str, log_dir: Path, clock_id: str | None = None
 ) -> ConfiguredClock:
-    """Build a compatible identity for direct developer execution without a properties file."""
-
-    identity = stable_clock_id(clock_id) if clock_id else stable_clock_id(
-        learning_path_name, fallback=True
+    identity = (
+        stable_clock_id(clock_id)
+        if clock_id
+        else stable_clock_id(learning_path_name, fallback=True)
     )
     return ConfiguredClock(
         clock_id=identity,
@@ -151,11 +188,14 @@ def legacy_clock_configuration(
     )
 
 
+# Source documentation:
+#   What it does: Discovers valid clocks while isolating per-file failures.
+#   Why it exists: One malformed or duplicate configuration must not hide other valid clocks.
+#   Designed use: LauncherPad renders the returned clocks and reports issues; optional logging
+#     records discovery without affecting deterministic validation or ordering.
 def discover_clock_configurations(
     configuration_dir: Path, *, logger: Any | None = None
 ) -> DiscoveryResult:
-    """Discover valid clocks while isolating malformed files and identity collisions."""
-
     resolved_dir = configuration_dir.expanduser().resolve()
     if logger is not None:
         logger.event(CONFIG_DISCOVERY_STARTED, configuration_dir=resolved_dir)
@@ -163,7 +203,9 @@ def discover_clock_configurations(
     clocks: list[ConfiguredClock] = []
     by_id: dict[str, ConfiguredClock] = {}
     try:
-        candidates = sorted(resolved_dir.glob("*.properties"), key=lambda item: item.name.casefold())
+        candidates = sorted(
+            resolved_dir.glob("*.properties"), key=lambda item: item.name.casefold()
+        )
     except OSError as exc:
         candidates = []
         issues.append(ConfigurationIssue(resolved_dir, str(exc)))
@@ -218,4 +260,3 @@ def discover_clock_configurations(
             error_count=len(issues),
         )
     return DiscoveryResult(tuple(clocks), tuple(issues))
-

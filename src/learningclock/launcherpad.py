@@ -3,10 +3,27 @@
 # Artifact  : LearningClock - LauncherPad GUI
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v1.0.0
+# Version   : v1.0.1
 # Purpose:
 #   Discovers configured clocks, observes their named mutexes, and launches
 #   independent LearningClock GUI processes from one compact Tkinter window.
+#
+# LauncherPad flow:
+#   main(configuration_dir, correlation_id)
+#   |-- configure LauncherPad file, console, and optional Seq observability
+#   |-- create Tk root and LauncherPad
+#   |   |-- discover valid clock configurations
+#   |   |-- create one launch control per valid clock
+#   |   `-- refresh_running_states() every STATE_REFRESH_MS
+#   |       |-- observe Local\Protepo.LearningClock.<clock-id>
+#   |       `-- emit telemetry only when the running state changes
+#   |-- launch(clock) creates a correlation ID and a detached child process
+#   `-- on_close() cancels polling and closes only LauncherPad
+#
+# Ownership contract:
+#   LauncherPad observes mutex existence but never owns a selected clock's
+#   singleton guard, CSV state, or child-process lifetime. Closing LauncherPad
+#   cannot terminate an independently running LearningClock process.
 # =============================================================================
 
 from __future__ import annotations
@@ -61,9 +78,8 @@ class ClockControlState:
     background: str
 
 
+# Source documentation: Maps authoritative mutex state to a clear LauncherPad button state.
 def clock_control_state(clock: ConfiguredClock, running: bool) -> ClockControlState:
-    """Map authoritative mutex state to a clear LauncherPad button state."""
-
     if running:
         return ClockControlState(
             text=f"{clock.display_name} — Running",
@@ -80,6 +96,12 @@ def clock_control_state(clock: ConfiguredClock, running: bool) -> ClockControlSt
 class LauncherPad:
     """Focused discover-display-observe-launch Tkinter application."""
 
+    # Source documentation:
+    #   What it does: Builds the discover-display-observe LauncherPad application.
+    #   Why it exists: Initialization creates one valid-clock snapshot and schedules mutex
+    #     observation without taking ownership of any clock.
+    #   Designed use: main supplies Tk, configuration, and loggers; tests may inject observers and
+    #     launchers. Construction schedules polling and emits the initialized event.
     def __init__(
         self,
         root: tk.Tk,
@@ -169,9 +191,13 @@ class LauncherPad:
             application_version="6.0",
         )
 
+    # Source documentation:
+    #   What it does: Launches one clock under a new correlation scope.
+    #   Why it exists: Parent request and child startup must be traceable without making
+    #     LauncherPad the owner or supervisor of the child.
+    #   Designed use: Clock buttons pass a discovered configuration; failures appear in the parent
+    #     UI and an early mutex refresh follows, while the child decides singleton ownership.
     def launch(self, clock: ConfiguredClock) -> None:
-        """Launch one clock under a correlation scope; process-level mutex remains authoritative."""
-
         correlation_id = str(uuid4())
         with correlation_context(correlation_id):
             self.loggers.process_launcher.event(
@@ -210,14 +236,16 @@ class LauncherPad:
                 )
                 self.status.config(text=f"Launch failed for {clock.display_name}")
                 return
-            self.status.config(
-                text=f"Started {clock.display_name} as process {child_process_id}"
-            )
+            self.status.config(text=f"Started {clock.display_name} as process {child_process_id}")
         self.root.after(250, self.refresh_running_states)
 
+    # Source documentation:
+    #   What it does: Refreshes controls from authoritative mutex observations.
+    #   Why it exists: Independent children can survive LauncherPad or start externally, so an
+    #     in-memory process list is insufficient.
+    #   Designed use: The Tk timer invokes it every STATE_REFRESH_MS; it cancels duplicate jobs,
+    #     fails closed, updates controls, and emits only initial detections or real transitions.
     def refresh_running_states(self, *, initial: bool = False) -> None:
-        """Observe all mutexes and log only state transitions, never stable polling iterations."""
-
         if self.closed:
             return
         if self.refresh_job is not None:
@@ -265,9 +293,13 @@ class LauncherPad:
                 )
         self.refresh_job = self.root.after(STATE_REFRESH_MS, self.refresh_running_states)
 
+    # Source documentation:
+    #   What it does: Closes only LauncherPad and its scheduled observation work.
+    #   Why it exists: Running clocks must survive parent closure and own their persistence and
+    #     singleton lifecycle independently.
+    #   Designed use: Registered as WM_DELETE_WINDOW; repeat calls are safe, polling is canceled,
+    #     and no clock process is signaled.
     def on_close(self) -> None:
-        """Close LauncherPad without tracking, signaling, or terminating launched clocks."""
-
         if self.closed:
             return
         self.closed = True
@@ -289,12 +321,16 @@ class LauncherPad:
         )
 
 
+# Source documentation:
+#   What it does: Starts the primary LearningClock LauncherPad GUI.
+#   Why it exists: This boundary owns LauncherPad diagnostics and guarantees logging shutdown
+#     around the Tk event loop.
+#   Designed use: desktop.main calls it in normal GUI mode; tests/development may override the
+#     configuration directory or correlation ID, and the return is a process exit status.
 def main(
     configuration_dir: Path = DEFAULT_CONFIGURATION_DIR,
     correlation_id: str | None = None,
 ) -> int:
-    """Start the primary LearningClock LauncherPad GUI."""
-
     diagnostic_dir = configuration_dir / "Tools" / "LearningClock"
     loggers = configure_observability(
         diagnostic_dir / "launcherpad_debug.log",

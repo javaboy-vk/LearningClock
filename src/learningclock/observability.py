@@ -3,10 +3,24 @@
 # Artifact  : LearningClock - Application Observability Composition
 # Author    : javaboy-vk
 # Date      : 2026-08-24
-# Version   : v2.0.0
+# Version   : v2.0.1
 # Purpose:
 #   Configures protepo.log once for LearningClock and exposes native semantic
 #   loggers to the application, CLI, and persistence boundaries.
+#
+# Composition flow:
+#   configure_observability(diagnostic_log_file)
+#   |-- verify the required protepo.log runtime version
+#   |-- resolve environment, console, file, Seq, and spool settings
+#   |-- configure the engineering-audience logging pipeline
+#   |-- fall back to console-only logging if sink configuration fails
+#   `-- register legacy catalogs and named v2 component loggers
+#
+# Reliability contract:
+#   Local file output is selected per configured clock, Seq is optional and
+#   failure-isolated, and correlation_context() carries one workflow identity
+#   across LauncherPad and clock-process events. shutdown_observability() owns
+#   deterministic handler flushing and reset between tests or application runs.
 # =============================================================================
 
 from __future__ import annotations
@@ -56,18 +70,21 @@ class LearningClockLoggers:
 _active_loggers: LearningClockLoggers | None = None
 
 
+# Source documentation: Reads a tolerant boolean environment setting for optional runtime sinks.
 def _environment_flag(name: str, default: bool) -> bool:
-    """Return a tolerant boolean environment setting."""
-
     value = os.getenv(name)
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+# Source documentation:
+#   What it does: Registers event catalogs and assembles all component loggers.
+#   Why it exists: Application code should receive one typed bundle rather than repeat catalog
+#     registration and logger-name strings throughout the product.
+#   Designed use: configure_observability calls it only after Log.configure and returns the
+#     resulting bundle to the CLI or GUI composition root.
 def _register_loggers() -> LearningClockLoggers:
-    """Register every catalog and resolve its application logger."""
-
     Log.register_catalogs(*ALL_EVENT_CATALOGS)
     return LearningClockLoggers(
         application=Log.get_logger(ApplicationEvents),
@@ -85,6 +102,13 @@ def _register_loggers() -> LearningClockLoggers:
     )
 
 
+# Source documentation:
+#   What it does: Configures LearningClock-owned logging and returns its semantic logger set.
+#   Why it exists: Every entry point needs the same identity, catalogs, correlation behavior,
+#     local diagnostics, and failure-isolated Seq policy.
+#   Designed use: Call once at a composition root and inject the returned bundle. Reconfiguration
+#     closes older handlers; sink failures fall back to console, while incompatible protepo.log
+#     versions raise because the event contract cannot be guaranteed.
 def configure_observability(
     diagnostic_log_file: Path | str | None,
     *,
@@ -92,8 +116,6 @@ def configure_observability(
     include_seq: bool = True,
     seq_spool_path: Path | str | None = None,
 ) -> LearningClockLoggers:
-    """Configure LearningClock-owned logging and return its semantic logger set."""
-
     global _active_loggers
 
     if _active_loggers is not None:
@@ -112,9 +134,7 @@ def configure_observability(
             f"found {protepo_log_version}"
         )
     seq_endpoint = (
-        os.getenv("LEARNINGCLOCK_SEQ_URL")
-        or os.getenv("SEQ_URL")
-        or DEFAULT_SEQ_URL
+        os.getenv("LEARNINGCLOCK_SEQ_URL") or os.getenv("SEQ_URL") or DEFAULT_SEQ_URL
         if include_seq
         else None
     )
@@ -180,15 +200,22 @@ def configure_observability(
     return _active_loggers
 
 
+# Source documentation:
+#   What it does: Returns a correlation scope for one cross-component workflow.
+#   Why it exists: Parent launch and child startup events need a shared identity without passing
+#     it to every log call.
+#   Designed use: Wrap one launch/startup operation; None delegates identifier handling to
+#     protepo.log.
 def correlation_context(correlation_id: str | None = None):
-    """Return a protepo.log correlation context for one application workflow."""
-
     return Log.context(correlation_id)
 
 
+# Source documentation:
+#   What it does: Flushes and resets LearningClock-owned logging handlers.
+#   Why it exists: GUI shutdown and repeated tests must not retain files, Seq workers, or stale
+#     global logger state.
+#   Designed use: Call from entry-point finally blocks; it is safe after partial startup.
 def shutdown_observability() -> None:
-    """Flush and close LearningClock-owned logging handlers."""
-
     global _active_loggers
 
     Log.shutdown()

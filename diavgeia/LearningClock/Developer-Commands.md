@@ -28,6 +28,9 @@ scripts\dev.cmd test
 scripts\coverage.cmd
 scripts\pygount-summary.cmd
 scripts\readme-assets.cmd
+scripts\dev.cmd api --reload
+scripts\dev.cmd openapi
+scripts\dev.cmd seq-dashboard
 scripts\dev.cmd unittest-csv
 scripts\dev.cmd csv-test test1
 scripts\dev.cmd package
@@ -66,6 +69,9 @@ Equivalent interpreter-explicit commands:
 .\.venv\Scripts\python.exe scripts\dev.py coverage
 .\.venv\Scripts\python.exe scripts\dev.py pygount-summary
 .\.venv\Scripts\python.exe scripts\dev.py readme-assets
+.\.venv\Scripts\python.exe scripts\dev.py api --reload
+.\.venv\Scripts\python.exe scripts\dev.py openapi
+.\.venv\Scripts\python.exe scripts\dev.py seq-dashboard
 .\.venv\Scripts\python.exe scripts\dev.py unittest-csv
 .\.venv\Scripts\python.exe scripts\dev.py unittest-csv-file --properties "tests\fixtures\clock-QA.properties"
 .\.venv\Scripts\python.exe scripts\dev.py unittest-csv-file --properties "tests\fixtures\clock-QA.properties" test1
@@ -84,8 +90,10 @@ Lifecycle mapping:
 - `validate-config`: validate `.vscode\launch.json`, `.vscode\tasks.json`, and `LearningClock.code-workspace`.
 - `test`: run `pytest`.
 - `coverage`: run the complete pytest suite with terminal coverage and write HTML coverage to `build\coverage\html`.
-- `pygount-summary`: run pygount summary reporting, generate `docs\assets\pygount-summary.svg`, and keep the README code inventory at the bottom.
+- `pygount-summary`: count Git-tracked files and generate ignored text/SVG inventory reports under `build\reports`.
 - `readme-assets`: generate README SVG visuals for the desktop UI and Obsidian dashboard.
+- `api`: run the FastAPI readiness surface, Swagger UI, ReDoc, and runtime OpenAPI schema.
+- `openapi`: regenerate tracked `docs\openapi.json` from the FastAPI application.
 - `unittest-csv`: run the isolated CSV unit test file.
 - `unittest-csv-file`: run the CSV regression suite against a properties-selected or explicitly supplied CSV.
 - `csv-test`: run a focused CSV regression selector through the local fixture properties.
@@ -114,16 +122,24 @@ scripts\release.cmd
 The release target copies these files:
 
 - `launcher\Learning-Clock.ico` -> `D:\LearningPath\Tools\LearningClock\Learning-Clock.ico`
-- `launcher\Learning-Clock.ico` -> `D:\LearningPath\Tools\LearningClock\Learning-Clock.ico`
-- `src\learningclock\*.py` -> `D:\LearningPath\Tools\LearningClock\learningclock\`
+- every `src\learningclock\*.py` -> `D:\LearningPath\Tools\LearningClock\learningclock\`
+- the default `clock.properties` only when the deployed copy does not already exist
 
-The v6.0 release no longer deploys VBS. Install the built wheel to obtain the single no-console `learningclock-gui.exe` entry point.
-- `src\learningclock\__init__.py` -> `D:\LearningPath\Tools\LearningClock\__init__.py`
-- `src\learningclock\app.py` -> `D:\LearningPath\Tools\LearningClock\app.py`
-- `src\learningclock\csv_store.py` -> `D:\LearningPath\Tools\LearningClock\csv_store.py`
+The v6.0 release no longer deploys VBS. Install the built wheel to obtain the
+single no-console `learningclock-gui.exe` entry point. Release also exports the
+shared dashboard component beside every configured LearningPath CSV folder.
 
 To release to a different folder:
 
 ```cmd
 scripts\release.cmd --production-dir "D:\Some\Other\LearningClock"
 ```
+
+## Controlled v6.0 documentation
+
+- [Architecture](6.0/Architecture/Overview.md)
+- [Architecture diagrams](6.0/Architecture/Diagrams.md)
+- [Configuration](6.0/Configuration/Overview.md)
+- [Seq setup](6.0/Configuration/Seq%20Setup.md)
+- [Implementation](6.0/Implementation/Overview.md)
+- [Python source code](6.0/Implementation/Python%20Source%20Code.md)

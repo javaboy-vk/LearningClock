@@ -75,6 +75,68 @@ configuration, and CLI behavior. `observability.py` configures console, file, an
 sinks, registers every LearningClock event catalog with `Log`, creates one native logger per
 catalog through `Log.get_logger(...)`, and supplies correlation contexts.
 
+`telemetry.py` defines the formal v2 event families used by the newest runtime
+boundaries: LauncherPad (`LPLCL`), discovery (`CONFG`), process launch (`LPCRP`),
+singleton protection (`MUTEX`), clock lifecycle (`LIFCL`), and calendar behavior
+(`CLNDR`). Event codes and placeholders are contracts consumed by local logs,
+Seq queries, dashboards, and tests.
+
+## LauncherPad and Process Boundaries
+
+- `configuration.py` returns immutable configurations and isolated issues; it
+  does not create UI, processes, log directories, mutexes, or CSV files.
+- `desktop.py` is the single GUI dispatcher. Delayed imports select LauncherPad
+  or one internal `--clock` process without initializing both applications.
+- `launcherpad.py` owns controls, observation, and launch requests. It never owns
+  a selected clock's mutex, persistence, or lifetime.
+- `process_launcher.py` builds list-form packaged/source commands and starts
+  detached processes without shells, VBS, pipes, or retained supervision.
+- `singleton.py` separates mutex ownership from observation. A clock acquires its
+  guard before persistence; LauncherPad opens and immediately closes an
+  observation handle.
+
+## Developer Python
+
+```text
+scripts\
+  dev.py                                  Lifecycle command dispatcher.
+  export_openapi.py                       Tracked OpenAPI schema exporter.
+  generate_readme_assets.py               README SVG generator.
+  migrate_learningpath_csv_categories.py  Backup-first CSV migration.
+  pygount_summary.py                      Git-tracked inventory generator.
+```
+
+`scripts/dev.py` keeps generated outputs under `build\` where possible and
+refuses cleanup outside the repository. `deploy` and `release` are explicit
+external-write targets; tests, compilation, and local report generation do not
+publish or release content.
+
+## Test Python
+
+The test suite covers API/OpenAPI parity, UI state, CLI behavior, configuration
+discovery, LauncherPad state, CSV unit/regression behavior, observability,
+detached process launching, release inclusion, Seq template contracts, and both
+fake and real Windows mutex behavior. Shared CSV setup lives in
+`tests/learning_clock_csv_test_support.py`.
+
+The controlled Diavgeia catalog at
+`diavgeia\LearningClock\6.0\Implementation\Python Source Code.md` lists every
+tracked Python module, script, support file, and suite.
+
+## Function and Method Documentation Standard
+
+Every substantive function and method documents what it does, why the callable
+exists, and how it is designed to be used. Failure, fallback, ownership, and
+sequencing behavior are included where they are not obvious. This documentation
+is a Java-style `#` comment block immediately above the definition and outside
+the callable body. For decorated callables, the block is immediately above the
+decorator. In-body function and method docstrings are not used for this purpose.
+
+Redundant commentary is intentionally omitted for obvious one- or two-line
+accessors, protocol declarations, direct command wrappers, and clearly named
+test/fake helpers. Short length does not exempt code whose order or side effects
+affect persistence, process ownership, security, or cleanup.
+
 ## Compatibility Launcher
 
 `src\learningclock\learning-clock.py` is a thin compatibility wrapper. It exists so older launchers and debugging workflows can keep calling the historical filename while the real implementation lives in importable package modules.

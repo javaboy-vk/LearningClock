@@ -1,5 +1,10 @@
 # LearningClock LauncherPad and Observability
 
+> This compatibility page preserves the established link. The controlled v6.0
+> sources are [Architecture](6.0/Architecture/Overview.md),
+> [Implementation](6.0/Implementation/Overview.md), and
+> [Seq Setup](6.0/Configuration/Seq%20Setup.md).
+
 LearningClock v6.0 uses one GUI entry point, `learningclock-gui.exe`, to open LauncherPad. LauncherPad discovers `D:\LearningPath\*.properties`, presents each valid clock, observes running state through `OpenMutexW`, and launches independent GUI processes. LearningClock—not LauncherPad—owns `Local\Protepo.LearningClock.<clock-id>` before creating CSV persistence, making singleton enforcement a data-integrity boundary.
 
 Normal execution contains no VBS, WScript, CScript, CMD, PowerShell, or Python console. Source mode uses the active environment's `pythonw.exe`; installed/frozen mode launches the GUI executable directly. LauncherPad can close without affecting clocks and reconstructs their state after restart from the kernel mutexes.

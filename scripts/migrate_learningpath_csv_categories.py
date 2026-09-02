@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - External CSV Category Migration Utility
 # Author    : javaboy-vk
 # Date      : 2026-07-03
-# Version   : v0.1.1
+# Version   : v0.1.2
 # Purpose:
 #   Migrates LearningClock CSV files selected by launcher-style .properties files
 #   to the current category schema.
@@ -57,6 +57,10 @@ from learningclock.observability import shutdown_observability  # noqa: E402
 # Configuration parsing:
 #   What this function does:
 #     Reads one Java/VBS-style launcher .properties file.
+#   Why it exists:
+#     Migration must use configured paths instead of guessing deployment locations.
+#   Designed use:
+#     main() calls it for each discovered properties file before resolving logDir.
 #   Success:
 #     Returns trimmed key/value pairs and ignores comments or blank lines.
 #   Error handling:
@@ -79,6 +83,10 @@ def load_properties(path: Path) -> dict[str, str]:
 # Path resolution:
 #   What this function does:
 #     Resolves launcher paths the same way the regression tests do.
+#   Why it exists:
+#     Relative logDir values belong to the properties file, not the caller's working directory.
+#   Designed use:
+#     Pass one configured value and properties parent; main() checks the resulting CSV path.
 #   Success:
 #     Absolute paths stay unchanged; relative paths resolve against the
 #     .properties file directory.
@@ -96,6 +104,10 @@ def resolve_path(value: str, base_dir: Path) -> Path:
 # CSV migration:
 #   What this function does:
 #     Rewrites one existing LearningClock CSV into the current production schema.
+#   Why it exists:
+#     Persisted history must retain user data while adopting new fields and totals.
+#   Designed use:
+#     main() calls it only for an existing configured CSV with a shared backup suffix.
 #   Success:
 #     The CSV contains normalized session rows and exactly one recalculated final
 #     TOTAL row using FIELDNAMES from learningclock.csv_store.
@@ -107,10 +119,12 @@ def migrate_csv(csv_path: Path, learning_path_name: str, backup_suffix: str) -> 
     store = CsvStore(csv_path.parent, learning_path_name)
     store.log_file = csv_path  # Point CsvStore at the externally configured CSV.
 
-    rows = store.read_existing_session_rows()  # Normalize legacy columns and remove stale TOTAL rows.
-    total_row = store.create_total_row(rows)   # Recalculate summary from normalized session rows.
+    rows = (
+        store.read_existing_session_rows()
+    )  # Normalize legacy columns and remove stale TOTAL rows.
+    total_row = store.create_total_row(rows)  # Recalculate summary from normalized session rows.
     backup_path = csv_path.with_name(f"{csv_path.name}.{backup_suffix}.bak")
-    shutil.copy2(csv_path, backup_path)        # Preserve user data before opening the CSV for rewrite.
+    shutil.copy2(csv_path, backup_path)  # Preserve user data before opening the CSV for rewrite.
 
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=FIELDNAMES, extrasaction="ignore")
@@ -124,6 +138,10 @@ def migrate_csv(csv_path: Path, learning_path_name: str, backup_suffix: str) -> 
 # Command-line entry point:
 #   What this function does:
 #     Discovers launcher .properties files and migrates each configured CSV.
+#   Why it exists:
+#     Operators need one backup-first batch operation across configured learning paths.
+#   Designed use:
+#     Run with every LearningClock instance closed, then review each SKIP/MIGRATED record.
 #   Success:
 #     Every properties file produces a machine-readable SKIP or MIGRATED line.
 #   Error handling:
@@ -131,7 +149,9 @@ def migrate_csv(csv_path: Path, learning_path_name: str, backup_suffix: str) -> 
 #     logDir/CSV paths are skipped so other learning paths can still migrate.
 def main(argv: list[str] | None = None) -> int:
 
-    parser = argparse.ArgumentParser(description="Migrate LearningClock CSV files to the current category schema.")
+    parser = argparse.ArgumentParser(
+        description="Migrate LearningClock CSV files to the current category schema."
+    )
     parser.add_argument(
         "--properties-root",
         default=r"D:\LearningPath",
@@ -147,21 +167,27 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"No .properties files found under {properties_root}")
 
     for properties_path in properties_files:
-        properties = load_properties(properties_path)                          # Read one launcher config.
-        learning_path_name = properties.get("learning-path-name", properties_path.stem)  # Prefer explicit app label.
-        log_dir_value = properties.get("logDir")                               # CSV directory is configured here.
+        properties = load_properties(properties_path)  # Read one launcher config.
+        learning_path_name = properties.get(
+            "learning-path-name", properties_path.stem
+        )  # Prefer explicit app label.
+        log_dir_value = properties.get("logDir")  # CSV directory is configured here.
         if not log_dir_value:
             print(f"SKIP\t{properties_path}\tmissing logDir")
             continue
 
-        log_dir = resolve_path(log_dir_value, properties_path.parent)           # Match launcher relative-path behavior.
-        csv_path = log_dir / LOG_FILE_NAME                                     # LearningClock always uses this CSV name.
+        log_dir = resolve_path(
+            log_dir_value, properties_path.parent
+        )  # Match launcher relative-path behavior.
+        csv_path = log_dir / LOG_FILE_NAME  # LearningClock always uses this CSV name.
         if not csv_path.exists():
             print(f"SKIP\t{properties_path}\tmissing CSV\t{csv_path}")
             continue
 
         row_count, backup_path = migrate_csv(csv_path, learning_path_name, backup_suffix)
-        print(f"MIGRATED\t{learning_path_name}\trows={row_count}\tcsv={csv_path}\tbackup={backup_path}")
+        print(
+            f"MIGRATED\t{learning_path_name}\trows={row_count}\tcsv={csv_path}\tbackup={backup_path}"
+        )
 
     return 0
 

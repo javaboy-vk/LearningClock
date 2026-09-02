@@ -1,17 +1,29 @@
-# LearningClock v6.0
+# LearningClock Engineering Knowledge
 
-LearningClock project notes and deployment-facing content.
+This version-independent page is the published entry point for LearningClock
+engineering and operational knowledge.
 
-## Status
+## Controlled product baselines
 
-- Version 6.0 adds LauncherPad, per-clock Windows mutex protection, no-console GUI processes, protepo.log 2.0 structured telemetry, and the LearningClock Seq Operations dashboard.
-- The v5.3 timer interface uses bold menu and button labels for visibility.
-- Inactive activity buttons are blue (`#069bff`); the currently running timer is orange (`#FF6600`).
-- **Book Listening** is the listening timer and uses the `book_listening` CSV column. Legacy `audiobook` data is normalized during CSV reads and migration.
-- Python source lives under `src/learningclock`; generated artifacts are kept under `build/`.
+- [LearningClock 6.0](6.0/Overview.md)
+  - [Architecture](6.0/Architecture/Overview.md)
+  - [Architecture diagrams](6.0/Architecture/Diagrams.md)
+  - [Configuration](6.0/Configuration/Overview.md)
+  - [Seq setup](6.0/Configuration/Seq%20Setup.md)
+  - [Implementation](6.0/Implementation/Overview.md)
+  - [Python source code](6.0/Implementation/Python%20Source%20Code.md)
 
-## Pages
+See [Documentation Versioning](Documentation%20Versioning.md) for the boundary
+between controlled release documentation and cross-release material.
+
+## Version-independent operations and reference
 
 - [Developer Commands](Developer-Commands.md)
+- [How to add a new timer](How-to-add-a-new-timer.md)
 - [Learning Clock Dashboard](Learning-Clock-Dashboard.md)
-- [LauncherPad and Observability](LauncherPad-and-Observability.md)
+- [Reference overview](Reference/Overview.md)
+- [LauncherPad and Observability compatibility page](LauncherPad-and-Observability.md)
+
+The deployable dashboard implementation remains under
+`views/learning-clock-dashboard/` because release tooling copies that component
+beside each configured LearningPath CSV.

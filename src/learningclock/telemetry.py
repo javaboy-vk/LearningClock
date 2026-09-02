@@ -3,18 +3,36 @@
 # Artifact  : LearningClock - Protepo Log v2 Event Definitions
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v2.0.1
+# Version   : v2.0.2
 # Purpose:
 #   Defines formal, structured Protepo Logging Standard v2 events for LauncherPad,
 #   configuration, process launching, singleton protection, runtime, and calendar flows.
+#
+# Event families:
+#   LPLCL-1xxx  LauncherPad lifecycle and running-state transitions.
+#   CONFG-2xxx  Configuration discovery and validation.
+#   LPCRP-3xxx  Detached process construction and launch.
+#   MUTEX-4xxx  Singleton ownership, duplicate rejection, and observation.
+#   LIFCL-5xxx  Configured clock lifecycle.
+#   CLNDR-6xxx  Calendar popup initialization and failure.
+#
+# Contract:
+#   Event codes and message placeholders are stable operational interfaces used
+#   by application log files, Seq queries, dashboard panels, and tests. Events
+#   carry internal visibility; callers provide the structured properties named
+#   by each template when emitting through logger.event(...).
 # =============================================================================
 
 from protepo.log import Severity, Visibility, define_event
 
 
+# Source documentation:
+#   What it does: Declares one internal LearningClock operational event.
+#   Why it exists: Every v2 event family needs identical visibility and construction rules so
+#     files, Seq queries, dashboards, and tests share one contract.
+#   Designed use: Module constants call it once at import time; runtime code emits the returned
+#     definition through logger.event with each named template property.
 def _event(code: str, severity: Severity, message: str, component: str):
-    """Declare one internal LearningClock operational event."""
-
     return define_event(
         code=code,
         severity=severity,
@@ -33,12 +51,8 @@ LAUNCHERPAD_INITIALIZED = _event(
     "LauncherPad initialized with {clock_count} valid clocks and {error_count} skipped configurations.",
     "LauncherPad",
 )
-LAUNCHERPAD_CLOSING = _event(
-    "LPLCL-1003", Severity.INFO, "LauncherPad closing.", "LauncherPad"
-)
-LAUNCHERPAD_CLOSED = _event(
-    "LPLCL-1004", Severity.INFO, "LauncherPad closed.", "LauncherPad"
-)
+LAUNCHERPAD_CLOSING = _event("LPLCL-1003", Severity.INFO, "LauncherPad closing.", "LauncherPad")
+LAUNCHERPAD_CLOSED = _event("LPLCL-1004", Severity.INFO, "LauncherPad closed.", "LauncherPad")
 RUNNING_STATE_CHANGED = _event(
     "LPLCL-1010",
     Severity.INFO,

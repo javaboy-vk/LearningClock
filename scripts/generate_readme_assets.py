@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - README Visual Asset Generator
 # Author    : javaboy-vk
 # Date      : 2026-06-09
-# Version   : v6.0
+# Version   : v6.0.1
 # Purpose:
 #   Generates stable SVG visuals used by README.md to show the app UI and
 #   Obsidian dashboard output.
@@ -82,12 +82,15 @@ def format_duration(seconds: int) -> str:
 # Dashboard label wrapping:
 #   What this function does:
 #     Splits chart labels into short lines that fit under one bar cell.
+#   Why it exists:
+#     Long labels otherwise overflow narrow chart columns inconsistently across SVG renderers.
+#   Designed use:
+#     Dashboard generation calls it for every label and receives stable lines.
 #   Success:
 #     Dense labels do not overlap adjacent labels in the README dashboard image.
 #   Error handling:
 #     Unknown labels fall back to conservative word wrapping.
 def dashboard_label_lines(label: str) -> list[str]:
-
     explicit_breaks = {
         "Active Recall": ["Active", "Recall"],
         "AI-Assisted Engineering": ["AI-Assisted", "Engineering"],
@@ -118,12 +121,15 @@ def dashboard_label_lines(label: str) -> list[str]:
 # Dashboard label rendering:
 #   What this function does:
 #     Renders a wrapped label as one centered SVG text element with tspans.
+#   Why it exists:
+#     SVG has no portable automatic wrapping for the generated chart geometry.
+#   Designed use:
+#     Pass chart coordinates and append the escaped markup to the dashboard SVG.
 #   Success:
 #     Every line stays centered under its own bar.
 #   Error handling:
 #     Escaping is delegated to text() before content enters the SVG.
 def dashboard_label_svg(label: str, x: float, y: int) -> str:
-
     lines = dashboard_label_lines(label)
     tspans = []
     for index, line in enumerate(lines):
@@ -139,12 +145,15 @@ def dashboard_label_svg(label: str, x: float, y: int) -> str:
 # Dashboard data source:
 #   What this function does:
 #     Reads generated QA CSV totals when available, otherwise produces stable sample values.
+#   Why it exists:
+#     Visuals should reflect real totals but remain reproducible when no local CSV exists.
+#   Designed use:
+#     Dashboard generators consume activity totals, page count, and aggregate seconds.
 #   Success:
 #     README dashboard art reflects real CSV categories and stays deterministic in clean checkouts.
 #   Error handling:
 #     CSV parsing errors surface directly because broken generated CSV should be fixed, not hidden.
 def read_dashboard_totals() -> tuple[dict[str, int], int, int]:
-
     totals = {activity: 0 for activity in ACTIVITIES}
     pages = 0
     grand_total = 0
@@ -174,12 +183,15 @@ def read_dashboard_totals() -> tuple[dict[str, int], int, int]:
 # UI SVG generation:
 #   What this function does:
 #     Builds the static desktop screenshot used by README.md.
+#   Why it exists:
+#     Repository readers need a reviewable preview aligned with current UI contracts.
+#   Designed use:
+#     main writes the returned SVG to the canonical timer UI asset.
 #   Success:
 #     Every current activity appears exactly once, and layout height follows the activity count.
 #   Error handling:
 #     No filesystem writes happen here; generation failures surface before main writes assets.
 def generate_ui_svg() -> str:
-
     width = 700
     height = 165 + (len(ACTIVITIES) * 43)
     window_width = width - 36
@@ -228,7 +240,7 @@ def generate_ui_svg() -> str:
   <text x="347" y="81" fill="#777777" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">View Progress</text>
   <text x="43" y="119" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Running: {active_activity}</text>
   <g font-family="Segoe UI, Arial, sans-serif">
-    {''.join(rows)}
+    {"".join(rows)}
   </g>
   <rect x="38" y="{controls_y}" width="132" height="35" fill="#069bff" stroke="#8c8c8c" stroke-width="1.4"/>
   <line x1="40" y1="{controls_y + 2}" x2="168" y2="{controls_y + 2}" stroke="#ffffff" stroke-width="1"/>
@@ -243,12 +255,15 @@ def generate_ui_svg() -> str:
 # Dashboard SVG generation:
 #   What this function does:
 #     Builds the static Obsidian/Diavgeia dashboard chart used by README.md.
+#   Why it exists:
+#     Readers need a stable chart preview without running Obsidian.
+#   Designed use:
+#     main writes the returned SVG after resolving totals; source CSV is never modified.
 #   Success:
 #     Bars and labels follow ACTIVITIES and ACTIVITY_TO_FIELD from the production CSV contract.
 #   Error handling:
 #     Bad CSV values parse through production parse_duration; structural errors surface naturally.
 def generate_dashboard_svg() -> str:
-
     totals, pages, grand_total = read_dashboard_totals()
     width = 920
     height = 500
@@ -282,8 +297,8 @@ def generate_dashboard_svg() -> str:
   <rect x="34" y="60" width="{width - 68}" height="404" rx="18" fill="#f8fbff" stroke="#c5d8ec" stroke-width="2"/>
   <line x1="{chart_x}" y1="{chart_y + chart_height}" x2="{chart_x + chart_width}" y2="{chart_y + chart_height}" stroke="#a9c5df" stroke-width="3"/>
   <g font-family="Segoe UI, Arial, sans-serif">
-    {''.join(bars)}
-    {''.join(labels)}
+    {"".join(bars)}
+    {"".join(labels)}
   </g>
   <g font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#111827">
     <text x="58" y="430">Total time: <tspan fill="#164f86" font-weight="700">{format_duration(grand_total)}</tspan></text>
@@ -295,8 +310,11 @@ def generate_dashboard_svg() -> str:
 """
 
 
+# Source documentation:
+#   What it does: Builds the in-application progress-panel documentation illustration.
+#   Why it exists: Docs must distinguish the embedded view from the Obsidian dashboard.
+#   Designed use: main regenerates it with UI/dashboard assets to keep visuals synchronized.
 def generate_progress_svg() -> str:
-
     totals, pages, grand_total = read_dashboard_totals()
     width = 1320
     height = 520
@@ -346,7 +364,7 @@ def generate_progress_svg() -> str:
   <text x="166" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Add Page Count</text>
   <text x="257" y="63" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">View Progress</text>
   <text x="12" y="80" fill="#000000" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Viewing CSV progress</text>
-  <g font-family="Segoe UI, Arial, sans-serif">{''.join(timer_rows)}</g>
+  <g font-family="Segoe UI, Arial, sans-serif">{"".join(timer_rows)}</g>
   <rect x="12" y="430" width="104" height="28" fill="#069bff" stroke="#8c8c8c"/>
   <text x="53" y="449" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Stop</text>
   <rect x="122" y="430" width="106" height="28" fill="#069bff" stroke="#8c8c8c"/>
@@ -356,7 +374,7 @@ def generate_progress_svg() -> str:
   <rect x="{panel_x + panel_width - 59}" y="96" width="45" height="26" fill="#eeeeee" stroke="#8c8c8c"/>
   <text x="{panel_x + panel_width - 53}" y="114" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="12">Refresh</text>
   <line x1="{chart_left}" y1="{baseline}" x2="{chart_left + chart_width}" y2="{baseline}" stroke="#a9c5df" stroke-width="2"/>
-  <g font-family="Segoe UI, Arial, sans-serif">{''.join(bars)}{''.join(labels)}</g>
+  <g font-family="Segoe UI, Arial, sans-serif">{"".join(bars)}{"".join(labels)}</g>
   <g font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#111827">
     <text x="{panel_x + 14}" y="463">Total time: <tspan fill="#164f86" font-weight="700">{format_duration(grand_total)}</tspan></text>
     <text x="{panel_x + 174}" y="463">Total pages read: <tspan fill="#164f86" font-weight="700">{pages}</tspan></text>
@@ -370,12 +388,15 @@ def generate_progress_svg() -> str:
 # Command-line entry point:
 #   What this function does:
 #     Ensures the asset folder exists and writes both generated SVG files.
+#   Why it exists:
+#     One entry point prevents partial visual-documentation refreshes.
+#   Designed use:
+#     Run dev readme-assets after visual or activity-contract changes.
 #   Success:
 #     README image references point at fresh assets matching the current category schema.
 #   Error handling:
 #     Write failures propagate so release/deploy workflows fail visibly.
 def main() -> int:
-
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
     UI_SVG.write_text(generate_ui_svg(), encoding="utf-8")
     DASHBOARD_SVG.write_text(generate_dashboard_svg(), encoding="utf-8")

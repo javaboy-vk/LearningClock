@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Pygount Summary Generator
 # Author    : javaboy-vk
 # Date      : 2026-06-09
-# Version   : v0.1.0
+# Version   : v0.1.1
 # Purpose:
 #   Generates a GitHub Pages-only code inventory SVG without changing tracked
 #   documentation files.
@@ -29,8 +29,11 @@ DISPLAY_LANGUAGE_NAMES = {"__unknown__": "Env Config"}
 TABLE_COLUMNS = ["Language", "Files", "Lines", "Code", "Comment", "Blank"]
 
 
+# Source documentation:
+#   What it does: Resolves the project or PATH pygount executable.
+#   Why it exists: Inventory generation needs the venv and a clear bootstrap error elsewhere.
+#   Designed use: run_pygount calls it once; dependencies are never installed implicitly.
 def pygount_executable() -> Path:
-
     executable = ROOT / ".venv" / "Scripts" / "pygount.exe"
     if executable.exists():
         return executable
@@ -43,8 +46,11 @@ def pygount_executable() -> Path:
     )
 
 
+# Source documentation:
+#   What it does: Returns the deterministic Git-tracked file set used for inventory.
+#   Why it exists: Totals must not vary with untracked files or ignored build output.
+#   Designed use: main passes it to pygount/fallback counters; an empty set is a failure.
 def source_controlled_files() -> list[str]:
-
     result = subprocess.run(
         ["git", "ls-files", "-z", "--cached"],
         cwd=ROOT,
@@ -65,8 +71,11 @@ def source_controlled_files() -> list[str]:
     return paths
 
 
+# Source documentation:
+#   What it does: Runs pygount once and decodes its JSON report.
+#   Why it exists: Collection must stay separate from repository-specific presentation.
+#   Designed use: Pass tracked paths; subprocess or JSON failures stop partial generation.
 def run_pygount(paths: list[str]) -> dict[str, Any]:
-
     command = [str(pygount_executable()), "--duplicates", "--format=json", *paths]
     result = subprocess.run(
         command,
@@ -81,11 +90,13 @@ def run_pygount(paths: list[str]) -> dict[str, Any]:
         raise SystemExit(f"Unable to parse pygount JSON output: {error}") from error
 
 
+# Source documentation:
+#   What it does: Normalizes pygount data into repository display rows.
+#   Why it exists: Internal buckets and unknown text require project-specific classification.
+#   Designed use: Supply the report and discovery list; output feeds text and SVG renderers.
 def build_summary_rows(report: dict[str, Any], paths: list[str]) -> list[list[str]]:
-
     report_files = {
-        str(item.get("path", "")).replace("\\", "/"): item
-        for item in report.get("files", [])
+        str(item.get("path", "")).replace("\\", "/"): item for item in report.get("files", [])
     }
     totals: dict[str, dict[str, int]] = defaultdict(
         lambda: {"files": 0, "lines": 0, "code": 0, "comment": 0, "blank": 0}
@@ -100,9 +111,9 @@ def build_summary_rows(report: dict[str, Any], paths: list[str]) -> list[list[st
                 continue
             if language == "__unknown__":
                 try:
-                    unknown_lines = (ROOT / normalized_path).read_text(
-                        encoding="utf-8"
-                    ).splitlines()
+                    unknown_lines = (
+                        (ROOT / normalized_path).read_text(encoding="utf-8").splitlines()
+                    )
                 except UnicodeDecodeError:
                     unknown_lines = []
                 line_count = len(unknown_lines)
@@ -139,7 +150,9 @@ def build_summary_rows(report: dict[str, Any], paths: list[str]) -> list[list[st
             str(values["comment"]),
             str(values["blank"]),
         ]
-        for language, values in sorted(totals.items(), key=lambda entry: (-entry[1]["lines"], entry[0].lower()))
+        for language, values in sorted(
+            totals.items(), key=lambda entry: (-entry[1]["lines"], entry[0].lower())
+        )
     ]
     rows.append(
         [
@@ -154,8 +167,11 @@ def build_summary_rows(report: dict[str, Any], paths: list[str]) -> list[list[st
     return rows
 
 
+# Source documentation:
+#   What it does: Renders aligned plain-text inventory rows.
+#   Why it exists: Text is human-readable evidence and the canonical SVG input.
+#   Designed use: Pass normalized rows including totals; widths derive from the full table.
 def render_summary_text(rows: list[list[str]]) -> str:
-
     widths = [
         max(len(row[index]) for row in [TABLE_COLUMNS, *rows])
         for index in range(len(TABLE_COLUMNS))
@@ -166,11 +182,16 @@ def render_summary_text(rows: list[list[str]]) -> str:
         return "  ".join(value.ljust(widths[index]) for index, value in enumerate(row))
 
     divider = "  ".join("-" * width for width in widths)
-    return "\n".join([format_row(TABLE_COLUMNS), divider, *(format_row(row) for row in rows)]) + "\n"
+    return (
+        "\n".join([format_row(TABLE_COLUMNS), divider, *(format_row(row) for row in rows)]) + "\n"
+    )
 
 
+# Source documentation:
+#   What it does: Wraps inventory text in a terminal-style documentation SVG.
+#   Why it exists: GitHub Pages needs a portable visual with fixed geometry and escaped content.
+#   Designed use: Pass render_summary_text output; main persists XML under the report directory.
 def render_svg(summary_text: str) -> str:
-
     lines = summary_text.rstrip().splitlines() or ["No pygount output."]
     font_size = 15
     line_height = 18
@@ -198,8 +219,11 @@ def render_svg(summary_text: str) -> str:
     )
 
 
+# Source documentation:
+#   What it does: Generates synchronized text and SVG source-inventory evidence.
+#   Why it exists: One command keeps discovery, counting, and both presentations aligned.
+#   Designed use: Run dev pygount-summary; outputs go under build/reports.
 def main() -> int:
-
     paths = source_controlled_files()
     rows = build_summary_rows(run_pygount(paths), paths)
     summary_text = render_summary_text(rows)

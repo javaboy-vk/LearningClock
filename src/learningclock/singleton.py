@@ -3,10 +3,28 @@
 # Artifact  : LearningClock - Windows Per-Configuration Singleton Guard
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v1.0.0
+# Version   : v1.0.1
 # Purpose:
 #   Owns named Windows mutex creation, duplicate rejection, observation, and
 #   cleanup as the process-level LearningClock persistence-integrity boundary.
+#
+# Ownership flow:
+#   SingleInstanceGuard(clock_id)
+#   |-- construct Local\Protepo.LearningClock.<clock-id>
+#   |-- acquire() creates and retains one owned kernel mutex handle
+#   |   `-- ERROR_ALREADY_EXISTS closes the temporary handle and rejects startup
+#   `-- close() releases ownership and closes the retained handle
+#
+# Observation flow:
+#   is_clock_running(clock_id)
+#   |-- OpenMutexW with SYNCHRONIZE access
+#   |-- missing name means the clock is available
+#   `-- existing name is immediately closed and reported as running
+#
+# Integrity contract:
+#   A clock acquires its guard before persistence initialization. LauncherPad
+#   uses only the observation path; process termination remains the final crash
+#   cleanup because Windows removes the last kernel handle automatically.
 # =============================================================================
 
 from __future__ import annotations
@@ -30,9 +48,8 @@ SYNCHRONIZE = 0x00100000
 MUTEX_NAMESPACE = r"Local\Protepo.LearningClock"
 
 
+# Source documentation: Returns the stable Windows kernel mutex name for one configured clock.
 def mutex_name(clock_id: str) -> str:
-    """Return the stable Windows kernel object name for one configured clock."""
-
     return f"{MUTEX_NAMESPACE}.{clock_id}"
 
 
@@ -51,6 +68,11 @@ class MutexApi(Protocol):
 class WindowsMutexApi:
     """ctypes adapter for CreateMutexW, OpenMutexW, ReleaseMutex, and CloseHandle."""
 
+    # Source documentation:
+    #   What it does: Binds the four Win32 mutex functions with explicit ctypes signatures.
+    #   Why it exists: Native-call isolation prevents pointer ambiguity and makes ownership logic
+    #     depend on an injectable Python protocol.
+    #   Designed use: Construct only on Windows; guards create it unless tests inject a fake API.
     def __init__(self) -> None:
         if os.name != "nt":
             raise OSError("LearningClock named mutexes require Windows")
@@ -89,6 +111,12 @@ class WindowsMutexApi:
 class SingleInstanceGuard:
     """Retain one configured clock's mutex handle for the full process lifetime."""
 
+    # Source documentation:
+    #   What it does: Prepares process-lifetime ownership for one stable clock identity.
+    #   Why it exists: Persistence needs one writer per clock while native calls and telemetry
+    #     remain replaceable in tests and startup.
+    #   Designed use: Create before CsvStore, acquire once, retain for the process, and close at
+    #     shutdown; inject api only for deterministic tests.
     def __init__(self, clock_id: str, *, api: MutexApi | None = None, logger: Any = None) -> None:
         self.clock_id = clock_id
         self.name = mutex_name(clock_id)
@@ -102,14 +130,16 @@ class SingleInstanceGuard:
     def acquired(self) -> bool:
         return bool(self._handle)
 
+    # Source documentation: Rebinds telemetry after startup advances to configured file logging.
     def set_logger(self, logger: Any) -> None:
-        """Rebind telemetry after startup advances from Seq-only to configured file logging."""
-
         self._logger = logger
 
+    # Source documentation:
+    #   What it does: Acquires this clock's mutex when no owner already exists.
+    #   Why it exists: The mutex prevents two processes from writing the same configured CSV.
+    #   Designed use: Call before storage construction; True means ownership, False is an expected
+    #     duplicate, and native creation failure raises OSError after telemetry.
     def acquire(self) -> bool:
-        """Acquire a newly-created mutex, returning False for an existing clock instance."""
-
         if self._handle:
             return True
         handle, error_code = self._api.create(self.name)
@@ -136,9 +166,13 @@ class SingleInstanceGuard:
             self._logger.event(MUTEX_ACQUIRED, clock_id=self.clock_id, mutex_name=self.name)
         return True
 
+    # Source documentation:
+    #   What it does: Releases owned mutex state during normal shutdown.
+    #   Why it exists: Explicit cleanup makes the clock immediately relaunchable; Windows process
+    #     teardown remains crash recovery.
+    #   Designed use: Call from finally or context-manager cleanup. It is idempotent, logs native
+    #     failures, and never restores a stale Python handle.
     def close(self) -> None:
-        """Release ownership and close the handle; process death remains the crash cleanup path."""
-
         handle, self._handle = self._handle, 0
         if not handle:
             return
@@ -166,11 +200,15 @@ class SingleInstanceGuard:
         self.close()
 
 
+# Source documentation:
+#   What it does: Observes whether a configured clock's mutex currently exists.
+#   Why it exists: LauncherPad needs live state across parent restarts and external launches
+#     without competing for ownership.
+#   Designed use: Poll with a stable clock ID and close the observed handle immediately; missing
+#     names return False, while unexpected native errors are logged and raised.
 def is_clock_running(
     clock_id: str, *, api: MutexApi | None = None, logger: Any | None = None
 ) -> bool:
-    """Observe mutex existence without acquiring or retaining ownership."""
-
     selected_api = api or WindowsMutexApi()
     name = mutex_name(clock_id)
     handle, error_code = selected_api.open(name)
