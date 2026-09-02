@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter UI State Tests
 # Author    : javaboy-vk
 # Date      : 2026-08-08
-# Version   : v6.0.3
+# Version   : v6.0.4
 # Purpose:
 #   Verifies activity-button colors and fixed UI sizing without a display.
 # =============================================================================
@@ -12,10 +12,12 @@ from learningclock.app import (
     ACTIVE_TIMER_BUTTON_BACKGROUND,
     ADD_TIME_GEOMETRY,
     BUTTON_BACKGROUND,
+    CALENDAR_WEEKDAYS,
     MANUAL_TIME_ENTRY_WIDTH,
     MANUAL_TIME_INPUT_LENGTH,
     MENU_FONT,
     LearningClock,
+    calendar_month_weeks,
     present_calendar_popup,
 )
 
@@ -82,6 +84,19 @@ def test_calendar_popup_is_mapped_raised_and_visible_before_keyboard_grab():
     present_calendar_popup(FakePicker())
 
     assert calls == ["deiconify", "lift", "wait_visibility", "focus_force", "grab_set"]
+
+
+def test_calendar_dates_align_with_sunday_first_weekday_headings():
+
+    september_2026 = calendar_month_weeks(2026, 9)
+    weekday_column = next(
+        column
+        for week in september_2026
+        for column, day_number in enumerate(week)
+        if day_number == 2
+    )
+
+    assert CALENDAR_WEEKDAYS[weekday_column] == "Wed"
 
 
 def test_set_date_action_schedules_the_calendar_popup_immediately():

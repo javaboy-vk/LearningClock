@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v6.0.4
+# Version   : v6.0.5
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, semantic
 #   application events, and shutdown lifecycle for LearningClock.
@@ -165,6 +165,14 @@ except ModuleNotFoundError:
         format_seconds,
         parse_duration,
     )
+
+CALENDAR_WEEKDAYS = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+
+
+def calendar_month_weeks(year: int, month: int) -> list[list[int]]:
+    """Return a Sunday-first month grid aligned with the calendar headings."""
+
+    return calendar.Calendar(firstweekday=calendar.SUNDAY).monthdayscalendar(year, month)
 
 # Operational algorithm:
 #   What this constant group does:
@@ -784,7 +792,7 @@ class LearningClock:
                 for child in calendar_frame.winfo_children():
                     child.destroy()
                 month_label.config(text=f"{calendar.month_name[state['month']]} {state['year']}")
-                for column, weekday in enumerate(("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")):
+                for column, weekday in enumerate(CALENDAR_WEEKDAYS):
                     tk.Label(
                         calendar_frame,
                         text=weekday,
@@ -792,7 +800,7 @@ class LearningClock:
                         font=("Arial", 9, "bold"),
                     ).grid(row=0, column=column)
                 for row, week in enumerate(
-                    calendar.monthcalendar(state["year"], state["month"]), start=1
+                    calendar_month_weeks(state["year"], state["month"]), start=1
                 ):
                     for column, day_number in enumerate(week):
                         if day_number:
