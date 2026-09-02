@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Observability Release Tests
 # Author    : javaboy-vk
 # Date      : 2026-08-24
-# Version   : v0.1.1
+# Version   : v0.1.2
 # Purpose:
 #   Verifies production release planning includes every runtime module required
 #   by the protepo.log and FastAPI integrations.
@@ -28,3 +28,5 @@ def test_release_dry_run_includes_observability_runtime_modules(tmp_path, monkey
     assert "src\\learningclock\\api.py" in output
     assert "src\\learningclock\\events.py" in output
     assert "src\\learningclock\\observability.py" in output
+    assert "src\\learningclock\\window_icon.py" in output
+    assert "launcher\\Learning-Clock.ico" in output

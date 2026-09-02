@@ -13,6 +13,8 @@ scripts\dev.cmd readme-assets
 scripts\dev.cmd api --reload
 scripts\dev.cmd openapi
 scripts\dev.cmd seq-dashboard
+scripts\dev.cmd launcherpad
+scripts\dev.cmd launcherpad-register
 scripts\dev.cmd unittest-csv
 scripts\dev.cmd unittest-csv-file
 scripts\dev.cmd csv-test test1
@@ -51,6 +53,8 @@ scripts\release.cmd
 - `api`: run the FastAPI development server; Swagger UI is available at `/docs`.
 - `openapi`: regenerate the tracked `docs\openapi.json` contract from the FastAPI application.
 - `seq-dashboard`: install or update the version-controlled LearningClock Seq workspace and Operations dashboard with `seqcli template import --merge`.
+- `launcherpad`: start LauncherPad from `.venv` with the repository `src` import path and `D:\LearningPath` configuration discovery.
+- `launcherpad-register`: create or update the current user's **LearningClock LauncherPad** Start Menu shortcut and request a Start pin when Windows exposes that action. Pass `--no-pin` to skip the request.
 - `unittest-csv`: run the isolated CSV unit test file.
 - `unittest-csv-file`: run the CSV regression suite against a properties-selected or explicitly supplied CSV.
 - `csv-test`: run one focused CSV regression selector through the default fixture properties.

@@ -14,6 +14,16 @@ The desktop app presents learning timers that map directly to the persisted CSV 
 
 `learningclock-gui.exe` opens **LearningClock LauncherPad 1.0**, discovers `D:\LearningPath\*.properties`, and creates one control per valid configured clock. Different clocks run as independent GUI processes. Each LearningClock owns `Local\Protepo.LearningClock.<clock-id>` for its whole lifetime, so a second process for the same configuration exits before CSV initialization. LauncherPad observes those mutexes every 1.5 seconds and does not own or terminate clock processes.
 
+From the repository, `dev launcherpad` starts the same source LauncherPad without
+a console. `dev launcherpad-register` creates the current user's Windows Start
+Menu entry with the LearningClock icon and requests **Pin to Start** when Windows
+exposes that action.
+
+The LauncherPad uses a high-contrast, full-canvas blue/orange clock icon with
+native Windows sizes from 16 through 256 pixels for clear Start Menu display.
+The same icon identifies the title bar at the top left of both LauncherPad and
+every configured LearningClock window.
+
 Normal startup no longer uses VBS, WScript, CMD, or PowerShell. Source launches use the active environment's sibling `pythonw.exe`; installed GUI entry points and frozen builds relaunch their GUI executable directly. The date selector also restores an explicitly raised and focused calendar popup on Windows.
 
 ### Version 5.3 interface

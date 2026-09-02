@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "LearningClock Seq Dashboard Layout",
+  "version": "1.0.0",
+  "description": "Keeps the LearningClock recent-events rows on one line and enables horizontal overflow.",
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "https://localhost/*",
+        "http://127.0.0.1/*",
+        "https://127.0.0.1/*"
+      ],
+      "css": ["seq-dashboard.css"],
+      "js": ["seq-dashboard.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

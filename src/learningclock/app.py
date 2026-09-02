@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v6.0.1
+# Version   : v6.0.4
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, semantic
 #   application events, and shutdown lifecycle for LearningClock.
@@ -90,6 +90,7 @@ from __future__ import annotations
 import argparse
 import calendar
 import os
+import re
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
@@ -135,6 +136,7 @@ from learningclock.telemetry import (
     CLOCK_STARTUP_FAILED,
     DUPLICATE_CLOCK_REJECTED,
 )
+from learningclock.window_icon import apply_window_icon
 
 # Operational algorithm:
 #   What this block does:
@@ -188,8 +190,14 @@ MENU_FONT = ("Arial", 10, "bold")
 #   Error handling:
 #     Tkinter reports invalid geometry strings when the window applies them.
 NORMAL_GEOMETRY = "450x420"
-ADD_TIME_GEOMETRY = "540x420"
+ADD_TIME_GEOMETRY = "620x420"
 PROGRESS_GEOMETRY = "1320x465"
+MANUAL_TIME_INPUT_LENGTH = len("HH:MM:SS")
+MANUAL_TIME_ENTRY_WIDTH = MANUAL_TIME_INPUT_LENGTH
+MANUAL_TIME_EDIT_PATTERN = re.compile(
+    r"(?:\d{0,2}|\d{2}:\d{0,2}|\d{2}:\d{2}:\d{0,2})"
+)
+MANUAL_TIME_PATTERN = re.compile(r"(\d{2}):([0-5]\d):([0-5]\d)")
 DEFAULT_AUTOSAVE_MINUTES = 5
 AUTOSAVE_PROPERTIES_FILE = Path(__file__).resolve().with_name("clock.properties")
 
@@ -365,6 +373,7 @@ class LearningClock:
         )  # Stable telemetry identity supplied by startup.
         self.debug_break_on_click = debug_break_on_click  # Developer click breakpoint flag.
         self.debug_break_on_close = debug_break_on_close  # Developer close breakpoint flag.
+        apply_window_icon(self.root)
         self.root.title(self.build_window_title())  # Put app/version/path in title.
         self.root.geometry(NORMAL_GEOMETRY)  # Start in compact timer layout.
         self.root.resizable(False, False)  # Keep fixed geometry predictable.
@@ -501,6 +510,10 @@ class LearningClock:
         self.timer_panel.pack(side="left", fill="y")  # Keep timer controls at their natural width.
         self.timer_frame = tk.Frame(self.timer_panel)  # Container for activity rows.
         self.timer_frame.pack(fill="x", pady=0)  # Keep rows compact.
+        manual_time_validate_command = (
+            self.root.register(self.validate_manual_time_edit),
+            "%P",
+        )
 
         for activity in ACTIVITIES:  # Create one row per activity.
             row = tk.Frame(self.timer_frame)  # Row owns button/label/entries.
@@ -529,7 +542,13 @@ class LearningClock:
             label.pack(side="left", padx=(10, 0))  # Place label after button.
             self.labels[activity] = label  # Store for update_display.
 
-            entry = tk.Entry(row, font=("Arial", 11), width=11)  # Hidden manual duration entry.
+            entry = tk.Entry(
+                row,
+                font=("Arial", 11),
+                width=MANUAL_TIME_ENTRY_WIDTH,
+                validate="key",
+                validatecommand=manual_time_validate_command,
+            )  # Hidden manual duration entry restricted to one HH:MM:SS value.
             entry.bind(
                 "<Return>", lambda _event: self.add_all_manual_time()
             )  # Enter submits all manual values.
@@ -593,6 +612,24 @@ class LearningClock:
         ).pack(side="left", padx=(2, 1), pady=1)
         self.date_entry.bind("<Alt-Down>", lambda _event: self.open_date_picker())
         self.date_entry.bind("<F4>", lambda _event: self.open_date_picker())
+
+    # Source documentation:
+    #   What it does: Accepts only incremental edits that can become one eight-character
+    #     HH:MM:SS duration, including valid 00-59 minute and second components.
+    #   Why it exists: A Tk Entry width controls presentation but does not prevent additional
+    #     characters from being typed or pasted into a horizontally scrolling field.
+    #   Designed use: Tkinter passes the proposed field value through %P on every key edit;
+    #     partial valid prefixes and deletion are allowed, while excess/malformed text is rejected.
+    @staticmethod
+    def validate_manual_time_edit(proposed_value):
+        if len(proposed_value) > MANUAL_TIME_INPUT_LENGTH:
+            return False
+        if MANUAL_TIME_EDIT_PATTERN.fullmatch(proposed_value) is None:
+            return False
+        components = proposed_value.split(":")
+        return all(
+            len(component) < 2 or int(component) <= 59 for component in components[1:]
+        )
 
     # Operational algorithm:
     #   What this method does:
@@ -1503,38 +1540,24 @@ class LearningClock:
     #   What this method does:
     #     Converts manual time text into seconds.
     #   Success:
-    #     Accepts minutes, HH:MM, and HH:MM:SS.
+    #     Accepts exactly HH:MM:SS and converts it to seconds.
     #   Error handling:
     #     Blank or malformed text raises ValueError with user-facing guidance.
     # Source documentation:
     #   What it does: Converts supported manual-duration text to whole seconds.
     #   Why it exists: Every activity field must share the same validation contract.
-    #   Designed use: add_all_manual_time passes text; minutes, HH:MM, and HH:MM:SS are accepted.
+    #   Designed use: add_all_manual_time passes the validated eight-character field value.
     @staticmethod
     def parse_manual_input(value):
         normalized = value.strip()  # Remove surrounding whitespace.
         if not normalized:  # Blank input is not meaningful.
             raise ValueError("Manual time cannot be blank.")
 
-        if normalized.isdigit():  # Plain number means minutes.
-            return int(normalized) * 60
-
-        parts = normalized.split(":")  # Try clock-style formats.
-        if len(parts) == 2:  # HH:MM format.
-            hours, minutes = parts
-            if not hours.isdigit() or not minutes.isdigit():  # Both pieces must be numeric.
-                raise ValueError("Use minutes, HH:MM, or HH:MM:SS.")
-            return int(hours) * 3600 + int(minutes) * 60  # Convert hours/minutes to seconds.
-
-        if len(parts) == 3:  # HH:MM:SS format.
-            hours, minutes, seconds = parts
-            if (
-                not hours.isdigit() or not minutes.isdigit() or not seconds.isdigit()
-            ):  # All pieces numeric.
-                raise ValueError("Use minutes, HH:MM, or HH:MM:SS.")
-            return int(hours) * 3600 + int(minutes) * 60 + int(seconds)  # Convert to seconds.
-
-        raise ValueError("Use minutes, HH:MM, or HH:MM:SS.")  # Reject unsupported shapes.
+        match = MANUAL_TIME_PATTERN.fullmatch(normalized)
+        if match is None:
+            raise ValueError("Use exactly HH:MM:SS with minutes and seconds from 00 to 59.")
+        hours, minutes, seconds = (int(component) for component in match.groups())
+        return hours * 3600 + minutes * 60 + seconds
 
     # Operational algorithm:
     #   What this method does:

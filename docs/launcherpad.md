@@ -44,6 +44,28 @@ LearningClock owns mutexes; LauncherPad observes them. Seq receives telemetry bu
 
 Source mode selects `pythonw.exe` beside the currently active interpreter and runs `-m learningclock.desktop`. This respects the repository virtual environment without hard-coded Python installations. Each clock starts in a detached process group and breaks away from the LauncherPad/VS Code Windows job, so closing LauncherPad cannot terminate it. The wheel defines the Windows GUI entry point `learningclock-gui`; the generated executable opens no console. A frozen `LearningClock.exe` is also supported: it relaunches itself with the internal `--clock` argument.
 
+Use the repository commands for source startup and current-user Start registration:
+
+```cmd
+dev launcherpad
+dev launcherpad --config-dir D:\LearningPath
+dev launcherpad-register
+```
+
+`launcherpad-register` creates or updates **LearningClock LauncherPad** under the
+current user's Start Menu, targets the repository `.venv\Scripts\pythonw.exe`,
+uses `launcher\Learning-Clock.ico`, and requests **Pin to Start**. Windows may
+require the final pin to be selected manually from the registered Start entry.
+
+The LauncherPad icon uses a high-contrast dark tile, a full-size blue/orange
+clock face, and thick white hands instead of the former miniature UI screenshot.
+`launcher\Learning-Clock-source.png` is the transparent master artwork;
+`scripts\Build-LauncherIcon.ps1` builds native 16 through 256 pixel frames into
+`launcher\Learning-Clock.ico` and synchronizes the packaged copy under
+`src\learningclock\assets`. The shared window-icon helper applies that asset at
+the top left of both the LauncherPad and configured LearningClock title bars,
+so Windows does not have to shrink one pale image or show Tk's generic icon.
+
 The setuptools wheel remains the repository's packaging mechanism; PyInstaller was not introduced. `dev release` stages the icon and complete `learningclock` package under `D:\LearningPath\Tools\LearningClock`. Install the built wheel into the production environment to create `learningclock-gui.exe`.
 
 ## Calendar regression

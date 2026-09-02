@@ -21,6 +21,14 @@ Files copied by release:
 
 VBS is no longer released. `D:\LearningPath\*.properties` remains the configuration-data directory; legacy `pythonExe` and `pyScriptPath` properties are ignored by LauncherPad.
 
+The released ICO is built from `launcher\Learning-Clock-source.png` with
+`scripts\Build-LauncherIcon.ps1`. It contains native 16, 20, 24, 32, 40, 48,
+64, 96, 128, and 256 pixel frames for Start Menu, shortcut, desktop, and window
+title-bar display. The builder also synchronizes
+`src\learningclock\assets\Learning-Clock.ico`; setuptools includes that copy in
+the wheel so both LauncherPad and configured LearningClock windows use the same
+top-left icon after installation.
+
 The production environment must contain FastAPI, Uvicorn, and pinned `protepo-log` 2.0.0. Build and install the wheel to create the no-console GUI entry executable:
 
 ```cmd
@@ -62,7 +70,7 @@ Output:
 build\dist
 ```
 
-The build uses `setuptools` through `pyproject.toml`. `[project.gui-scripts]` produces `learningclock-gui.exe`; `[project.scripts]` retains the non-GUI `learningclock` health/version CLI. PyInstaller is not part of this repository.
+The build uses `setuptools` through `pyproject.toml`. `[project.gui-scripts]` produces `learningclock-gui.exe`; `[project.scripts]` retains the non-GUI `learningclock` health/version CLI. Package data includes the multi-resolution window ICO. PyInstaller is not part of this repository.
 
 ## Generated Output Policy
 

@@ -5,7 +5,7 @@ rem ============================================================================
 rem File Name : help.bat
 rem Artifact  : LearningClock - Project Command Help
 rem Author    : javaboy-vk
-rem Version   : v1.0.0
+rem Version   : v1.1.0
 rem Purpose:
 rem   Shows the local command-line contract for LearningClock.
 rem =============================================================================
@@ -26,6 +26,8 @@ echo   dev readme-assets                Regenerate README SVG assets
 echo   dev api --reload                 Run FastAPI with Swagger UI and ReDoc
 echo   dev openapi                      Export docs\openapi.json from FastAPI
 echo   dev seq-dashboard                Install/update the LearningClock Seq workspace
+echo   dev launcherpad                  Start LauncherPad from the source environment
+echo   dev launcherpad-register         Register LauncherPad in the current-user Start Menu
 echo   dev unittest-csv                 Run isolated CSV unit tests
 echo   dev unittest-csv-file            Run CSV regression tests
 echo   dev csv-test test1               Run one focused CSV regression selector
@@ -38,8 +40,10 @@ echo   dev all                          Clean, compile, test, and package
 echo   dev dev clean                    Dispatch dev.cmd directly when needed
 echo.
 echo Runtime commands:
-echo   set PYTHONPATH=src
-echo   .\.venv\Scripts\pythonw.exe -m learningclock.desktop --config-dir D:\LearningPath
+echo   dev launcherpad
+echo   dev launcherpad --config-dir D:\LearningPath
+echo   dev launcherpad-register
+echo   dev launcherpad-register --no-pin
 echo   .\.venv\Scripts\pythonw.exe -m learningclock.desktop --clock launcher\dev.properties
 echo   dev api --reload
 echo   Swagger UI: http://127.0.0.1:8000/docs

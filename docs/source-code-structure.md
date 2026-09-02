@@ -13,6 +13,7 @@ src\learningclock\
   process_launcher.py  Detached source/packaged GUI process construction and launch.
   singleton.py         Windows named-mutex ownership and observation.
   telemetry.py         Formal protepo.log 2.0 event definitions for new runtime boundaries.
+  window_icon.py       Shared multi-layout icon resolution and Tk title-bar application.
   csv_store.py         CSV schema, normalization, persistence, totals, emergency recovery.
   events.py            Product-owned semantic event catalogs and stable event IDs.
   observability.py     protepo.log configuration, logger composition, and correlation.
@@ -94,6 +95,8 @@ Seq queries, dashboards, and tests.
 - `singleton.py` separates mutex ownership from observation. A clock acquires its
   guard before persistence; LauncherPad opens and immediately closes an
   observation handle.
+- `window_icon.py` resolves one packaged, released, or repository ICO and applies
+  it to both primary Tk root windows without making cosmetic failure fatal.
 
 ## Developer Python
 

@@ -1,8 +1,8 @@
 # LearningClock 6.0 Python Source Code
 
 **Product Release:** 6.0  
-**Document Revision:** R3  
-**Document Version:** 6.0.R3
+**Document Revision:** R8
+**Document Version:** 6.0.R8
 
 This catalog documents every tracked Python area and explicitly includes the
 v6.0 modules added for configuration discovery, LauncherPad, process launching,
@@ -27,12 +27,21 @@ singleton enforcement, and formal telemetry.
 | `src/learningclock/process_launcher.py` | Packaged/source command selection and detached, shell-free, stream-free process creation. |
 | `src/learningclock/singleton.py` | Injectable Windows mutex API, process-lifetime ownership guard, and non-owning observation. |
 | `src/learningclock/telemetry.py` | Formal v2 `LPLCL`, `CONFG`, `LPCRP`, `MUTEX`, `LIFCL`, and `CLNDR` event definitions. |
+| `src/learningclock/window_icon.py` | Resolves the shared ICO across installed, frozen, released-source, and repository layouts and applies it non-fatally to both primary Tk title bars. |
+
+Manual-time mode expands the LearningClock window to 620 pixels and uses
+eight-character entry widgets. Tk key validation permits only prefixes of the
+exact `HH:MM:SS` structure, rejects a ninth character, and constrains minutes
+and seconds to `00` through `59`. Submission repeats strict validation so a
+programmatic or otherwise unvalidated value cannot bypass the contract.
 
 ## Developer and generation scripts
 
 | File | Responsibility |
 | --- | --- |
-| `scripts/dev.py` | Command dispatcher for clean, compile, test, coverage, API, OpenAPI, Seq, package, deploy, release, and aggregate lifecycle targets. |
+| `scripts/dev.py` | Command dispatcher for clean, compile, test, coverage, API, OpenAPI, Seq, LauncherPad startup/registration, package, deploy, release, and aggregate lifecycle targets. |
+| `scripts/Build-LauncherIcon.ps1` | Builds high-contrast multi-resolution Windows ICO frames from the transparent LauncherPad source artwork. |
+| `scripts/Register-LauncherPad.ps1` | Current-user Start Menu shortcut creation and best-effort Windows Start pin request. |
 | `scripts/export_openapi.py` | Writes tracked `docs/openapi.json` from `learningclock.api.app.openapi()`. |
 | `scripts/generate_readme_assets.py` | Generates the synchronized LearningClock README SVG illustrations. |
 | `scripts/migrate_learningpath_csv_categories.py` | Resolves configured CSVs, creates timestamped backups, normalizes rows, and rewrites one final `TOTAL`. |
@@ -46,8 +55,10 @@ singleton enforcement, and formal telemetry.
 | `tests/test_api.py` | Health, Swagger UI, ReDoc, and tracked OpenAPI parity. |
 | `tests/test_app_ui.py` | Activity colors, menu visibility, and calendar popup ordering. |
 | `tests/test_cli.py` | Readiness and version command behavior. |
+| `tests/test_dev_launcherpad.py` | Detached LauncherPad developer startup and side-effect-free Start Menu command construction. |
 | `tests/test_launcherpad_configuration.py` | Legacy identity, ordering, malformed-file isolation, and duplicate IDs. |
 | `tests/test_launcherpad.py` | Available/running control-state mapping without a display. |
+| `tests/test_launcher_icon.py` | Native icon-size inventory, PNG-backed ICO frames, source artwork, and reproducible builder contract. |
 | `tests/test_learning_clock_csv_regression.py` | Fixture and configured-file CSV regression behavior. |
 | `tests/test_learning_clock_csv_unit.py` | Schema, compatibility, totals, checkpoints, recovery, dates, manual time, and pages. |
 | `tests/test_observability.py` | Catalog identity, event families, structured properties, local files, and native loggers. |
@@ -55,6 +66,15 @@ singleton enforcement, and formal telemetry.
 | `tests/test_release_observability.py` | Production release inclusion of the observability modules. |
 | `tests/test_seq_dashboard.py` | Templates, dashboard coverage, workspace references, installer merge, and credential hygiene. |
 | `tests/test_singleton.py` | Fake mutex semantics plus Windows process-exit cleanup integration. |
+| `tests/test_window_icon.py` | Shared icon resolution, soft failure, packaged-asset parity, and integration in both primary windows. |
+
+## Launcher assets
+
+| File | Responsibility |
+| --- | --- |
+| `launcher/Learning-Clock-source.png` | Transparent 512-pixel high-contrast master with a large blue/orange clock mark. |
+| `launcher/Learning-Clock.ico` | Generated Windows icon containing ten native sizes from 16 through 256 pixels. |
+| `src/learningclock/assets/Learning-Clock.ico` | Synchronized package-data copy used by installed LauncherPad and LearningClock title bars. |
 
 ## Source-commentary convention
 

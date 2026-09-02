@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Developer Command Runner
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v6.0.1
+# Version   : v6.0.2
 # Purpose:
 #   Provides Maven-style lifecycle commands for the Python project.
 #
@@ -35,11 +35,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = ROOT / "build"
 VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
+VENV_PYTHONW = ROOT / ".venv" / "Scripts" / "pythonw.exe"
 REGRESSION_PROPERTIES = ROOT / "tests" / "fixtures" / "clock-QA.properties"
 PRODUCTION_APP_DIR = Path(r"D:\LearningPath\Tools\LearningClock")
 LEARNING_PATH_PROPERTIES_DIR = Path(r"D:\LearningPath")
 DASHBOARD_MARKDOWN = ROOT / "diavgeia" / "LearningClock" / "Learning-Clock-Dashboard.md"
 DASHBOARD_VIEWS_DIR = ROOT / "diavgeia" / "LearningClock" / "views"
+LAUNCHER_ICON = ROOT / "launcher" / "Learning-Clock.ico"
+REGISTER_LAUNCHERPAD_SCRIPT = ROOT / "scripts" / "Register-LauncherPad.ps1"
+WINDOWS_DETACHED_CREATION_FLAGS = 0x00000008 | 0x00000200 | 0x01000000
 
 
 # Source documentation:
@@ -85,6 +89,18 @@ def require_venv() -> str:
             "Missing .venv. Create it first from Command Prompt with: python -m venv .venv"
         )
     return str(VENV_PYTHON)
+
+
+# Source documentation:
+#   What it does: Returns the project no-console interpreter or stops with setup guidance.
+#   Why it exists: LauncherPad must start as a Windows GUI without opening a Python console.
+#   Designed use: Launcher and Start Menu registration targets call it after .venv creation.
+def require_venv_pythonw() -> str:
+    if not VENV_PYTHONW.exists():
+        raise SystemExit(
+            "Missing .venv GUI Python. Create the environment first with: python -m venv .venv"
+        )
+    return str(VENV_PYTHONW)
 
 
 # Source documentation:
@@ -318,6 +334,89 @@ def seq_dashboard(args: list[str] | None = None) -> None:
     )
 
 
+# Source documentation:
+#   What it does: Starts LauncherPad from the repository's no-console Python environment.
+#   Why it exists: Developers need one stable command that supplies PYTHONPATH and survives the
+#     command dispatcher exiting without tying LauncherPad to a console or shell process.
+#   Designed use: Run dev launcherpad with an optional --config-dir; the command returns after
+#     creating an independent GUI process and reports its process identifier.
+def launcherpad(args: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="dev.py launcherpad")
+    parser.add_argument("--config-dir", default=str(LEARNING_PATH_PROPERTIES_DIR))
+    parsed_args = parser.parse_args(args or [])
+
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(ROOT / "src")
+    command = [
+        require_venv_pythonw(),
+        "-m",
+        "learningclock.desktop",
+        "--config-dir",
+        str(Path(parsed_args.config_dir)),
+    ]
+    creation_flags = WINDOWS_DETACHED_CREATION_FLAGS if os.name == "nt" else 0
+    process = subprocess.Popen(
+        command,
+        cwd=ROOT,
+        env=environment,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        close_fds=True,
+        creationflags=creation_flags,
+    )
+    print(f"LauncherPad started with process ID {process.pid}.")
+
+
+# Source documentation:
+#   What it does: Creates or updates the current user's LauncherPad Start Menu shortcut.
+#   Why it exists: Windows registration needs a stable icon, source command, working directory,
+#     and an optional best-effort pin request without changing machine-wide installation state.
+#   Designed use: Run dev launcherpad-register after creating .venv; --config-dir controls the
+#     shortcut's discovery folder and --no-pin skips the Windows shell pin request.
+def register_launcherpad(args: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="dev.py launcherpad-register")
+    parser.add_argument("--config-dir", default=str(LEARNING_PATH_PROPERTIES_DIR))
+    parser.add_argument("--no-pin", action="store_true")
+    parsed_args = parser.parse_args(args or [])
+
+    pythonw = require_venv_pythonw()
+    if not LAUNCHER_ICON.exists():
+        raise SystemExit(f"LauncherPad icon was not found: {LAUNCHER_ICON}")
+    if not REGISTER_LAUNCHERPAD_SCRIPT.exists():
+        raise SystemExit(
+            f"LauncherPad registration script was not found: {REGISTER_LAUNCHERPAD_SCRIPT}"
+        )
+
+    shortcut_arguments = subprocess.list2cmdline(
+        [
+            "-m",
+            "learningclock.desktop",
+            "--config-dir",
+            str(Path(parsed_args.config_dir)),
+        ]
+    )
+    command = [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        str(REGISTER_LAUNCHERPAD_SCRIPT),
+        "-TargetPath",
+        pythonw,
+        "-ShortcutArguments",
+        shortcut_arguments,
+        "-WorkingDirectory",
+        str(ROOT),
+        "-IconPath",
+        str(LAUNCHER_ICON),
+    ]
+    if not parsed_args.no_pin:
+        command.append("-PinToStart")
+    run(command)
+
+
 def unittest_csv(args: list[str] | None = None) -> None:
 
     run([require_venv(), "tests/test_learning_clock_csv_unit.py", *(args or [])])
@@ -464,6 +563,8 @@ TARGETS = {
     "api": api,
     "openapi": openapi,
     "seq-dashboard": seq_dashboard,
+    "launcherpad": launcherpad,
+    "launcherpad-register": register_launcherpad,
     "unittest-csv": unittest_csv,
     "unittest-csv-file": unittest_csv_file,
     "csv-test": csv_test,

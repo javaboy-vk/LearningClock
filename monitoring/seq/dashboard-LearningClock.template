@@ -14,11 +14,7 @@
           {"Value": "if @Level = 'Information' then 'INFO' else if @Level = 'Warning' then 'WARN' else if @Level = 'Error' then 'ERROR' else if @Level = 'Fatal' then 'FATAL' else Substring(ToUpper(@Level), 0, 5)", "Label": "Level"},
           {"Value": "EventCode", "Label": "EventId"},
           {"Value": "@Message", "Label": "Message"},
-          {"Value": "Module", "Label": "Component"},
-          {"Value": "properties.clock_id", "Label": "ClockId"},
-          {"Value": "ProcessId", "Label": "ProcessId"},
-          {"Value": "Environment", "Label": "Environment"},
-          {"Value": "CorrelationId", "Label": "CorrelationId"}
+          {"Value": "properties.clock_id", "Label": "ClockId"}
         ],
         "Where": "Application = 'LearningClock' ci",
         "SignalExpression": null,
@@ -29,7 +25,7 @@
         "Limit": 200
       }],
       "DisplayStyle": {"WidthColumns": 12, "HeightRows": 4},
-      "Description": "Latest 200 structured LearningClock events. Use the Events workspace with Tail for continuous arrival."
+      "Description": "Latest 200 LearningClock events in the full dashboard width. Use Seq Events for complete structured-event inspection and Tail for continuous arrival."
     },
     {
       "Title": "Application Health",

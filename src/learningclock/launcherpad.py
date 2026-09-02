@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - LauncherPad GUI
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v1.0.1
+# Version   : v1.0.2
 # Purpose:
 #   Discovers configured clocks, observes their named mutexes, and launches
 #   independent LearningClock GUI processes from one compact Tkinter window.
@@ -60,6 +60,7 @@ from learningclock.telemetry import (
     PROCESS_LAUNCH_FAILED,
     RUNNING_STATE_CHANGED,
 )
+from learningclock.window_icon import apply_window_icon
 
 LAUNCHERPAD_TITLE = "LearningClock LauncherPad 1.0"
 AVAILABLE_BACKGROUND = "#069bff"
@@ -121,6 +122,7 @@ class LauncherPad:
         self.refresh_job: str | None = None
         self.closed = False
 
+        apply_window_icon(self.root)
         self.root.title(LAUNCHERPAD_TITLE)
         self.root.minsize(700, 260)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)

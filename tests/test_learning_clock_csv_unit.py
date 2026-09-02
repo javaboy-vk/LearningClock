@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Unit Tests
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v5.5
+# Version   : v5.6
 # Purpose:
 #   Verifies CSV save, normalization, emergency recovery, and total calculations.
 # =============================================================================
@@ -249,7 +249,13 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         clock.persisted_manual_pages = 0
         clock.session_saved = False
         clock.manual_entries = {
-            activity: Entry("15" if activity == "Reading" else "00:02:30" if activity == "Sandbox" else "")
+            activity: Entry(
+                "00:15:00"
+                if activity == "Reading"
+                else "00:02:30"
+                if activity == "Sandbox"
+                else ""
+            )
             for activity in learning_clock.ACTIVITIES
         }
         clock.update_display = lambda: None
@@ -263,7 +269,7 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
         self.assertEqual("00:02:30", rows[0]["sandbox"])
         self.assertEqual("00:17:30", rows[-1]["total"])
 
-        clock.manual_entries["Reading"].value = "5"
+        clock.manual_entries["Reading"].value = "00:05:00"
         clock.add_all_manual_time()
 
         rows = self.read_log_rows()
@@ -564,20 +570,17 @@ class LearningClockCsvUnitTestCase(LearningClockCsvHarness, unittest.TestCase):
     #   What we test:
     #     Manual time entry accepts supported input shapes and rejects invalid values.
     #   Success:
-    #     Minutes, HH:MM, and HH:MM:SS convert to seconds; blank and malformed values raise ValueError.
+    #     Exact HH:MM:SS converts to seconds; shorter, longer, blank, and malformed values raise ValueError.
     #   Error checks:
     #     Assertions catch accepted-format drift and missing validation errors.
-    def test_manual_input_accepts_supported_formats_and_rejects_bad_values(self):
+    def test_manual_input_accepts_only_exact_hh_mm_ss(self):
 
-        self.assertEqual(300, LearningClock.parse_manual_input("5"))        # Plain number means minutes.
-        self.assertEqual(0, LearningClock.parse_manual_input("0"))          # Zero is a valid no-op duration.
-        self.assertEqual(5400, LearningClock.parse_manual_input("01:30"))   # HH:MM converts to seconds.
+        self.assertEqual(0, LearningClock.parse_manual_input("00:00:00"))  # Zero is a valid no-op duration.
         self.assertEqual(5445, LearningClock.parse_manual_input("01:30:45"))  # HH:MM:SS converts to seconds.
 
-        with self.assertRaises(ValueError):                                 # Blank input should be rejected.
-            LearningClock.parse_manual_input("")
-        with self.assertRaises(ValueError):                                 # Non-numeric time part should be rejected.
-            LearningClock.parse_manual_input("1:xx")
+        for invalid_value in ("", "5", "01:30", "1:xx", "00:00:001", "00:60:00"):
+            with self.subTest(value=invalid_value), self.assertRaises(ValueError):
+                LearningClock.parse_manual_input(invalid_value)
 
 
 if __name__ == "__main__":

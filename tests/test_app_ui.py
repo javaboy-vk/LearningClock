@@ -3,14 +3,17 @@
 # Artifact  : LearningClock - Tkinter UI State Tests
 # Author    : javaboy-vk
 # Date      : 2026-08-08
-# Version   : v6.0.1
+# Version   : v6.0.3
 # Purpose:
-#   Verifies activity-button colors follow the active timer without a display.
+#   Verifies activity-button colors and fixed UI sizing without a display.
 # =============================================================================
 
 from learningclock.app import (
     ACTIVE_TIMER_BUTTON_BACKGROUND,
+    ADD_TIME_GEOMETRY,
     BUTTON_BACKGROUND,
+    MANUAL_TIME_ENTRY_WIDTH,
+    MANUAL_TIME_INPUT_LENGTH,
     MENU_FONT,
     LearningClock,
     present_calendar_popup,
@@ -48,6 +51,24 @@ def test_active_timer_button_is_orange_and_inactive_buttons_are_blue():
 def test_menu_uses_a_bold_font_for_visibility():
 
     assert MENU_FONT[-1] == "bold"
+
+
+def test_manual_time_mode_fits_a_complete_hh_mm_ss_value():
+
+    add_time_width = int(ADD_TIME_GEOMETRY.partition("x")[0])
+
+    assert add_time_width >= 620
+    assert MANUAL_TIME_INPUT_LENGTH == len("00:00:00")
+    assert MANUAL_TIME_ENTRY_WIDTH == len("00:00:00")
+
+
+def test_manual_time_field_rejects_text_beyond_hh_mm_ss():
+
+    accepted_edits = ["", "0", "00", "00:", "00:00", "00:00:", "00:00:00"]
+    rejected_edits = ["000", "0:", "00:60", "00:00:60", "00:00:001", "00:00:00x"]
+
+    assert all(LearningClock.validate_manual_time_edit(value) for value in accepted_edits)
+    assert not any(LearningClock.validate_manual_time_edit(value) for value in rejected_edits)
 
 
 def test_calendar_popup_is_mapped_raised_and_visible_before_keyboard_grab():

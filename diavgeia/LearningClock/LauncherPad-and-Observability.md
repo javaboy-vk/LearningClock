@@ -9,6 +9,17 @@ LearningClock v6.0 uses one GUI entry point, `learningclock-gui.exe`, to open La
 
 Normal execution contains no VBS, WScript, CScript, CMD, PowerShell, or Python console. Source mode uses the active environment's `pythonw.exe`; installed/frozen mode launches the GUI executable directly. LauncherPad can close without affecting clocks and reconstructs their state after restart from the kernel mutexes.
 
+Start and register the source LauncherPad with the root developer commands:
+
+```cmd
+dev launcherpad
+dev launcherpad-register
+```
+
+Registration creates the current user's **LearningClock LauncherPad** Start Menu
+entry with the product icon. It requests **Pin to Start** when Windows exposes
+that shell action; otherwise the registered entry can be pinned manually.
+
 `protepo.log` 2.0 is the canonical observability path. Formal `LPLCL-*`, `CONFG-*`, `LPCRP-*`, `MUTEX-*`, `LIFCL-*`, and `CLNDR-*` events include structured clock identity, configuration, process, runtime mode, operation, error, and correlation properties. A launch correlation passes from LauncherPad into the selected clock process.
 
 The version-controlled **LearningClock Operations** Seq dashboard is installed with:

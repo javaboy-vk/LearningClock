@@ -31,6 +31,8 @@ scripts\readme-assets.cmd
 scripts\dev.cmd api --reload
 scripts\dev.cmd openapi
 scripts\dev.cmd seq-dashboard
+scripts\dev.cmd launcherpad
+scripts\dev.cmd launcherpad-register
 scripts\dev.cmd unittest-csv
 scripts\dev.cmd csv-test test1
 scripts\dev.cmd package
@@ -72,6 +74,8 @@ Equivalent interpreter-explicit commands:
 .\.venv\Scripts\python.exe scripts\dev.py api --reload
 .\.venv\Scripts\python.exe scripts\dev.py openapi
 .\.venv\Scripts\python.exe scripts\dev.py seq-dashboard
+.\.venv\Scripts\python.exe scripts\dev.py launcherpad
+.\.venv\Scripts\python.exe scripts\dev.py launcherpad-register
 .\.venv\Scripts\python.exe scripts\dev.py unittest-csv
 .\.venv\Scripts\python.exe scripts\dev.py unittest-csv-file --properties "tests\fixtures\clock-QA.properties"
 .\.venv\Scripts\python.exe scripts\dev.py unittest-csv-file --properties "tests\fixtures\clock-QA.properties" test1
@@ -94,6 +98,8 @@ Lifecycle mapping:
 - `readme-assets`: generate README SVG visuals for the desktop UI and Obsidian dashboard.
 - `api`: run the FastAPI readiness surface, Swagger UI, ReDoc, and runtime OpenAPI schema.
 - `openapi`: regenerate tracked `docs\openapi.json` from the FastAPI application.
+- `launcherpad`: start the source LauncherPad as an independent no-console process using the project `.venv` and `D:\LearningPath` by default.
+- `launcherpad-register`: create or update the current user's Start Menu shortcut with the LearningClock icon and request **Pin to Start**. Windows may require the pin to be completed manually; `--no-pin` registers without requesting it.
 - `unittest-csv`: run the isolated CSV unit test file.
 - `unittest-csv-file`: run the CSV regression suite against a properties-selected or explicitly supplied CSV.
 - `csv-test`: run a focused CSV regression selector through the local fixture properties.

@@ -1,0 +1,25 @@
+/*
+ * Seq 2026.1 configures dashboard tables with horizontal overflow hidden.
+ * This local-only browser extension preserves the log row format and exposes
+ * native horizontal scrolling without changing the installed Seq web client.
+ */
+.learningclock-recent-events .chart-table,
+.learningclock-recent-events .chart-table[data-overlayscrollbars-viewport],
+.learningclock-recent-events .chart-table [data-overlayscrollbars-viewport] {
+  overflow-x: auto !important;
+  overscroll-behavior-x: contain;
+}
+
+.learningclock-recent-events .chart-table table {
+  width: max-content !important;
+  min-width: 100% !important;
+  table-layout: auto !important;
+}
+
+.learningclock-recent-events .chart-table th,
+.learningclock-recent-events .chart-table td,
+.learningclock-recent-events .chart-table .property-value {
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}

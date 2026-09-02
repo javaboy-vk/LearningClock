@@ -1,8 +1,8 @@
 # LearningClock 6.0 Configuration
 
 **Product Release:** 6.0  
-**Document Revision:** R1  
-**Document Version:** 6.0.R1
+**Document Revision:** R2
+**Document Version:** 6.0.R2
 
 LearningClock configuration has three distinct scopes: per-clock properties,
 application environment variables, and repository/developer commands. Secrets
@@ -68,6 +68,28 @@ URL variables fall back to the local default when Seq is included by the caller.
 | LauncherPad Seq spool | `D:\LearningPath\Tools\LearningClock\launcherpad_seq_offline.clef` |
 | Clock CSV and diagnostics | Configured `logDir` |
 | Build, test, coverage, packages | Repository `build\` |
+
+## LauncherPad commands and Start registration
+
+Start LauncherPad from the repository `.venv` without a console:
+
+```cmd
+dev launcherpad
+dev launcherpad --config-dir D:\LearningPath
+```
+
+Create or update the current user's Windows Start Menu entry:
+
+```cmd
+dev launcherpad-register
+dev launcherpad-register --no-pin
+```
+
+The shortcut is named **LearningClock LauncherPad**, targets the repository
+`.venv\Scripts\pythonw.exe`, supplies the source module and configuration
+directory arguments, and uses `launcher\Learning-Clock.ico`. The default command
+requests **Pin to Start**, but Windows can require the user to complete pinning
+from the registered Start entry. `--no-pin` skips that request.
 
 ## API configuration
 

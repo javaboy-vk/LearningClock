@@ -3,19 +3,20 @@
 LearningClock LauncherPad is the normal GUI entry point. Start it from source without a console:
 
 ```cmd
-set PYTHONPATH=src
-.\.venv\Scripts\pythonw.exe -m learningclock.desktop
+dev launcherpad
 ```
 
 LauncherPad discovers `D:\LearningPath\*.properties` by default. Override the directory for development:
 
 ```cmd
-.\.venv\Scripts\pythonw.exe -m learningclock.desktop --config-dir launcher
+dev launcherpad --config-dir launcher
 ```
 There is an option to manually add time and record also the number of pages you process in each session.
 There are also timers for sandbox exploration, updating documentation, and even promote any cool code to a production version. A user doesn't have to use all of the timers, but just the ones that fit his needs.
 
-An installed package exposes `.venv\Scripts\learningclock-gui.exe`. Create one Desktop or Start Menu shortcut to that GUI executable; it requires no per-clock arguments. Old per-clock VBS shortcuts can be removed manually after LauncherPad validation.
+Register the source LauncherPad for the current user with `dev launcherpad-register`. The command creates **LearningClock LauncherPad** in the Windows Start Menu using `launcher\Learning-Clock.ico` and requests a Start pin when the shell permits it. Windows 11 can withhold the automatic pin verb; in that case, right-click the registered Start entry and select **Pin to Start**. Pass `--no-pin` when only Start Menu registration is wanted.
+
+An installed package exposes `.venv\Scripts\learningclock-gui.exe`; the developer registration command deliberately targets the repository's `.venv\Scripts\pythonw.exe` and source tree. Old per-clock VBS shortcuts can be removed manually after LauncherPad validation.
 
 The logDir parameter is where the application will generate 2 files: the .csv that tracks all the sessions and the debug log, which is the application level logging output.
 The Learning-Clock-Dashboard.md file is designed to run inside the Obsidian runtime, and renders the .csv file into a graph.
@@ -54,15 +55,13 @@ Tracked activities are `Reading`, `Book Listening`, `Outlining`, `Active Recall`
 
 ## Manual Time And Pages
 
-Use the `Add Time` menu item to enter manual time for one or more activities. Supported formats are:
+Use the `Add Time` menu item to enter manual time for one or more activities. Each field accepts exactly:
 
 ```text
-5
-01:30
 01:30:45
 ```
 
-A plain number is interpreted as minutes. `HH:MM` and `HH:MM:SS` are interpreted as durations. Blank or zero-only Add Time and Add Pages submissions are accepted as no-ops.
+The required format is `HH:MM:SS`, with exactly two digits per component and minute/second values from `00` through `59`. The field rejects a ninth character, malformed separators, and out-of-range minute or second values. Add Time widens the LearningClock window so the complete value remains visible without clipping. Blank or `00:00:00` Add Time submissions and zero-only Add Pages submissions are accepted as no-ops.
 
 Use `Add Page Count` to add a positive whole-number page count to the current session.
 
