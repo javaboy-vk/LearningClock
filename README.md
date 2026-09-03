@@ -24,6 +24,8 @@ native Windows sizes from 16 through 256 pixels for clear Start Menu display.
 The same icon identifies the title bar at the top left of both LauncherPad and
 every configured LearningClock window.
 
+![LearningClock LauncherPad with configured clock controls](docs/assets/learning-clock-launcherpad.svg)
+
 Normal startup no longer uses VBS, WScript, CMD, or PowerShell. Source launches use the active environment's sibling `pythonw.exe`; installed GUI entry points and frozen builds relaunch their GUI executable directly. The date selector also restores an explicitly raised and focused calendar popup on Windows.
 
 ### Version 5.3 interface
@@ -91,7 +93,8 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 - [CSV Contract](docs/csv-contract.md)
 - [Tests and Default Clock-QA Regression Fixture](docs/tests.md)
 - [Coverage](docs/coverage.md)
-- [Coverage Report](https://javaboy-vk.github.io/LearningClock/)
+- [Engineering Scorecard](https://javaboy-vk.github.io/LearningClock/)
+- [Coverage Report](https://javaboy-vk.github.io/LearningClock/coverage/)
 - [Convenience Commands](docs/convenience-commands.md)
 - [Production Release, Packaging, and Generated Output Policy](docs/production-release.md)
 - [Obsidian-Diavgeia Documentation](docs/obsidian-diavgeia-documentation.md)
@@ -103,6 +106,8 @@ The Obsidian/Diavgeia dashboard reads the CSV and renders the aggregate learning
 
 ## Code Inventory
 
-The GitHub Pages workflow generates this image without modifying the repository.
+The GitHub Pages workflow generates the repository-wide inventory without modifying the repository. It uses the same blue Pygount table format as the Engineering Scorecard and covers the complete Git-tracked LearningClock workspace.
 
-![Pygount summary](https://javaboy-vk.github.io/LearningClock/pygount-summary.svg)
+![LearningClock repository Pygount inventory](https://javaboy-vk.github.io/LearningClock/pygount-summary.svg)
+
+[Open the LearningClock Engineering Scorecard](https://javaboy-vk.github.io/LearningClock/) for the Application Source, Tests and Benchmarks, Documentation, and DevOps breakdown, together with tests, coverage, performance, benchmarks, and Diavgeia sections.

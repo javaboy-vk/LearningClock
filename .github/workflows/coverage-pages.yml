@@ -44,7 +44,13 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Generate HTML coverage
-        run: python -m pytest --cov=learningclock --cov-report=term-missing --cov-report=html:build/coverage/html
+        run: >-
+          python -m pytest
+          --junitxml=build/tests/junit/pytest-results.xml
+          --cov=learningclock
+          --cov-report=term-missing
+          --cov-report=json:build/coverage/coverage.json
+          --cov-report=html:build/coverage/html
 
       - name: Generate code inventory
         run: python scripts/pygount_summary.py
@@ -53,7 +59,12 @@ jobs:
         shell: bash
         run: |
           mkdir -p build/pages
-          cp -R build/coverage/html/. build/pages/
+          cp build/reports/root-index.html build/pages/index.html
+          cp -R build/reports build/pages/reports
+          cp -R build/coverage build/pages/coverage
+          cp -R build/tests build/pages/tests
+          cp -R build/performance build/pages/performance
+          cp -R build/benchmarks build/pages/benchmarks
           cp build/reports/pygount-summary.svg build/pages/pygount-summary.svg
 
       - name: Configure GitHub Pages

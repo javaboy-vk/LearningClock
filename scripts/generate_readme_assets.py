@@ -3,13 +3,15 @@
 # Artifact  : LearningClock - README Visual Asset Generator
 # Author    : javaboy-vk
 # Date      : 2026-06-09
-# Version   : v6.0.1
+# Version   : v6.1.0
 # Purpose:
-#   Generates stable SVG visuals used by README.md to show the app UI and
-#   Obsidian dashboard output.
+#   Generates stable SVG visuals used by README.md to show LauncherPad, the app
+#   UI, the in-app progress panel, and Obsidian dashboard output.
 #
 # Generation call tree:
 #   main()
+#   |-- generate_launcherpad_svg()
+#   |   `-- render representative configured-clock controls
 #   |-- generate_ui_svg()
 #   |   |-- read ACTIVITIES from learningclock.csv_store
 #   |   |-- render one representative timer row per activity
@@ -23,7 +25,7 @@
 #   |   `-- return a complete dashboard SVG string
 #   |-- generate_progress_svg()
 #   |   `-- return the in-app View Progress dashboard visual
-#   `-- write the README UI, Progress, and Obsidian dashboard SVG assets
+#   `-- write the LauncherPad, UI, Progress, and Obsidian dashboard SVG assets
 #
 # Import note:
 #   This script is a direct repo utility, not an installed console entry point.
@@ -49,6 +51,7 @@ from learningclock.app import APP_VERSION  # noqa: E402
 from learningclock.csv_store import ACTIVITY_TO_FIELD, ACTIVITIES, parse_duration  # noqa: E402
 
 ASSET_DIR = ROOT / "docs" / "assets"
+LAUNCHERPAD_SVG = ASSET_DIR / "learning-clock-launcherpad.svg"
 UI_SVG = ASSET_DIR / "learning-clock-ui.svg"
 DASHBOARD_SVG = ASSET_DIR / "learning-clock-dashboard.svg"
 PROGRESS_SVG = ASSET_DIR / "learning-clock-progress.svg"
@@ -77,6 +80,51 @@ def text(value: object) -> str:
 def format_duration(seconds: int) -> str:
 
     return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
+
+
+# Source documentation:
+#   What it does: Renders the LauncherPad window and representative configured clocks.
+#   Why it exists: README readers need to see the primary v6.0 entry point before the clock UI.
+#   Designed use: main writes this deterministic SVG beside the other README visuals.
+def generate_launcherpad_svg() -> str:
+    controls = [
+        ("Python Engineering Lab", "#069bff"),
+        ("DIAS", "#069bff"),
+        ("AIXtreme", "#069bff"),
+        ("Performance Engineering — Running", "#FF6600"),
+        ("MAGPAI", "#069bff"),
+        ("LearningClock QA", "#069bff"),
+    ]
+    buttons = []
+    for index, (label, background) in enumerate(controls):
+        column = index % 3
+        row = index // 3
+        x = 38 + column * 274
+        y = 124 + row * 74
+        buttons.append(
+            f'<rect x="{x}" y="{y}" width="252" height="54" rx="3" '
+            f'fill="{background}" stroke="#8c8c8c"/>'
+            f'<line x1="{x + 2}" y1="{y + 2}" x2="{x + 250}" y2="{y + 2}" '
+            f'stroke="#ffffff" stroke-opacity=".8"/>'
+            f'<text x="{x + 126}" y="{y + 33}" fill="#ffffff" font-size="15" '
+            f'font-weight="700" text-anchor="middle">{text(label)}</text>'
+        )
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="330" viewBox="0 0 900 330" role="img" aria-label="LearningClock LauncherPad with configured clock controls">
+  <rect width="900" height="330" rx="8" fill="#d7d7d7" stroke="#8c8c8c" stroke-width="2"/>
+  <rect x="1" y="1" width="898" height="42" rx="7" fill="#fafafa"/>
+  <rect x="1" y="34" width="898" height="9" fill="#fafafa"/>
+  <circle cx="23" cy="22" r="13" fill="#069bff"/>
+  <path d="M23 11 A11 11 0 0 1 34 22 H23 Z" fill="#FF6600"/>
+  <line x1="23" y1="22" x2="23" y2="14" stroke="#ffffff" stroke-width="2"/>
+  <line x1="23" y1="22" x2="29" y2="25" stroke="#ffffff" stroke-width="2"/>
+  <text x="45" y="27" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="14">LearningClock LauncherPad 1.0</text>
+  <text x="865" y="27" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="20">×</text>
+  <text x="30" y="88" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="23" font-weight="700">LearningClock LauncherPad 1.0</text>
+  <g font-family="Segoe UI, Arial, sans-serif">{"".join(buttons)}</g>
+  <text x="30" y="295" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="14">6 configured clocks</text>
+</svg>
+"""
 
 
 # Dashboard label wrapping:
@@ -398,9 +446,11 @@ def generate_progress_svg() -> str:
 #     Write failures propagate so release/deploy workflows fail visibly.
 def main() -> int:
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    LAUNCHERPAD_SVG.write_text(generate_launcherpad_svg(), encoding="utf-8")
     UI_SVG.write_text(generate_ui_svg(), encoding="utf-8")
     DASHBOARD_SVG.write_text(generate_dashboard_svg(), encoding="utf-8")
     PROGRESS_SVG.write_text(generate_progress_svg(), encoding="utf-8")
+    print(f"wrote {LAUNCHERPAD_SVG.relative_to(ROOT)}")
     print(f"wrote {UI_SVG.relative_to(ROOT)}")
     print(f"wrote {DASHBOARD_SVG.relative_to(ROOT)}")
     print(f"wrote {PROGRESS_SVG.relative_to(ROOT)}")
