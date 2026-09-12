@@ -3,13 +3,20 @@
 # Artifact  : LearningClock - Observability Release Tests
 # Author    : javaboy-vk
 # Date      : 2026-08-24
-# Version   : v0.3.0
+# Version   : v0.4.0
 # Purpose:
 #   Verifies production release planning includes every runtime module required
 #   by the protepo.log and FastAPI integrations.
 # =============================================================================
 
 from scripts import dev
+
+
+def test_private_runtime_dependency_uses_published_immutable_commit():
+    project = (dev.ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert "@115ab65d25e445876257b80a623a6d1667ac8cec#subdirectory=" in project
+    assert "@protepo-log-v2.0.0#subdirectory=" not in project
 
 
 def test_default_release_layout_uses_standard_application_directories():

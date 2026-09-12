@@ -1,6 +1,6 @@
 # Application Logging and Seq Operations
 
-LearningClock requires distribution `protepo-log` 2.0.0 and imports it as `protepo.log`. The dependency is pinned to immutable tag `protepo-log-v2.0.0`; the application refuses to configure observability if the imported runtime version differs.
+LearningClock requires distribution `protepo-log` 2.0.0 and imports it as `protepo.log`. The dependency is pinned to immutable release commit `115ab65d25e445876257b80a623a6d1667ac8cec`; the application refuses to configure observability if the imported runtime version differs.
 
 ## Protepo Logging Standard v2
 

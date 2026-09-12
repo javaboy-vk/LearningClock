@@ -13,7 +13,7 @@ authors = [
 ]
 dependencies = [
   "fastapi>=0.115",
-  "protepo-log @ git+https://github.com/javaboy-vk/Python-Engineering-Lab.git@protepo-log-v2.0.0#subdirectory=packaging/protepo-log",
+  "protepo-log @ git+https://github.com/javaboy-vk/Python-Engineering-Lab.git@115ab65d25e445876257b80a623a6d1667ac8cec#subdirectory=packaging/protepo-log",
   "uvicorn[standard]>=0.30",
 ]
 
