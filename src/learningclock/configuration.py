@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Configured Clock Discovery
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v2.4.0
+# Version   : v2.4.1
 # Purpose:
 #   Loads central runtime settings; validates, migrates, identifies, and
 #   deterministically discovers per-clock properties files.
@@ -34,7 +34,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from learningclock.telemetry import (
@@ -61,6 +61,15 @@ _SHARED_KEYS = frozenset({"pythonExe", "pyScriptPath"})
 
 def logs_directory(configuration_dir: Path) -> Path:
     """Resolve centralized logs beside the standard props directory."""
+
+    windows_path = PureWindowsPath(str(configuration_dir))
+    if windows_path.drive:
+        installation_root = (
+            windows_path.parent
+            if windows_path.name.casefold() == "props"
+            else windows_path
+        )
+        return Path(str(installation_root / "logs"))
 
     resolved = configuration_dir.expanduser().resolve()
     installation_root = resolved.parent if resolved.name.casefold() == "props" else resolved

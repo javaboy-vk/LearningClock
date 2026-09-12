@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter UI State Tests
 # Author    : javaboy-vk
 # Date      : 2026-08-08
-# Version   : v6.0.5
+# Version   : v6.0.6
 # Purpose:
 #   Verifies activity-button colors and fixed UI sizing without a display.
 # =============================================================================

@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v6.0.7
+# Version   : v6.0.9
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, semantic
 #   application events, and shutdown lifecycle for LearningClock.
@@ -96,7 +96,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 from dataclasses import replace
 from datetime import date, datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from tkinter import messagebox
 
 # Operational algorithm:
@@ -1818,12 +1818,20 @@ class LearningClock:
 def clock_diagnostics_directory(
     configuration_path: Path | None, clock_id: str
 ) -> Path:
-    configuration_dir = (
-        configuration_path.parent
-        if configuration_path is not None
-        else DEFAULT_CONFIGURATION_DIR
-    )
-    return logs_directory(configuration_dir) / clock_id
+    if configuration_path is None:
+        configuration_dir = DEFAULT_CONFIGURATION_DIR
+    else:
+        windows_path = PureWindowsPath(str(configuration_path))
+        configuration_dir = (
+            Path(str(windows_path.parent))
+            if windows_path.drive
+            else configuration_path.parent
+        )
+    diagnostics_root = logs_directory(configuration_dir)
+    windows_diagnostics_root = PureWindowsPath(str(diagnostics_root))
+    if windows_diagnostics_root.drive:
+        return Path(str(windows_diagnostics_root / clock_id))
+    return diagnostics_root / clock_id
 
 
 # Source documentation:

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -81,9 +82,12 @@ def test_process_launch_is_detached_without_inherited_stream_pipes(tmp_path, mon
     assert captured["cwd"] == central(tmp_path).script_path.parent
     assert captured["stdin"] < 0 and captured["stdout"] < 0 and captured["stderr"] < 0
     assert captured["close_fds"] is True
-    assert captured["creationflags"] == (
+    expected_creation_flags = (
         CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB
+        if os.name == "nt"
+        else 0
     )
+    assert captured["creationflags"] == expected_creation_flags
     assert "shell" not in captured
     assert any(definition is PROCESS_CREATED for definition, _ in logger.events)
 
