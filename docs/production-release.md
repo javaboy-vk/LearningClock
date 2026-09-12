@@ -7,21 +7,23 @@ scripts\release.cmd --dry-run
 scripts\release.cmd
 ```
 
-Default production directory:
+Default installation root:
 
 ```text
-D:\LearningPath\Tools\LearningClock
+D:\LearningClock
 ```
 
-Files copied by release:
+Release layout:
 
-- `launcher\Learning-Clock.ico`
-- every `src\learningclock\*.py` module under `learningclock\`
-- the default `clock.properties`, while preserving an existing deployed copy
+- `Lib\learningclock\`: every application module, the single `app.py`, central `clock.properties`, and packaged dashboard assets
+- `Lib\protepo\`: the required pure-Python logging dependency
+- `props\`: all per-clock `.properties` files
+- `logs\`: LauncherPad logs and one subdirectory per clock
+- `assets\Learning-Clock.ico`: the released application icon
 
-VBS is no longer released. `D:\LearningPath\*.properties` remains the configuration-data directory; legacy `pythonExe` and `pyScriptPath` properties are ignored by LauncherPad.
+VBS is no longer released. Every per-clock `.properties` file remains under `D:\LearningClock\props`; release neither relocates nor deletes those files. Configure `pythonExe` and `pyScriptPath` once in `D:\LearningClock\Lib\learningclock\clock.properties`; later releases preserve that machine-specific file. `pyScriptPath` targets the only deployed application module, `D:\LearningClock\Lib\learningclock\app.py`. Release removes the superseded `runtime` tree only after the `Lib` deployment and dashboard export succeed.
 
-The released ICO is built from `launcher\Learning-Clock-source.png` with
+The released ICO under `D:\LearningClock\assets` is built from `launcher\Learning-Clock-source.png` with
 `scripts\Build-LauncherIcon.ps1`. It contains native 16, 20, 24, 32, 40, 48,
 64, 96, 128, and 256 pixel frames for Start Menu, shortcut, desktop, and window
 title-bar display. The builder also synchronizes
@@ -41,14 +43,14 @@ path\to\python.exe -m pip check
 
 Create one Desktop/Start Menu shortcut to that environment's `Scripts\learningclock-gui.exe`. The generated GUI entry point opens LauncherPad without a console or arguments. Do not create per-clock shortcuts.
 
-Release also reads `D:\LearningPath\*.properties` and exports the shared dashboard component beside each configured `LearningPath` CSV folder:
+Release exports one centralized dashboard and one Dataview implementation:
 
 ```text
-Learning-Clock-Dashboard.md
-views\
+D:\DiavgeiaVault\Learning-Clock-Dashboard.md
+D:\DiavgeiaVault\Engineering\LearningClock\views\learning-clock-dashboard\view.js
 ```
 
-For a properties file with `logDir=D:\DiavgeiaVault\Engineering\MAGPAI\LearningPath`, release updates `D:\DiavgeiaVault\Engineering\MAGPAI\Learning-Clock-Dashboard.md` and `D:\DiavgeiaVault\Engineering\MAGPAI\views\`.
+The central view scans the open Obsidian vault for `*/LearningPath/learning_time_log.csv`. For `logDir=D:\DiavgeiaVault\Engineering\MAGPAI`, the CSV remains under `MAGPAI\LearningPath` and appears in the dashboard's clock selector without a Markdown or JavaScript copy under `MAGPAI`.
 
 Release to a different folder:
 
@@ -70,7 +72,7 @@ Output:
 build\dist
 ```
 
-The build uses `setuptools` through `pyproject.toml`. `[project.gui-scripts]` produces `learningclock-gui.exe`; `[project.scripts]` retains the non-GUI `learningclock` health/version CLI. Package data includes the multi-resolution window ICO. PyInstaller is not part of this repository.
+The build uses `setuptools` through `pyproject.toml`. `[project.gui-scripts]` produces `learningclock-gui.exe`; `[project.scripts]` retains the non-GUI `learningclock` health/version CLI. Package data includes the multi-resolution ICO and central properties; wheel data includes the canonical dashboard resources. PyInstaller is not part of this repository.
 
 ## Generated Output Policy
 

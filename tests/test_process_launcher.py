@@ -1,71 +1,45 @@
-# =============================================================================
-# File Name : test_process_launcher.py
-# Artifact  : LearningClock - GUI Process Launcher Tests
-# Author    : javaboy-vk
-# Date      : 2026-08-31
-# Version   : v1.0.1
-# Purpose:
-#   Verifies source and packaged commands, interpreter selection, and the
-#   shell/VBS-free independent process contract.
-# =============================================================================
-
 from pathlib import Path
 
 import pytest
 
-from learningclock.configuration import ConfiguredClock
+from learningclock.configuration import CentralConfiguration, ConfiguredClock
 from learningclock.process_launcher import (
     CREATE_BREAKAWAY_FROM_JOB,
     CREATE_NEW_PROCESS_GROUP,
     DETACHED_PROCESS,
     build_clock_command,
     launch_clock,
-    select_gui_python,
 )
 from learningclock.telemetry import PROCESS_CREATED, PROCESS_LAUNCH_FAILED
 
 
 def clock(tmp_path: Path) -> ConfiguredClock:
     path = tmp_path / "Clock With Spaces.properties"
-    return ConfiguredClock("clock", "Clock", "Clock", path, tmp_path / "logs")
+    return ConfiguredClock("clock", "Clock", "Clock With Spaces", path, tmp_path / "Log Dir")
 
 
-def test_source_command_uses_module_and_gui_interpreter(tmp_path):
-    python = tmp_path / "python.exe"
-    pythonw = tmp_path / "pythonw.exe"
-    python.write_bytes(b"")
-    pythonw.write_bytes(b"")
-
-    command, mode = build_clock_command(
-        clock(tmp_path), "correlation-1", python_executable=python
+def central(tmp_path: Path) -> CentralConfiguration:
+    return CentralConfiguration(
+        tmp_path / "clock.properties",
+        tmp_path / "Python With Spaces" / "pythonw.exe",
+        tmp_path / "App With Spaces" / "app.py",
     )
 
-    assert mode == "source"
-    assert Path(command[0]) == pythonw.resolve()
-    assert command[1:3] == ["-m", "learningclock.desktop"]
-    assert command[3:] == [
-        "--clock",
-        str(tmp_path / "Clock With Spaces.properties"),
+
+def test_command_combines_central_and_per_clock_configuration(tmp_path):
+    command, mode = build_clock_command(clock(tmp_path), central(tmp_path), "correlation-1")
+    assert mode == "configured-python"
+    assert command == [
+        str(tmp_path / "Python With Spaces" / "pythonw.exe"),
+        str(tmp_path / "App With Spaces" / "app.py"),
+        "--learning-path",
+        "Clock With Spaces",
+        "--log-dir",
+        str(tmp_path / "Log Dir" / "LearningPath"),
+        "--clock-id",
+        "clock",
         "--correlation-id",
         "correlation-1",
-    ]
-    assert select_gui_python(python) == pythonw.resolve()
-
-
-def test_packaged_command_relaunches_gui_executable_directly(tmp_path):
-    executable = tmp_path / "LearningClock.exe"
-
-    command, mode = build_clock_command(
-        clock(tmp_path), "correlation-2", packaged_executable=executable
-    )
-
-    assert mode == "packaged"
-    assert command == [
-        str(executable),
-        "--clock",
-        str(tmp_path / "Clock With Spaces.properties"),
-        "--correlation-id",
-        "correlation-2",
     ]
 
 
@@ -75,7 +49,6 @@ def test_normal_launcher_modules_have_no_vbs_or_shell_dependency():
         (root / name).read_text(encoding="utf-8")
         for name in ("desktop.py", "launcherpad.py", "process_launcher.py")
     ).casefold()
-
     assert ".vbs" not in text
     assert "wscript" not in text
     assert "cscript" not in text
@@ -103,15 +76,9 @@ def test_process_launch_is_detached_without_inherited_stream_pipes(tmp_path, mon
 
     monkeypatch.setattr("learningclock.process_launcher.subprocess.Popen", fake_popen)
     logger = CaptureLogger()
-
-    process_id = launch_clock(
-        clock(tmp_path),
-        "correlation-3",
-        logger=logger,
-        packaged_executable=tmp_path / "LearningClock.exe",
-    )
-
+    process_id = launch_clock(clock(tmp_path), central(tmp_path), "correlation-3", logger=logger)
     assert process_id == 4321
+    assert captured["cwd"] == central(tmp_path).script_path.parent
     assert captured["stdin"] < 0 and captured["stdout"] < 0 and captured["stderr"] < 0
     assert captured["close_fds"] is True
     assert captured["creationflags"] == (
@@ -122,20 +89,17 @@ def test_process_launch_is_detached_without_inherited_stream_pipes(tmp_path, mon
 
 
 def test_process_launch_failure_emits_formal_error_event(tmp_path, monkeypatch):
-    def fail_popen(_command, **_kwargs):
+    def fail(*_args, **_kwargs):
         raise OSError("launch blocked")
 
-    monkeypatch.setattr("learningclock.process_launcher.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("learningclock.process_launcher.subprocess.Popen", fail)
     logger = CaptureLogger()
-
     with pytest.raises(OSError, match="launch blocked"):
-        launch_clock(
-            clock(tmp_path),
-            "correlation-4",
-            logger=logger,
-            packaged_executable=tmp_path / "LearningClock.exe",
-        )
-
-    failure = next(properties for definition, properties in logger.events if definition is PROCESS_LAUNCH_FAILED)
+        launch_clock(clock(tmp_path), central(tmp_path), "correlation-4", logger=logger)
+    failure = next(
+        properties
+        for definition, properties in logger.events
+        if definition is PROCESS_LAUNCH_FAILED
+    )
     assert failure["clock_id"] == "clock"
     assert failure["error_type"] == "OSError"

@@ -1,8 +1,8 @@
 # LearningClock 6.0 Python Source Code
 
 **Product Release:** 6.0  
-**Document Revision:** R8
-**Document Version:** 6.0.R8
+**Document Revision:** R10
+**Document Version:** 6.0.R10
 
 This catalog documents every tracked Python area and explicitly includes the
 v6.0 modules added for configuration discovery, LauncherPad, process launching,
@@ -17,14 +17,17 @@ singleton enforcement, and formal telemetry.
 | `src/learningclock/api.py` | FastAPI app, typed `HealthResponse`, `GET /health`, and generated OpenAPI surfaces. It does not control desktop state. |
 | `src/learningclock/app.py` | Configured Tkinter clock, timer/manual-entry state, calendar, checkpointing, singleton acquisition, and shutdown recovery. |
 | `src/learningclock/cli.py` | Non-GUI readiness/version command with stdout reserved for user output. |
-| `src/learningclock/configuration.py` | Immutable `ConfiguredClock`, validation, stable identity, discovery ordering, and isolated `ConfigurationIssue` results. |
+| `src/learningclock/configuration.py` | Central `pythonExe`/`pyScriptPath`, immutable per-clock configuration, literal properties parsing, validation, migration, identity, de-duplication, ordering, and isolated issues. |
 | `src/learningclock/csv_store.py` | CSV schema, legacy normalization, chronological rows, aggregate totals, emergency files, and storage events. |
 | `src/learningclock/desktop.py` | One GUI entry that delays imports and dispatches LauncherPad or internal `--clock` mode. |
+| `src/learningclock/date_picker.py` | Dependency-free modal Tkinter calendar used by custom report ranges. |
 | `src/learningclock/events.py` | Stable catalog-style product events for application, UI, timer, storage, configuration, and CLI behavior. |
-| `src/learningclock/launcherpad.py` | Multi-clock Tkinter grid, mutex observation, correlated launch requests, and non-owning close behavior. |
+| `src/learningclock/launcherpad.py` | Multi-clock grid, create form, asynchronous cross-clock histogram, mutex observation, correlated launch requests, and non-owning close behavior. |
 | `src/learningclock/learning-clock.py` | Compatibility adapter for historical direct script/debug launch paths. |
 | `src/learningclock/observability.py` | protepo.log 2.0 composition, version enforcement, named loggers, local/Seq sinks, fallback, and correlation. |
-| `src/learningclock/process_launcher.py` | Packaged/source command selection and detached, shell-free, stream-free process creation. |
+| `src/learningclock/process_launcher.py` | Central-plus-per-clock command construction and detached, shell-free, stream-free process creation. |
+| `src/learningclock/provisioning.py` | New-clock validation, exact two-key properties, canonical CSV initialization, atomic writes, and safe rollback. |
+| `src/learningclock/reporting.py` | Inclusive period resolution, legacy-compatible read-only CSV parsing, category aggregation, and warning isolation. |
 | `src/learningclock/singleton.py` | Injectable Windows mutex API, process-lifetime ownership guard, and non-owning observation. |
 | `src/learningclock/telemetry.py` | Formal v2 `LPLCL`, `CONFG`, `LPCRP`, `MUTEX`, `LIFCL`, and `CLNDR` event definitions. |
 | `src/learningclock/window_icon.py` | Resolves the shared ICO across installed, frozen, released-source, and repository layouts and applies it non-fatally to both primary Tk title bars. |
@@ -58,11 +61,12 @@ programmatic or otherwise unvalidated value cannot bypass the contract.
 | `tests/test_dev_launcherpad.py` | Detached LauncherPad developer startup and side-effect-free Start Menu command construction. |
 | `tests/test_launcherpad_configuration.py` | Legacy identity, ordering, malformed-file isolation, and duplicate IDs. |
 | `tests/test_launcherpad.py` | Available/running control-state mapping without a display. |
+| `tests/test_launcherpad_requirements.py` | Central configuration, migration, provisioning, rollback, date ranges, aggregation, UI contracts, and packaged resources. |
 | `tests/test_launcher_icon.py` | Native icon-size inventory, PNG-backed ICO frames, source artwork, and reproducible builder contract. |
 | `tests/test_learning_clock_csv_regression.py` | Fixture and configured-file CSV regression behavior. |
 | `tests/test_learning_clock_csv_unit.py` | Schema, compatibility, totals, checkpoints, recovery, dates, manual time, and pages. |
 | `tests/test_observability.py` | Catalog identity, event families, structured properties, local files, and native loggers. |
-| `tests/test_process_launcher.py` | Source/packaged commands, no-shell/no-VBS contract, detached flags, and failures. |
+| `tests/test_process_launcher.py` | Central runtime command composition, no-shell/no-VBS contract, detached flags, and failures. |
 | `tests/test_release_observability.py` | Production release inclusion of the observability modules. |
 | `tests/test_seq_dashboard.py` | Templates, dashboard coverage, workspace references, installer merge, and credential hygiene. |
 | `tests/test_singleton.py` | Fake mutex semantics plus Windows process-exit cleanup integration. |

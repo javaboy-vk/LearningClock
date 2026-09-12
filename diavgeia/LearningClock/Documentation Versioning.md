@@ -52,8 +52,8 @@ Version-independent material remains directly under `LearningClock/`:
 - `Developer-Commands.md` documents the current repository command surface.
 - `How-to-add-a-new-timer.md` is a maintenance workflow that links to the
   applicable release contract.
-- `Learning-Clock-Dashboard.md` and `views/` are deployable tooling copied beside
-  configured CSV data, rather than a controlled release-document set.
+- `Learning-Clock-Dashboard.md` is published once at the vault root, while its
+  centralized `views/` implementation remains under `Engineering/LearningClock`.
 - `LauncherPad-and-Observability.md` remains a compatibility link for the
   previously published path.
 

@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Developer Command Runner
 # Author    : javaboy-vk
 # Date      : 2026-06-05
-# Version   : v6.0.2
+# Version   : v6.8.0
 # Purpose:
 #   Provides Maven-style lifecycle commands for the Python project.
 #
@@ -17,13 +17,14 @@
 # Safety contract:
 #   safe_remove() refuses paths outside the repository. Build products remain
 #   under build/ where possible. deploy and release are explicit targets because
-#   they write to configured external LearningPath or Diavgeia locations.
+#   they write to configured external LearningClock or Diavgeia locations.
 # =============================================================================
 
 from __future__ import annotations
 
 import argparse
 import compileall
+import importlib.util
 import json
 import os
 import shutil
@@ -37,10 +38,15 @@ BUILD_DIR = ROOT / "build"
 VENV_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
 VENV_PYTHONW = ROOT / ".venv" / "Scripts" / "pythonw.exe"
 REGRESSION_PROPERTIES = ROOT / "tests" / "fixtures" / "clock-QA.properties"
-PRODUCTION_APP_DIR = Path(r"D:\LearningPath\Tools\LearningClock")
-LEARNING_PATH_PROPERTIES_DIR = Path(r"D:\LearningPath")
+PRODUCTION_ROOT = Path(r"D:\LearningClock")
+PRODUCTION_LIB_DIR = PRODUCTION_ROOT / "Lib"
+LEARNINGCLOCK_PROPERTIES_DIR = PRODUCTION_ROOT / "props"
+LEARNINGCLOCK_LOG_DIR = PRODUCTION_ROOT / "logs"
+LEARNINGCLOCK_ASSETS_DIR = PRODUCTION_ROOT / "assets"
 DASHBOARD_MARKDOWN = ROOT / "diavgeia" / "LearningClock" / "Learning-Clock-Dashboard.md"
 DASHBOARD_VIEWS_DIR = ROOT / "diavgeia" / "LearningClock" / "views"
+DIAVGEIA_LEARNINGCLOCK_DIR = Path(r"D:\DiavgeiaVault\Engineering\LearningClock")
+DIAVGEIA_VAULT_ROOT = Path(r"D:\DiavgeiaVault")
 LAUNCHER_ICON = ROOT / "launcher" / "Learning-Clock.ico"
 REGISTER_LAUNCHERPAD_SCRIPT = ROOT / "scripts" / "Register-LauncherPad.ps1"
 WINDOWS_DETACHED_CREATION_FLAGS = 0x00000008 | 0x00000200 | 0x01000000
@@ -129,78 +135,42 @@ def remove_python_metadata() -> None:
 
 
 # Source documentation:
-#   What it does: Reads launcher properties needed by deployment tooling.
-#   Why it exists: Dashboard export must resolve learning paths without importing GUI code.
-#   Designed use: Export helpers call it on trusted .properties files; comments/blanks are ignored.
-def load_properties(path: Path) -> dict[str, str]:
-    values = {}
-    with path.open("r", encoding="utf-8") as handle:
-        for line in handle:
-            stripped = line.strip()
-            if not stripped or stripped.startswith(("#", ";")):
-                continue
-            key, separator, value = stripped.partition("=")
-            if separator:
-                values[key.strip()] = value.strip().strip('"')
-    return values
+#   What it does: Copies the one dashboard and one Dataview implementation to the vault.
+#   Why it exists: All clocks are selected from a single page without generated copies.
+#   Designed use: release calls it from packaged runtime assets; tests may override the target.
+def export_dashboard_components(
+    *,
+    source_dir: Path | None = None,
+    dashboard_target_dir: Path = DIAVGEIA_VAULT_ROOT,
+    views_target_dir: Path = DIAVGEIA_LEARNINGCLOCK_DIR / "views",
+    dry_run: bool = False,
+) -> None:
+    source_root = source_dir or DASHBOARD_MARKDOWN.parent
+    source_markdown = source_root / DASHBOARD_MARKDOWN.name
+    source_views = source_root / "views"
+    if not source_markdown.exists():
+        raise SystemExit(f"Dashboard source file was not found: {source_markdown}")
+    if not source_views.exists():
+        raise SystemExit(f"Dashboard views source folder was not found: {source_views}")
 
+    target_markdown = dashboard_target_dir / source_markdown.name
+    target_views = views_target_dir
+    obsolete_dashboard = views_target_dir.parent / source_markdown.name
+    if dry_run:
+        print(f"would export central dashboard: {source_markdown} -> {target_markdown}")
+        print(f"would export central dashboard view: {source_views} -> {target_views}")
+        if obsolete_dashboard.exists() and obsolete_dashboard.resolve() != target_markdown.resolve():
+            print(f"would remove obsolete dashboard location: {obsolete_dashboard}")
+        return
 
-def resolve_config_path(value: str, base_dir: Path) -> Path:
-
-    path = Path(value)
-    if path.is_absolute():
-        return path
-    return (base_dir / path).resolve()
-
-
-# Source documentation:
-#   What it does: Resolves dashboard destinations from configured clock log directories.
-#   Why it exists: Each dashboard location must derive from configuration, not guessed names.
-#   Designed use: export_dashboard_components consumes the source/destination pairs.
-def learning_path_dashboard_destinations(properties_dir: Path) -> list[tuple[Path, Path]]:
-    destinations = []
-    for properties_path in sorted(properties_dir.glob("*.properties")):
-        properties = load_properties(properties_path)
-        log_dir_value = properties.get("logDir")
-        if not log_dir_value:
-            print(f"skipping dashboard export without logDir: {properties_path}")
-            continue
-        log_dir = resolve_config_path(log_dir_value, properties_path.parent)
-        destinations.append((properties_path, log_dir.parent))
-    return destinations
-
-
-# Source documentation:
-#   What it does: Copies shared dashboard Markdown and view beside each configured path.
-#   Why it exists: The Dataview loader expects a self-contained component near each clock's CSV.
-#   Designed use: deploy/release call it; dry_run reports writes, and missing inputs stop early.
-def export_dashboard_components(properties_dir: Path, *, dry_run: bool = False) -> None:
-    if not DASHBOARD_MARKDOWN.exists():
-        raise SystemExit(f"Dashboard source file was not found: {DASHBOARD_MARKDOWN}")
-    if not DASHBOARD_VIEWS_DIR.exists():
-        raise SystemExit(f"Dashboard views source folder was not found: {DASHBOARD_VIEWS_DIR}")
-
-    destinations = learning_path_dashboard_destinations(properties_dir)
-    if not destinations:
-        raise SystemExit(f"No dashboard destinations resolved from {properties_dir}")
-
-    for properties_path, destination in destinations:
-        target_markdown = destination / DASHBOARD_MARKDOWN.name
-        target_views_dir = destination / "views"
-        if dry_run:
-            print(
-                f"would export dashboard from {properties_path.name}: "
-                f"{DASHBOARD_MARKDOWN.relative_to(ROOT)} -> {target_markdown}"
-            )
-            print(
-                f"would export dashboard from {properties_path.name}: "
-                f"{DASHBOARD_VIEWS_DIR.relative_to(ROOT)} -> {target_views_dir}"
-            )
-            continue
-        destination.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(DASHBOARD_MARKDOWN, target_markdown)
-        shutil.copytree(DASHBOARD_VIEWS_DIR, target_views_dir, dirs_exist_ok=True)
-        print(f"exported dashboard from {properties_path.name} -> {destination}")
+    dashboard_target_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source_markdown, target_markdown)
+    shutil.copytree(source_views, target_views, dirs_exist_ok=True)
+    if obsolete_dashboard.exists() and obsolete_dashboard.resolve() != target_markdown.resolve():
+        obsolete_dashboard.unlink()
+        print(f"removed obsolete dashboard location -> {obsolete_dashboard}")
+    print(f"exported central dashboard -> {target_markdown}")
+    print(f"exported central dashboard view -> {target_views}")
 
 
 # Source documentation:
@@ -342,7 +312,8 @@ def seq_dashboard(args: list[str] | None = None) -> None:
 #     creating an independent GUI process and reports its process identifier.
 def launcherpad(args: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="dev.py launcherpad")
-    parser.add_argument("--config-dir", default=str(LEARNING_PATH_PROPERTIES_DIR))
+    parser.add_argument("--config-dir", default=str(LEARNINGCLOCK_PROPERTIES_DIR))
+    parser.add_argument("--central-config", default=None)
     parsed_args = parser.parse_args(args or [])
 
     environment = os.environ.copy()
@@ -354,6 +325,8 @@ def launcherpad(args: list[str] | None = None) -> None:
         "--config-dir",
         str(Path(parsed_args.config_dir)),
     ]
+    if parsed_args.central_config:
+        command.extend(["--central-config", str(Path(parsed_args.central_config))])
     creation_flags = WINDOWS_DETACHED_CREATION_FLAGS if os.name == "nt" else 0
     process = subprocess.Popen(
         command,
@@ -376,8 +349,9 @@ def launcherpad(args: list[str] | None = None) -> None:
 #     shortcut's discovery folder and --no-pin skips the Windows shell pin request.
 def register_launcherpad(args: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="dev.py launcherpad-register")
-    parser.add_argument("--config-dir", default=str(LEARNING_PATH_PROPERTIES_DIR))
+    parser.add_argument("--config-dir", default=str(LEARNINGCLOCK_PROPERTIES_DIR))
     parser.add_argument("--no-pin", action="store_true")
+    parser.add_argument("--central-config", default=None)
     parsed_args = parser.parse_args(args or [])
 
     pythonw = require_venv_pythonw()
@@ -388,14 +362,15 @@ def register_launcherpad(args: list[str] | None = None) -> None:
             f"LauncherPad registration script was not found: {REGISTER_LAUNCHERPAD_SCRIPT}"
         )
 
-    shortcut_arguments = subprocess.list2cmdline(
-        [
-            "-m",
-            "learningclock.desktop",
-            "--config-dir",
-            str(Path(parsed_args.config_dir)),
-        ]
-    )
+    desktop_arguments = [
+        "-m",
+        "learningclock.desktop",
+        "--config-dir",
+        str(Path(parsed_args.config_dir)),
+    ]
+    if parsed_args.central_config:
+        desktop_arguments.extend(["--central-config", str(Path(parsed_args.central_config))])
+    shortcut_arguments = subprocess.list2cmdline(desktop_arguments)
     command = [
         "powershell",
         "-NoProfile",
@@ -473,8 +448,8 @@ def install(_args: list[str] | None = None) -> None:
 
 
 # Source documentation:
-#   What it does: Publishes Diavgeia content and configured dashboard components.
-#   Why it exists: The central vault and per-LearningPath dashboards must refresh together.
+#   What it does: Publishes the complete LearningClock Diavgeia area.
+#   Why it exists: The vault-level dashboard and its view must refresh together.
 #   Designed use: Invoke explicitly through dev deploy because it writes outside the repository.
 def deploy(_args: list[str] | None = None) -> None:
     run(
@@ -487,27 +462,72 @@ def deploy(_args: list[str] | None = None) -> None:
             str(ROOT / "scripts" / "export-diavgeia-vault.ps1"),
         ]
     )
-    export_dashboard_components(LEARNING_PATH_PROPERTIES_DIR)
+
+
+def bundled_protepo_source() -> Path:
+    """Resolve the installed pure-Python protepo package required by the GUI runtime."""
+
+    specification = importlib.util.find_spec("protepo")
+    locations = tuple(specification.submodule_search_locations or ()) if specification else ()
+    if not locations:
+        raise SystemExit("The release environment does not contain the required protepo package.")
+    source = Path(locations[0]).resolve()
+    if not source.is_dir():
+        raise SystemExit(f"The installed protepo package directory was not found: {source}")
+    return source
+
+
+def remove_obsolete_runtime_directory(
+    production_root: Path, *, dry_run: bool = False
+) -> None:
+    """Remove only the superseded runtime tree within the selected installation root."""
+
+    resolved_root = production_root.resolve()
+    obsolete = (resolved_root / "runtime").resolve()
+    if obsolete.parent != resolved_root or obsolete.name.casefold() != "runtime":
+        raise RuntimeError(f"Refusing unexpected runtime cleanup target: {obsolete}")
+    if not obsolete.exists():
+        return
+    if dry_run:
+        print(f"would remove obsolete runtime directory: {obsolete}")
+        return
+    shutil.rmtree(obsolete)
+    print(f"removed obsolete runtime directory: {obsolete}")
 
 
 # Source documentation:
-#   What it does: Stages the complete runtime, icon, properties, and dashboards.
-#   Why it exists: Production needs every package module while preserving autosave configuration.
+#   What it does: Stages modules under Lib, configuration under props, and static assets.
+#   Why it exists: Production needs every package module while preserving machine configuration.
 #   Designed use: Run dev release --dry-run first, then release to an explicit/default directory.
 def release(args: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="dev.py release")
-    parser.add_argument("--production-dir", default=str(PRODUCTION_APP_DIR))
+    parser.add_argument("--production-dir", default=str(PRODUCTION_ROOT))
     parser.add_argument("--dry-run", action="store_true")
     parsed_args = parser.parse_args(args or [])
-    production_dir = Path(parsed_args.production_dir)
+    production_root = Path(parsed_args.production_dir)
+    lib_dir = production_root / "Lib"
+    protepo_source = bundled_protepo_source()
     release_files = [
         (
             ROOT / "launcher" / "Learning-Clock.ico",
-            production_dir / "Learning-Clock.ico",
+            production_root / "assets" / "Learning-Clock.ico",
+        ),
+        (
+            DASHBOARD_MARKDOWN,
+            lib_dir / "learningclock" / "dashboard_assets" / DASHBOARD_MARKDOWN.name,
+        ),
+        (
+            DASHBOARD_VIEWS_DIR / "learning-clock-dashboard" / "view.js",
+            lib_dir
+            / "learningclock"
+            / "dashboard_assets"
+            / "views"
+            / "learning-clock-dashboard"
+            / "view.js",
         ),
     ]
     release_files.extend(
-        (source, production_dir / "learningclock" / source.name)
+        (source, lib_dir / "learningclock" / source.name)
         for source in sorted((ROOT / "src" / "learningclock").glob("*.py"))
     )
 
@@ -521,12 +541,25 @@ def release(args: list[str] | None = None) -> None:
         shutil.copy2(source, target)
         print(f"released: {source.relative_to(ROOT)} -> {target}")
 
+    for directory in (production_root / "props", production_root / "logs"):
+        if parsed_args.dry_run:
+            print(f"would ensure directory: {directory}")
+        else:
+            directory.mkdir(parents=True, exist_ok=True)
+
+    protepo_target = lib_dir / "protepo"
+    if parsed_args.dry_run:
+        print(f"would release runtime dependency: {protepo_source} -> {protepo_target}")
+    else:
+        shutil.copytree(protepo_source, protepo_target, dirs_exist_ok=True)
+        print(f"released runtime dependency: {protepo_source} -> {protepo_target}")
+
     default_clock_properties = ROOT / "src" / "learningclock" / "clock.properties"
-    deployed_clock_properties = production_dir / "learningclock" / "clock.properties"
+    deployed_clock_properties = lib_dir / "learningclock" / "clock.properties"
     if not default_clock_properties.exists():
         raise SystemExit(f"Release source file was not found: {default_clock_properties}")
     if deployed_clock_properties.exists():
-        print(f"preserved configured autosave file: {deployed_clock_properties}")
+        print(f"preserved configured central file: {deployed_clock_properties}")
     elif parsed_args.dry_run:
         print(
             f"would release: {default_clock_properties.relative_to(ROOT)} -> {deployed_clock_properties}"
@@ -538,7 +571,12 @@ def release(args: list[str] | None = None) -> None:
             f"released: {default_clock_properties.relative_to(ROOT)} -> {deployed_clock_properties}"
         )
 
-    export_dashboard_components(LEARNING_PATH_PROPERTIES_DIR, dry_run=parsed_args.dry_run)
+    runtime_dashboard_assets = lib_dir / "learningclock" / "dashboard_assets"
+    export_dashboard_components(
+        source_dir=None if parsed_args.dry_run else runtime_dashboard_assets,
+        dry_run=parsed_args.dry_run,
+    )
+    remove_obsolete_runtime_directory(production_root, dry_run=parsed_args.dry_run)
 
 
 # Source documentation:

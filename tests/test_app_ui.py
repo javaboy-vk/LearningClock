@@ -3,10 +3,12 @@
 # Artifact  : LearningClock - Tkinter UI State Tests
 # Author    : javaboy-vk
 # Date      : 2026-08-08
-# Version   : v6.0.4
+# Version   : v6.0.5
 # Purpose:
 #   Verifies activity-button colors and fixed UI sizing without a display.
 # =============================================================================
+
+from pathlib import Path
 
 from learningclock.app import (
     ACTIVE_TIMER_BUTTON_BACKGROUND,
@@ -18,8 +20,15 @@ from learningclock.app import (
     MENU_FONT,
     LearningClock,
     calendar_month_weeks,
+    clock_diagnostics_directory,
     present_calendar_popup,
 )
+
+
+def test_clock_diagnostics_are_centralized_by_clock_identity():
+    assert clock_diagnostics_directory(
+        Path(r"D:\LearningClock\props\Alpha.properties"), "alpha"
+    ) == Path(r"D:\LearningClock\logs\alpha")
 
 
 class FakeButton:

@@ -1,8 +1,8 @@
 # LearningClock 6.0 Architecture Diagrams
 
 **Product Release:** 6.0  
-**Document Revision:** R1  
-**Document Version:** 6.0.R1
+**Document Revision:** R6
+**Document Version:** 6.0.R6
 
 ## System context
 
@@ -11,6 +11,8 @@ flowchart LR
     User[User] --> LauncherPad[LearningClock LauncherPad]
     LauncherPad --> ClockA[Configured Clock A]
     LauncherPad --> ClockB[Configured Clock B]
+    LauncherPad --> Provision[Transactional clock provisioning]
+    LauncherPad --> Report[Cross-clock category histogram]
     ClockA --> CsvA[(Clock A CSV)]
     ClockB --> CsvB[(Clock B CSV)]
     LauncherPad --> Logs[Local semantic logs]
@@ -27,8 +29,10 @@ flowchart LR
 flowchart TD
     Entry[learningclock-gui] --> Desktop[desktop.main]
     Desktop -->|no --clock| LP[LauncherPad process]
-    LP --> Discovery[Discover configurations]
-    LP -->|selected properties and correlation ID| Child[Detached clock process]
+    LP --> Central[Load central runtime configuration]
+    LP --> Discovery[Discover and migrate clock configurations]
+    Central -->|pythonExe and pyScriptPath| Child[Detached clock process]
+    Discovery -->|learning-path-name and logDir| Child
     Child --> Guard[Acquire per-clock named mutex]
     Guard -->|new owner| App[Tkinter LearningClock]
     Guard -->|already exists| Reject[Reject before persistence]
@@ -48,9 +52,10 @@ sequenceDiagram
     participant CSV as CsvStore
     User->>LP: Select configured clock
     LP->>LP: Create correlation ID
-    LP->>PL: launch_clock(configuration, correlation)
+    LP->>LP: Validate central executable and script
+    LP->>PL: launch_clock(central, clock, correlation)
     PL-->>LP: Detached process ID
-    PL->>Clock: --clock PATH --correlation-id ID
+    PL->>Clock: app.py --learning-path NAME --log-dir PATH
     Clock->>Mutex: CreateMutexW(clock_id)
     alt mutex acquired
         Mutex-->>Clock: owned handle
@@ -60,6 +65,28 @@ sequenceDiagram
         Mutex-->>Clock: ERROR_ALREADY_EXISTS
         Clock-->>User: reject duplicate startup
     end
+```
+
+## Provisioning and report flow
+
+```mermaid
+flowchart LR
+    Form[Create New Clock form] --> Validate[Validate name, path, duplicates, conflicts]
+    Validate --> Atomic[Atomic properties and LearningPath CSV writes]
+    Central[One deployed vault dashboard and view] --> Scan[Discover every LearningPath CSV]
+    Scan --> Select[Select a clock]
+    Atomic --> Refresh[Immediate discovery refresh]
+    Refresh --> Launch[Launchable clock]
+    Refresh --> Worker[Background report worker]
+    Worker --> Rows[Read dated non-TOTAL rows]
+    Rows --> Aggregate[Canonical ordered category totals]
+    Rows --> Issues[File row column value and reason]
+    Aggregate --> Latest{Latest request ID?}
+    Latest -->|yes| Chart[Vertical histogram]
+    Latest -->|no| Discard[Discard stale result]
+    Issues --> Link[Skipped invalid hyperlink]
+    Link --> Popup[Read-only diagnostic popup]
+    Popup --> Source[Open source file or nearest directory]
 ```
 
 ## Persistence flow
@@ -83,11 +110,11 @@ flowchart TD
 flowchart LR
     Components[Application components] --> Events[events.py and telemetry.py]
     Events --> Composition[observability.py]
-    Composition --> File[(learning_clock_debug.log)]
+    Composition --> File[(D:\LearningClock\logs\clock-id\learning_clock_debug.log)]
     Composition -. optional .-> SeqSink[Seq CLEF ingestion]
     SeqSink --> Seq[(Seq)]
     Seq --> Ops[LearningClock Operations dashboard]
-    SeqSink -->|delivery unavailable| Spool[(offline CLEF spool)]
+    SeqSink -->|delivery unavailable| Spool[(D:\LearningClock\logs\clock-id\offline CLEF spool)]
 ```
 
 Dashed Seq paths are optional. A dashboard event confirms received telemetry;

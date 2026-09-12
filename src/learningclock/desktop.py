@@ -3,16 +3,16 @@
 # Artifact  : LearningClock - Primary Windows GUI Entry Point
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v1.0.1
+# Version   : v1.1.0
 # Purpose:
-#   Opens LauncherPad by default and dispatches the internal --clock mode used
-#   for independent configured LearningClock GUI processes.
+#   Opens LauncherPad by default and retains the internal --clock compatibility
+#   mode for direct configured LearningClock GUI processes.
 #
 # Dispatch flow:
 #   main(argv)
 #   |-- parse_args(argv) without importing a Tkinter application module
 #   |-- no --clock: import and run launcherpad.main(config_dir, correlation_id)
-#   `-- --clock PATH: translate shared desktop flags and run app.main(arguments)
+#   `-- --clock PATH: translate compatibility desktop flags and run app.main(arguments)
 #
 # Boundary contract:
 #   This is the only packaged GUI entry point. Delayed imports keep LauncherPad
@@ -26,7 +26,7 @@ import argparse
 import os
 from pathlib import Path
 
-from learningclock.configuration import DEFAULT_CONFIGURATION_DIR
+from learningclock.configuration import DEFAULT_CONFIGURATION_DIR, central_configuration_path
 
 
 # Source documentation:
@@ -44,6 +44,11 @@ def parse_args(argv: list[str] | None = None):
         default=Path(os.getenv("LEARNINGCLOCK_CONFIG_DIR", str(DEFAULT_CONFIGURATION_DIR))),
     )
     parser.add_argument("--correlation-id", default=None)
+    parser.add_argument(
+        "--central-config",
+        type=Path,
+        default=central_configuration_path(),
+    )
     parser.add_argument("--debug-break-on-click", action="store_true")
     parser.add_argument("--debug-break-on-close", action="store_true")
     return parser.parse_args(argv)
@@ -60,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.clock is None:
         from learningclock.launcherpad import main as launcherpad_main
 
-        return launcherpad_main(args.config_dir, args.correlation_id)
+        return launcherpad_main(args.config_dir, args.correlation_id, args.central_config)
 
     from learningclock.app import main as clock_main
 

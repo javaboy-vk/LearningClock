@@ -5,7 +5,7 @@ rem ============================================================================
 rem File Name : help.bat
 rem Artifact  : LearningClock - Project Command Help
 rem Author    : javaboy-vk
-rem Version   : v1.1.0
+rem Version   : v1.3.0
 rem Purpose:
 rem   Shows the local command-line contract for LearningClock.
 rem =============================================================================
@@ -41,7 +41,7 @@ echo   dev dev clean                    Dispatch dev.cmd directly when needed
 echo.
 echo Runtime commands:
 echo   dev launcherpad
-echo   dev launcherpad --config-dir D:\LearningPath
+echo   dev launcherpad --config-dir D:\LearningClock\props
 echo   dev launcherpad-register
 echo   dev launcherpad-register --no-pin
 echo   .\.venv\Scripts\pythonw.exe -m learningclock.desktop --clock launcher\dev.properties

@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Shared Tkinter Window Icon
 # Author    : javaboy-vk
 # Date      : 2026-09-01
-# Version   : v1.0.0
+# Version   : v1.1.0
 # Purpose:
 #   Resolves and applies the same multi-resolution Windows icon to LauncherPad
 #   and configured LearningClock root windows across source and packaged modes.
@@ -28,6 +28,7 @@ def window_icon_candidates() -> tuple[Path, ...]:
     module_path = Path(__file__).resolve()
     return (
         module_path.parent / "assets" / ICON_FILE_NAME,
+        module_path.parents[2] / "assets" / ICON_FILE_NAME,
         Path(sys.executable).resolve().parent / ICON_FILE_NAME,
         module_path.parent.parent / ICON_FILE_NAME,
         module_path.parents[2] / "launcher" / ICON_FILE_NAME,

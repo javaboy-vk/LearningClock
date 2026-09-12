@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - CSV Persistence
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v5.4.1
+# Version   : v5.4.2
 # Purpose:
 #   Provides CSV read, write, normalization, total calculation, emergency
 #   session recovery, and semantic persistence events for LearningClock.
@@ -12,7 +12,7 @@
 #   CsvStore.__init__(log_dir, learning_path_name)
 #   |-- create log directory
 #   |-- set main CSV path: learning_time_log.csv
-#   `-- set diagnostic log path: learning_clock_debug.log
+#   `-- use the injected central diagnostic path, or default beside the CSV
 #
 #   LearningClock shutdown / regression test save path
 #   `-- CsvStore.save_session_summary(session_row)
@@ -104,7 +104,7 @@ ACTIVITIES = [
 #     Regression tests catch accidental CSV format drift and date-normalization regressions.
 LOG_FILE_NAME = "learning_time_log.csv"  # Main persisted session CSV.
 EMERGENCY_FILE_PREFIX = "learning_time_log_emergency_"  # Prefix for fallback one-session CSVs.
-DIAGNOSTIC_LOG_FILE_NAME = "learning_clock_debug.log"  # Diagnostic log beside the CSV.
+DIAGNOSTIC_LOG_FILE_NAME = "learning_clock_debug.log"  # Fallback when no path is injected.
 CSV_DATE_FORMAT = "%Y-%m-%d"  # Canonical persisted date format.
 CSV_DATE_FORMAT_DESCRIPTION = "YYYY-MM-DD"  # Human-readable date format label.
 LEGACY_CSV_DATE_FORMATS = [

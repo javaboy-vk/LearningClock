@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Protepo Log v2 Event Definitions
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v2.0.2
+# Version   : v2.1.0
 # Purpose:
 #   Defines formal, structured Protepo Logging Standard v2 events for LauncherPad,
 #   configuration, process launching, singleton protection, runtime, and calendar flows.
@@ -101,6 +101,49 @@ CONFIG_DISCOVERY_COMPLETED = _event(
     Severity.INFO,
     "Configuration discovery completed with {clock_count} valid clocks and {error_count} errors.",
     "Configuration",
+)
+CONFIG_LEGACY_MIGRATED = _event(
+    "CONFG-2007",
+    Severity.INFO,
+    "Legacy configuration {configuration_path} migrated; removed {removed_properties}.",
+    "Configuration",
+)
+CONFIG_LEGACY_MIGRATION_FAILED = _event(
+    "CONFG-2008",
+    Severity.ERROR,
+    "Legacy configuration migration failed for {configuration_path}: {error_type}: {error_message}.",
+    "Configuration",
+)
+CONFIG_DUPLICATE_SOURCE = _event(
+    "CONFG-2009",
+    Severity.WARN,
+    "Configuration {configuration_path} duplicates {duplicate_kind} {duplicate_value} and was skipped.",
+    "Configuration",
+)
+
+CLOCK_PROVISIONED = _event(
+    "LPLCL-1020",
+    Severity.INFO,
+    "Clock {clock_name} provisioned at {log_dir}.",
+    "LauncherPad",
+)
+CLOCK_PROVISION_FAILED = _event(
+    "LPLCL-1021",
+    Severity.ERROR,
+    "Clock provisioning failed for {clock_name}: {error_type}: {error_message}.",
+    "LauncherPad",
+)
+REPORT_COMPLETED = _event(
+    "LPLCL-1030",
+    Severity.INFO,
+    "Cross-clock report completed with {clock_count} clocks, {row_count} rows, and {warning_count} warnings.",
+    "LauncherPad",
+)
+REPORT_INPUT_SKIPPED = _event(
+    "LPLCL-1031",
+    Severity.WARN,
+    "Cross-clock report skipped {input_kind} for {clock_name}: {reason}.",
+    "LauncherPad",
 )
 
 LAUNCH_REQUESTED = _event(

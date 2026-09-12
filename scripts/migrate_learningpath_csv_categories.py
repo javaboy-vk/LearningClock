@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - External CSV Category Migration Utility
 # Author    : javaboy-vk
 # Date      : 2026-07-03
-# Version   : v0.1.2
+# Version   : v0.4.0
 # Purpose:
 #   Migrates LearningClock CSV files selected by launcher-style .properties files
 #   to the current category schema.
@@ -30,7 +30,7 @@
 #
 # Safety contract:
 #   - The script never guesses CSV locations from folder names alone. It reads
-#     logDir from each .properties file and appends learning_time_log.csv.
+#     logDir from each .properties file and appends LearningPath/learning_time_log.csv.
 #   - The original CSV is copied beside the source file before any rewrite.
 #   - Existing user rows are normalized through CsvStore so legacy compatibility
 #     stays identical to the app's normal read/write behavior.
@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--properties-root",
-        default=r"D:\LearningPath",
+        default=r"D:\LearningClock\props",
         help="Directory containing LearningClock .properties files.",
     )
     args = parser.parse_args(argv)
@@ -171,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
         learning_path_name = properties.get(
             "learning-path-name", properties_path.stem
         )  # Prefer explicit app label.
-        log_dir_value = properties.get("logDir")  # CSV directory is configured here.
+        log_dir_value = properties.get("logDir")  # Clock/dashboard directory is configured here.
         if not log_dir_value:
             print(f"SKIP\t{properties_path}\tmissing logDir")
             continue
@@ -179,7 +179,8 @@ def main(argv: list[str] | None = None) -> int:
         log_dir = resolve_path(
             log_dir_value, properties_path.parent
         )  # Match launcher relative-path behavior.
-        csv_path = log_dir / LOG_FILE_NAME  # LearningClock always uses this CSV name.
+        data_dir = log_dir if log_dir.name.casefold() == "learningpath" else log_dir / "LearningPath"
+        csv_path = data_dir / LOG_FILE_NAME
         if not csv_path.exists():
             print(f"SKIP\t{properties_path}\tmissing CSV\t{csv_path}")
             continue

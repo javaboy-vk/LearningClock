@@ -3,13 +3,14 @@ File Name : view.js
 Artifact  : LearningClock - Learning Clock Dashboard Dataview View
 Author    : javaboy-vk
 Date      : 2026-06-05
-Version   : v6.0
+Version   : v6.3
 Purpose:
-  Renders the LearningClock learning-time dashboard from the vault CSV.
+  Discovers every LearningClock CSV in the vault and renders the selected clock.
 */
 
 const csvFileName = "learning_time_log.csv";
 const legacyCsvFolderName = "LearningPath";
+const viewInput = typeof input === "object" && input ? input : {};
 
 const activityFields = [
   ["Reading", "reading"],
@@ -140,32 +141,76 @@ function getCurrentFolderPath() {
   return lastSlash >= 0 ? currentPath.slice(0, lastSlash) : "";
 }
 
-function getLearningPathName(rows) {
+function getLearningPathName(rows, fallbackName) {
+  if (viewInput.learningPathName) {
+    return String(viewInput.learningPathName);
+  }
   const rowWithPath = rows.find((row) => row.learning_path && row.learning_path.trim());
   if (rowWithPath) {
     return rowWithPath.learning_path.trim();
   }
 
-  const currentFolder = getCurrentFolderPath();
-  const folderParts = currentFolder.split("/").filter(Boolean);
-  return folderParts[folderParts.length - 1] || "LearningClock";
+  return fallbackName || "LearningClock";
 }
 
-function findCsvFile() {
+function resolveConfiguredCsvFile() {
+  if (!viewInput.csvPath) {
+    return null;
+  }
+
   const currentFolder = getCurrentFolderPath();
   const candidatePaths = [
-    joinVaultPath(currentFolder, csvFileName),
-    joinVaultPath(currentFolder, legacyCsvFolderName, csvFileName),
-  ];
+    String(viewInput.csvPath),
+    joinVaultPath(currentFolder, String(viewInput.csvPath)),
+  ].filter(Boolean);
 
   for (const candidatePath of candidatePaths) {
     const candidateFile = app.vault.getAbstractFileByPath(candidatePath);
     if (candidateFile) {
-      return { file: candidateFile, path: candidatePath };
+      return { file: candidateFile, path: candidatePath, name: String(viewInput.learningPathName || "LearningClock") };
     }
   }
 
   throw new Error(`CSV file not found in dashboard component: ${candidatePaths.join(" or ")}`);
+}
+
+function discoverClockSources() {
+  const configured = resolveConfiguredCsvFile();
+  if (configured) {
+    return [configured];
+  }
+
+  const suffix = `/${legacyCsvFolderName}/${csvFileName}`.toLowerCase();
+  const sources = app.vault.getFiles()
+    .filter((file) => `/${file.path}`.toLowerCase().endsWith(suffix))
+    .map((file) => {
+      const folderPath = file.path.slice(0, -suffix.length);
+      const folderParts = folderPath.split("/").filter(Boolean);
+      return {
+        file,
+        path: file.path,
+        name: folderParts[folderParts.length - 1] || "LearningClock",
+        folderPath,
+      };
+    });
+
+  const duplicateNames = new Set(
+    sources
+      .filter((source, index) => sources.some((other, otherIndex) => (
+        otherIndex !== index && other.name.localeCompare(source.name, undefined, { sensitivity: "accent" }) === 0
+      )))
+      .map((source) => source.name)
+  );
+  for (const source of sources) {
+    source.label = duplicateNames.has(source.name) ? source.folderPath : source.name;
+  }
+  return sources.sort((left, right) => (
+    (left.label || left.name).localeCompare(
+      right.label || right.name,
+      undefined,
+      { sensitivity: "base", numeric: true }
+    )
+  ));
 }
 
 function applyStyles(root) {
@@ -182,6 +227,20 @@ function applyStyles(root) {
     }
     .lc-title-name {
       color: #3279b7;
+    }
+    .lc-clock-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 18px 0 8px;
+    }
+    .lc-clock-picker label {
+      color: #164f86;
+      font-weight: 700;
+    }
+    .lc-clock-picker select {
+      min-width: 260px;
+      max-width: 100%;
     }
     .lc-bars {
       display: grid;
@@ -268,21 +327,51 @@ function applyStyles(root) {
       margin: 18px 0 0;
       white-space: pre-wrap;
     }
+    .lc-sessions {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .lc-sessions th,
+    .lc-sessions td {
+      border-bottom: 1px solid var(--background-modifier-border);
+      padding: 7px 10px;
+      text-align: left;
+    }
   `;
   root.appendChild(style);
 }
 
-try {
-  const root = dv.container;
-  applyStyles(root);
+function appendRecentSessions(parent, sessions) {
+  appendText(parent, "h2", "Recent Sessions");
+  const table = document.createElement("table");
+  table.className = "lc-sessions";
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  for (const heading of ["Date", "Start", "End", "Total", "Pages"]) {
+    appendText(headRow, "th", heading);
+  }
+  head.appendChild(headRow);
+  table.appendChild(head);
 
-  const { file, path: csvPath } = findCsvFile();
+  const body = document.createElement("tbody");
+  for (const row of sessions.slice(-10).reverse()) {
+    const tableRow = document.createElement("tr");
+    for (const value of [row.date, row.session_start, row.session_end, row.total, row.pages_read || "0"]) {
+      appendText(tableRow, "td", value || "");
+    }
+    body.appendChild(tableRow);
+  }
+  table.appendChild(body);
+  parent.appendChild(table);
+}
 
-  const text = await app.vault.read(file);
+async function renderDashboard(parent, source) {
+  parent.replaceChildren();
+  const text = await app.vault.read(source.file);
   const rows = parseCsv(text);
   const sessions = rows.filter((row) => row.date && row.date !== "TOTAL");
   const totalRow = rows.find((row) => row.date === "TOTAL");
-  const learningPathName = getLearningPathName(rows);
+  const learningPathName = getLearningPathName(rows, source.name);
 
   const totals = Object.fromEntries(activityFields.map(([, field]) => [field, 0]));
   let totalSeconds = 0;
@@ -304,11 +393,11 @@ try {
   const firstSession = sessions[0];
   const lastSession = sessions[sessions.length - 1];
 
-  appendDashboardTitle(root, learningPathName);
+  appendDashboardTitle(parent, learningPathName);
 
   const card = document.createElement("section");
   card.className = "lc-card";
-  root.appendChild(card);
+  parent.appendChild(card);
 
   const bars = document.createElement("div");
   bars.className = "lc-bars";
@@ -348,20 +437,47 @@ try {
   `;
   card.appendChild(footer);
 
-  dv.header(2, "Recent Sessions");
-  dv.table(
-    ["Date", "Start", "End", "Total", "Pages"],
-    sessions.slice(-10).reverse().map((row) => [
-      row.date,
-      row.session_start,
-      row.session_end,
-      row.total,
-      row.pages_read || "0",
-    ])
-  );
+  appendRecentSessions(parent, sessions);
+  appendText(parent, "h2", "CSV File");
+  appendText(parent, "div", source.path, "lc-source");
+}
 
-  dv.header(2, "CSV File");
-  appendText(root, "div", csvPath, "lc-source");
+try {
+  const root = dv.container;
+  applyStyles(root);
+  const sources = discoverClockSources();
+  if (sources.length === 0) {
+    throw new Error(`No */${legacyCsvFolderName}/${csvFileName} files were found in this vault.`);
+  }
+
+  const picker = document.createElement("div");
+  picker.className = "lc-clock-picker";
+  const pickerLabel = appendText(picker, "label", "Learning clock:");
+  const selector = document.createElement("select");
+  pickerLabel.htmlFor = "lc-clock-selector";
+  selector.id = "lc-clock-selector";
+  for (const source of sources) {
+    const option = document.createElement("option");
+    option.value = source.path;
+    option.textContent = source.label || source.name;
+    selector.appendChild(option);
+  }
+  picker.appendChild(selector);
+  root.appendChild(picker);
+
+  const dashboard = document.createElement("div");
+  root.appendChild(dashboard);
+  const showSelectedClock = async () => {
+    const source = sources.find((candidate) => candidate.path === selector.value) || sources[0];
+    try {
+      await renderDashboard(dashboard, source);
+    } catch (error) {
+      dashboard.replaceChildren();
+      appendText(dashboard, "p", `Dashboard error: ${error.message}`);
+    }
+  };
+  selector.addEventListener("change", showSelectedClock);
+  await showSelectedClock();
 } catch (error) {
   dv.paragraph(`Dashboard error: ${error.message}`);
 }

@@ -18,7 +18,7 @@ dev seq-dashboard
 
 The installer uses `seqcli template import --merge` and the ignored `import.state` mapping, so repeated runs update the existing entities. No credentials are stored in the repository.
 
-LearningClock runtime ingestion uses `LEARNINGCLOCK_SEQ_URL` or `SEQ_URL`, and `LEARNINGCLOCK_SEQ_API_KEY` or `SEQ_API_KEY`. It defaults to local Seq and spools failed clock delivery beside that clock's diagnostics. LauncherPad uses `D:\LearningPath\Tools\LearningClock\launcherpad_seq_offline.clef` by default.
+LearningClock runtime ingestion uses `LEARNINGCLOCK_SEQ_URL` or `SEQ_URL`, and `LEARNINGCLOCK_SEQ_API_KEY` or `SEQ_API_KEY`. It defaults to local Seq and spools failed clock delivery beside that clock's diagnostics. LauncherPad uses `D:\LearningClock\logs\launcherpad_seq_offline.clef` by default; clock spools use `D:\LearningClock\logs\<clock-id>\learning_clock_seq_offline.clef`.
 
 Select the **LearningClock** workspace, choose **LearningClock - All Events**, and enable **Tail**. In **LearningClock Operations**, the recent-events table intentionally shows only Timestamp, Level, EventId, Message, and ClockId, with ClockId as the rightmost column. The chart spans all 12 dashboard columns so the pane follows the available window width. Use the Seq Events workspace when complete structured-event inspection is required.
 

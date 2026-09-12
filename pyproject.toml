@@ -37,7 +37,11 @@ learningclock-gui = "learningclock.desktop:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-learningclock = ["assets/*.ico"]
+learningclock = ["assets/*.ico", "clock.properties"]
+
+[tool.setuptools.data-files]
+"learningclock/dashboard_assets" = ["diavgeia/LearningClock/Learning-Clock-Dashboard.md"]
+"learningclock/dashboard_assets/views/learning-clock-dashboard" = ["diavgeia/LearningClock/views/learning-clock-dashboard/view.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

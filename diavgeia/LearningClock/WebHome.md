@@ -20,10 +20,12 @@ between controlled release documentation and cross-release material.
 
 - [Developer Commands](Developer-Commands.md)
 - [How to add a new timer](How-to-add-a-new-timer.md)
-- [Learning Clock Dashboard](Learning-Clock-Dashboard.md)
+- [Learning Clock Dashboard](/Learning-Clock-Dashboard.md)
 - [Reference overview](Reference/Overview.md)
 - [LauncherPad and Observability compatibility page](LauncherPad-and-Observability.md)
 
 The deployable dashboard implementation remains under
-`views/learning-clock-dashboard/` because release tooling copies that component
-beside each configured LearningPath CSV.
+`views/learning-clock-dashboard/`. Release tooling installs that component once
+under `Engineering/LearningClock` and installs the dashboard note at the vault
+root. The view discovers every configured clock's `LearningPath/learning_time_log.csv`
+file in the vault and exposes one alphabetically sorted selector.

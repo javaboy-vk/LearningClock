@@ -7,10 +7,13 @@ src\learningclock\
   cli.py               Lightweight non-GUI CLI and version/readiness checks.
   api.py               FastAPI health endpoint and automatic OpenAPI documentation.
   app.py               Tkinter application, timer state, UI workflow, shutdown flow.
-  configuration.py     Properties discovery, validation, ordering, and stable clock identity.
+  configuration.py     Central/per-clock loading, validation, migration, discovery, identity.
+  provisioning.py      Transactional new-clock properties, CSV data, and rollback.
+  reporting.py         Inclusive periods and compatible cross-clock CSV aggregation.
+  date_picker.py       Reusable Tkinter calendar dialog.
   desktop.py           Primary no-console GUI dispatcher; LauncherPad default and --clock mode.
-  launcherpad.py       Dynamic configured-clock grid and mutex-based running-state UI.
-  process_launcher.py  Detached source/packaged GUI process construction and launch.
+  launcherpad.py       Clock grid, creation form, asynchronous report, chart, mutex state.
+  process_launcher.py  Central+clock command construction and detached launch.
   singleton.py         Windows named-mutex ownership and observation.
   telemetry.py         Formal protepo.log 2.0 event definitions for new runtime boundaries.
   window_icon.py       Shared multi-layout icon resolution and Tk title-bar application.
@@ -84,14 +87,13 @@ Seq queries, dashboards, and tests.
 
 ## LauncherPad and Process Boundaries
 
-- `configuration.py` returns immutable configurations and isolated issues; it
-  does not create UI, processes, log directories, mutexes, or CSV files.
+- `configuration.py` returns central/per-clock immutable configurations, migrates obsolete shared keys, de-duplicates canonical clocks, and isolates issues.
+- `provisioning.py` validates the complete request before atomic writes and rolls back only content created by the failed operation.
+- `reporting.py` consumes the canonical CSV activity/date compatibility contract without mutating CSV files.
 - `desktop.py` is the single GUI dispatcher. Delayed imports select LauncherPad
   or one internal `--clock` process without initializing both applications.
-- `launcherpad.py` owns controls, observation, and launch requests. It never owns
-  a selected clock's mutex, persistence, or lifetime.
-- `process_launcher.py` builds list-form packaged/source commands and starts
-  detached processes without shells, VBS, pipes, or retained supervision.
+- `launcherpad.py` owns controls, creation/report coordination, observation, and launch requests. Its background request ID prevents stale report presentation. It never owns a selected clock's mutex, persistence, or lifetime.
+- `process_launcher.py` combines validated central `pythonExe`/`pyScriptPath` with per-clock name/log directory and starts detached processes without shells, VBS, pipes, or retained supervision.
 - `singleton.py` separates mutex ownership from observation. A clock acquires its
   guard before persistence; LauncherPad opens and immediately closes an
   observation handle.

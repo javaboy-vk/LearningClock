@@ -1,84 +1,89 @@
 # LauncherPad Architecture and Operations
 
-LearningClock v6.0 replaces the former per-clock shortcut path:
+LearningClock LauncherPad 2.0 is the normal Windows entry point. It owns configuration discovery, new-clock provisioning, runtime launch validation, mutex observation, and read-only cross-clock reporting. Each timer remains an independent process and the sole writer of its CSV.
 
-```text
-Desktop shortcut -> Learning-clock.vbs -> pythonw.exe -> app.py -> one configuration
+## Configuration ownership and resolution
+
+The central `clock.properties` is resolved from `learningclock/configuration.py`, beside the deployed package modules. In source it is `src\learningclock\clock.properties`; `dev release` places it at `D:\LearningClock\Lib\learningclock\clock.properties`; a wheel installation places it in that environment's `site-packages\learningclock`. This makes lookup independent of the shortcut or process working directory. `LEARNINGCLOCK_CENTRAL_CONFIG` and desktop `--central-config` are supported overrides; an absolute value is used directly and a relative value resolves beside the packaged default.
+
+```properties
+pythonExe=P:\Python\Python314\pythonw.exe
+pyScriptPath=D:\LearningClock\Lib\learningclock\app.py
+autosave_minutes=5
 ```
 
-The production path is now:
+`pythonExe` and `pyScriptPath` are shared and authoritative. `autosave_minutes` remains the optional timer checkpoint setting. Values shown above are deployment examples, not code constants. The parser treats backslashes literally and supports spaces without Java `Properties` escaping.
 
-```text
-Desktop / Start Menu -> learningclock-gui.exe -> LauncherPad
-                                             -> LearningClock process --clock <properties>
+Per-clock files are discovered from `D:\LearningClock\props` by default and newly created files contain only:
+
+```properties
+learning-path-name=Polyglot-Lab
+logDir=D:\DiavgeiaVault\Engineering\Polyglot-Lab
 ```
 
-No VBS, WScript, CScript, CMD, or PowerShell process participates in normal GUI startup.
+On launch, `load_central_configuration(..., validate_paths=True)` proves the Python executable and script exist. `process_launcher.py` then builds a list-form, shell-free command using `--learning-path`, `--log-dir`, `--clock-id`, and `--correlation-id`. A missing/unreadable central file, blank setting, or missing runtime path produces an actionable dialog and no process attempt.
 
-## Responsibilities
+Old per-clock files containing `pythonExe` or `pyScriptPath` remain loadable. Discovery ignores those values, atomically removes only those lines, and converts an old `logDir` ending in `LearningPath` to its parent clock directory. It retains comments and other supported properties where possible and emits `CONFG-2007`. Migration failure is isolated and logged; it never updates central configuration.
 
-- `configuration.py` discovers and validates `.properties` files. `learning-path-name` and `logDir` are required. Optional `clock-id`, `display-name`, and `order` extend the existing schema without invalidating old files.
-- `singleton.py` is the data-integrity boundary. LearningClock calls `CreateMutexW` with `Local\Protepo.LearningClock.<clock-id>` before creating `CsvStore`, timer state, or session state. `ERROR_ALREADY_EXISTS` rejects a duplicate. Normal close calls `ReleaseMutex` and `CloseHandle`; process termination lets Windows remove the final handle automatically.
-- `launcherpad.py` calls `OpenMutexW` every 1.5 seconds. It only observes, closes the observation handle immediately, and maps existence to a disabled orange `— Running` control. Stable polling creates no information-level telemetry; only state transitions do.
-- `process_launcher.py` launches list-form commands with `shell=False`, detached Windows process flags, closed inheritable handles, and standard streams attached to `DEVNULL` rather than pipes. LauncherPad stores no child-process ownership and never terminates clocks.
-- `desktop.py` is the one GUI entry point. With no internal arguments it opens LauncherPad; `--clock <properties>` runs the selected LearningClock in a separate process.
+## Create New Clock
 
-```mermaid
-flowchart TD
-    U[Windows Desktop / Start Menu] --> LP[LearningClock LauncherPad]
-    LP --> CFG[Configuration Discovery]
-    LP --> LC1[LearningClock - MAGPAI]
-    LP --> LC2[LearningClock - DIAS]
-    LC1 --> M1[Named Mutex MAGPAI]
-    LC2 --> M2[Named Mutex DIAS]
-    LP --> LOG[protepo.log 2.0]
-    LC1 --> LOG
-    LC2 --> LOG
-    LOG --> SEQ[Seq]
-    SEQ --> DASH[LearningClock Operations Dashboard]
-```
+**Create New Clock** opens a modal form with a learning path name, complete Diavgeia clock directory, Browse, Create, and Cancel. Enter submits and Escape cancels.
 
-LearningClock owns mutexes; LauncherPad observes them. Seq receives telemetry but never determines runtime ownership.
+Before writing, `provisioning.py` rejects blanks, path traversal, control/invalid Windows filename characters, reserved names, relative log paths, duplicate names, duplicate canonical log directories, and any existing LearningClock properties or CSV file.
 
-## Source and packaged execution
+Successful creation performs one transactional workflow:
 
-Source mode selects `pythonw.exe` beside the currently active interpreter and runs `-m learningclock.desktop`. This respects the repository virtual environment without hard-coded Python installations. Each clock starts in a detached process group and breaks away from the LauncherPad/VS Code Windows job, so closing LauncherPad cannot terminate it. The wheel defines the Windows GUI entry point `learningclock-gui`; the generated executable opens no console. A frozen `LearningClock.exe` is also supported: it relaunches itself with the internal `--clock` argument.
+1. Create `logDir`, its `LearningPath` child, and missing configuration/Diavgeia parents without touching existing unrelated content.
+2. Atomically write `<learning-path-name>.properties` with only the two per-clock keys.
+3. Initialize `logDir\LearningPath\learning_time_log.csv` with the complete `csv_store.FIELDNAMES` header.
+4. Leave dashboard resources untouched; release tooling owns the single vault-level dashboard and view.
+5. Rediscover clock configurations and refresh the LauncherPad report immediately.
 
-Use the repository commands for source startup and current-user Start registration:
+If a write fails, only files created by the operation are removed. Newly created directories are removed only when empty; pre-existing directories and unrelated files are never deleted. Existing LearningClock files are not overwritten.
+
+## Cross-clock report
+
+`reporting.py` uses `csv_store.ACTIVITIES`, `ACTIVITY_TO_FIELD`, legacy field mappings, date formats, and `learning_time_log.csv` filename as the canonical contract. Categories retain timer order. A single-worker executor keeps filesystem scanning off Tk's UI thread, and a monotonically increasing request ID prevents an older result replacing a newer selection.
+
+| Option | Inclusive local-date definition |
+| --- | --- |
+| `This week` | Monday through today |
+| `Last week` | Previous Monday through Sunday |
+| `This month` | First day of this month through today |
+| `Define range` | Calendar-selected start through end |
+
+Custom fields are read-only and appear only for `Define range`; clicking either opens the reusable Tkinter calendar. Start after end is rejected.
+
+The aggregator enumerates valid configurations, de-duplicates canonical log directories, reads dated session rows, excludes `TOTAL`, understands all current/legacy date formats and category aliases, and sums integer seconds. Missing columns contribute zero. Missing/unavailable/empty files and malformed dates or durations are isolated and logged as `LPLCL-1031`. The skipped/invalid count below the chart is a hyperlink; its read-only popup lists the clock, source path, CSV row, column, rejected value, and reason for every issue. Each path is itself a link that opens the source file, or the nearest existing directory for a missing source. The chart still renders all categories and zero totals when no rows match. Durations use unbounded hours, so values beyond 24 hours remain correct.
+
+## Source and deployment boundaries
+
+| Source | Responsibility |
+| --- | --- |
+| `configuration.py` | Central/per-clock parsing, validation, discovery, de-duplication, migration |
+| `provisioning.py` | Name/path validation, atomic properties/CSV creation, rollback |
+| `reporting.py` | Period resolution, CSV compatibility, aggregation |
+| `date_picker.py` | Reusable modal calendar |
+| `launcherpad.py` | Tkinter controls, refresh, background request ordering, chart |
+| `process_launcher.py` | Central+clock command construction and detached launch |
+| `csv_store.py` | Canonical filenames, activities, fields, aliases, duration format |
+
+`pyproject.toml` includes central configuration and dashboard resources in packages. `dev release` stages the complete package under `Lib`, keeps only `Lib\learningclock\app.py`, places the icon under `assets`, and preserves `Lib\learningclock\clock.properties`. It then publishes the dashboard at `D:\DiavgeiaVault\Learning-Clock-Dashboard.md` and the view under `D:\DiavgeiaVault\Engineering\LearningClock\views`.
+
+## Troubleshooting
+
+- **Central configuration unavailable:** edit the reported `clock.properties` and set nonblank existing `pythonExe` and `pyScriptPath` files.
+- **Invalid log directory:** select a complete Windows path. LauncherPad creates missing parents.
+- **Creation conflict:** move/rename the existing properties or CSV after reviewing it; LauncherPad does not overwrite user content.
+- **Missing CSV:** the report shows a skipped source; opening a newly provisioned clock uses its initialized canonical CSV.
+- **Skipped report sources:** click the skipped/invalid hyperlink below the chart to inspect and open each exact file/row. The scan is read-only. `launcherpad_debug.log` retains the corresponding `LPLCL-1031` events.
+- **Dashboard cannot find CSV:** confirm the CSV is in the configured clock's `LearningPath` child, the dashboard is at the vault root, and the view exists under `Engineering/LearningClock/views`.
+
+Start and register from the repository with:
 
 ```cmd
 dev launcherpad
-dev launcherpad --config-dir D:\LearningPath
+dev launcherpad --config-dir D:\LearningClock\props
+dev launcherpad --central-config D:\LearningClock\Lib\learningclock\clock.properties
 dev launcherpad-register
 ```
-
-`launcherpad-register` creates or updates **LearningClock LauncherPad** under the
-current user's Start Menu, targets the repository `.venv\Scripts\pythonw.exe`,
-uses `launcher\Learning-Clock.ico`, and requests **Pin to Start**. Windows may
-require the final pin to be selected manually from the registered Start entry.
-
-The LauncherPad icon uses a high-contrast dark tile, a full-size blue/orange
-clock face, and thick white hands instead of the former miniature UI screenshot.
-`launcher\Learning-Clock-source.png` is the transparent master artwork;
-`scripts\Build-LauncherIcon.ps1` builds native 16 through 256 pixel frames into
-`launcher\Learning-Clock.ico` and synchronizes the packaged copy under
-`src\learningclock\assets`. The shared window-icon helper applies that asset at
-the top left of both the LauncherPad and configured LearningClock title bars,
-so Windows does not have to shrink one pale image or show Tk's generic icon.
-
-The setuptools wheel remains the repository's packaging mechanism; PyInstaller was not introduced. `dev release` stages the icon and complete `learningclock` package under `D:\LearningPath\Tools\LearningClock`. Install the built wheel into the production environment to create `learningclock-gui.exe`.
-
-## Calendar regression
-
-The Set Date action originally revealed only the date field; it did not invoke the custom calendar until the embedded icon was clicked. The transient `Toplevel` could also remain unmapped or behind its parent on Windows. Set Date now schedules the calendar immediately after the field is laid out, and the popup is retained, deiconified, raised, visibility-synchronized, focused, and only then given the input grab. The icon, `Alt+Down`, and `F4` reopen it. Date parsing and CSV behavior are unchanged.
-
-## Acceptance checks
-
-1. Start LauncherPad and confirm all valid `D:\LearningPath` configurations appear.
-2. Launch two different clocks; confirm separate processes and orange disabled controls.
-3. Close and restart LauncherPad; clocks continue and are reconstructed from mutex observation.
-4. Attempt the same clock directly; confirm the duplicate exits before CSV initialization.
-5. Terminate a clock; confirm its control becomes available and can immediately relaunch.
-6. Open Set Date and confirm the calendar appears above the clock and applies a selected date.
-
-These GUI/process-tree scenarios require an interactive Windows desktop. Automated tests cover configuration, command construction, button mapping, real subprocess mutex ownership/cleanup, v2 telemetry, and dashboard contracts.

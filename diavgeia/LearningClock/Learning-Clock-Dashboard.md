@@ -1,6 +1,6 @@
 # Learning Clock Dashboard v6.0
 
-The dashboard displays **Book Listening** from the `book_listening` CSV column and also reads legacy `audiobook` data. It uses the shared LearningClock v6.0 activity taxonomy.
+This is the single LearningClock dashboard for the Diavgeia vault. Choose any discovered clock to render its `LearningPath/learning_time_log.csv` data.
 
 ```dataviewjs
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -17,9 +17,9 @@ for (let attempt = 0; attempt < 20; attempt++) {
 if (!currentPage?.file) {
   dv.paragraph("Dashboard is waiting for Obsidian to finish loading. Refresh this note if it does not appear.");
 } else {
-  const dashboardPath = currentPage.file.path || "";
-  const dashboardFolder = currentPage.file.folder
-    || (dashboardPath.includes("/") ? dashboardPath.slice(0, dashboardPath.lastIndexOf("/")) : "");
-  await dv.view([dashboardFolder, "views/learning-clock-dashboard"].filter(Boolean).join("/"));
+  await dv.view(
+    "Engineering/LearningClock/views/learning-clock-dashboard",
+    { discoverClocks: true }
+  );
 }
 ```

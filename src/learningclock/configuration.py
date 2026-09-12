@@ -3,12 +3,13 @@
 # Artifact  : LearningClock - Configured Clock Discovery
 # Author    : javaboy-vk
 # Date      : 2026-08-31
-# Version   : v1.0.1
+# Version   : v2.4.0
 # Purpose:
-#   Loads, validates, identifies, and deterministically discovers LearningClock
-#   properties files without coupling configuration data to launch code.
+#   Loads central runtime settings; validates, migrates, identifies, and
+#   deterministically discovers per-clock properties files.
 #
 # Configuration flow:
+#   load_central_configuration(clock.properties) -> pythonExe + pyScriptPath
 #   discover_clock_configurations(configuration_dir)
 #   |-- enumerate *.properties in case-insensitive filename order
 #   |-- load_clock_configuration(path)
@@ -17,7 +18,8 @@
 #   |   |-- validate explicit clock-id or normalize the filename fallback
 #   |   `-- resolve relative logDir values beside the properties file
 #   |-- isolate malformed files as ConfigurationIssue values
-#   |-- reject duplicate clock IDs without hiding other valid clocks
+#   |-- atomically remove obsolete per-clock shared runtime keys
+#   |-- reject duplicate IDs, names, and canonical log directories
 #   `-- order valid clocks by explicit order, display name, and clock ID
 #
 # Boundary contract:
@@ -29,6 +31,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,16 +42,42 @@ from learningclock.telemetry import (
     CONFIG_DISCOVERY_COMPLETED,
     CONFIG_DISCOVERY_STARTED,
     CONFIG_DUPLICATE_ID,
+    CONFIG_DUPLICATE_SOURCE,
+    CONFIG_LEGACY_MIGRATED,
+    CONFIG_LEGACY_MIGRATION_FAILED,
     CONFIG_MALFORMED,
     CONFIG_VALIDATED,
 )
 
-DEFAULT_CONFIGURATION_DIR = Path(r"D:\LearningPath")
+INSTALLATION_ROOT = Path(r"D:\LearningClock")
+DEFAULT_CONFIGURATION_DIR = INSTALLATION_ROOT / "props"
+DEFAULT_LOG_DIRECTORY = INSTALLATION_ROOT / "logs"
+DEFAULT_CENTRAL_CONFIGURATION = Path(__file__).resolve().with_name("clock.properties")
+CENTRAL_CONFIGURATION_ENV = "LEARNINGCLOCK_CENTRAL_CONFIG"
+LEARNING_PATH_DIRECTORY_NAME = "LearningPath"
 _CLOCK_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+_SHARED_KEYS = frozenset({"pythonExe", "pyScriptPath"})
+
+
+def logs_directory(configuration_dir: Path) -> Path:
+    """Resolve centralized logs beside the standard props directory."""
+
+    resolved = configuration_dir.expanduser().resolve()
+    installation_root = resolved.parent if resolved.name.casefold() == "props" else resolved
+    return installation_root / "logs"
 
 
 class ConfigurationError(ValueError):
     """Raised when one LearningClock properties file is unusable."""
+
+
+@dataclass(frozen=True, slots=True)
+class CentralConfiguration:
+    """Application-level executable and script settings shared by every clock."""
+
+    configuration_path: Path
+    python_executable: Path
+    script_path: Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +131,104 @@ def load_properties(path: Path) -> dict[str, str]:
     return values
 
 
+def central_configuration_path(override: Path | None = None) -> Path:
+    """Resolve central configuration without depending on the process working directory."""
+
+    selected = override or Path(
+        os.getenv(CENTRAL_CONFIGURATION_ENV, str(DEFAULT_CENTRAL_CONFIGURATION))
+    )
+    if selected.is_absolute():
+        return selected.resolve()
+    return (DEFAULT_CENTRAL_CONFIGURATION.parent / selected).resolve()
+
+
+def _resolve_property_path(value: str, properties_path: Path) -> Path:
+    candidate = Path(value).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return (properties_path.parent / candidate).resolve()
+
+
+def load_central_configuration(
+    path: Path | None = None, *, validate_paths: bool = False
+) -> CentralConfiguration:
+    """Load shared runtime settings and optionally prove both configured files exist."""
+
+    resolved_path = central_configuration_path(path)
+    values = load_properties(resolved_path)
+    central = CentralConfiguration(
+        configuration_path=resolved_path,
+        python_executable=_resolve_property_path(_required(values, "pythonExe"), resolved_path),
+        script_path=_resolve_property_path(_required(values, "pyScriptPath"), resolved_path),
+    )
+    if validate_paths:
+        missing: list[str] = []
+        if not central.python_executable.is_file():
+            missing.append(f"Python executable does not exist: {central.python_executable}")
+        if not central.script_path.is_file():
+            missing.append(f"LearningClock script does not exist: {central.script_path}")
+        if missing:
+            raise ConfigurationError("\n".join(missing))
+    return central
+
+
+def migrate_legacy_clock_configuration(path: Path, *, logger: Any | None = None) -> bool:
+    """Remove obsolete shared keys and normalize the former CSV-directory logDir."""
+
+    try:
+        original = path.read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise ConfigurationError(f"could not read properties for migration: {exc}") from exc
+    lines = original.splitlines(keepends=True)
+    kept: list[str] = []
+    removed: list[str] = []
+    normalized_log_dir = False
+    for raw_line in lines:
+        stripped = raw_line.strip()
+        key = stripped.partition("=")[0].strip() if "=" in stripped else ""
+        if key in _SHARED_KEYS:
+            removed.append(key)
+        elif key == "logDir":
+            prefix, separator, raw_value = raw_line.partition("=")
+            value = raw_value.strip().strip('"')
+            candidate = Path(value)
+            if candidate.name.casefold() == LEARNING_PATH_DIRECTORY_NAME.casefold():
+                line_ending = "\r\n" if raw_line.endswith("\r\n") else "\n" if raw_line.endswith("\n") else ""
+                kept.append(f"{prefix}{separator}{candidate.parent}{line_ending}")
+                normalized_log_dir = True
+            else:
+                kept.append(raw_line)
+        else:
+            kept.append(raw_line)
+    if not removed and not normalized_log_dir:
+        return False
+    temporary = path.with_name(f".{path.name}.learningclock.tmp")
+    try:
+        temporary.write_text("".join(kept), encoding="utf-8")
+        os.replace(temporary, path)
+    except OSError as exc:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+        if logger is not None:
+            logger.event(
+                CONFIG_LEGACY_MIGRATION_FAILED,
+                configuration_path=path,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+            )
+        raise ConfigurationError(f"could not migrate legacy properties: {exc}") from exc
+    if logger is not None:
+        logger.event(
+            CONFIG_LEGACY_MIGRATED,
+            configuration_path=path,
+            removed_properties=",".join(sorted(set(removed))),
+            normalized_log_dir=normalized_log_dir,
+        )
+    return True
+
+
 # Source documentation:
 #   What it does: Returns a stable, mutex-safe clock ID.
 #   Why it exists: Discovery, Windows mutexes, logs, and Seq filters share this identity.
@@ -148,6 +275,8 @@ def load_clock_configuration(path: Path) -> ConfiguredClock:
     log_dir = Path(log_dir_value)
     if not log_dir.is_absolute():
         log_dir = (resolved_path.parent / log_dir).resolve()
+    if log_dir.name.casefold() == LEARNING_PATH_DIRECTORY_NAME.casefold():
+        log_dir = log_dir.parent
     order_value = values.get("order", "").strip()
     order: int | None = None
     if order_value:
@@ -194,7 +323,11 @@ def legacy_clock_configuration(
 #   Designed use: LauncherPad renders the returned clocks and reports issues; optional logging
 #     records discovery without affecting deterministic validation or ordering.
 def discover_clock_configurations(
-    configuration_dir: Path, *, logger: Any | None = None
+    configuration_dir: Path,
+    *,
+    logger: Any | None = None,
+    migrate_legacy: bool = True,
+    excluded_paths: tuple[Path, ...] = (),
 ) -> DiscoveryResult:
     resolved_dir = configuration_dir.expanduser().resolve()
     if logger is not None:
@@ -202,6 +335,9 @@ def discover_clock_configurations(
     issues: list[ConfigurationIssue] = []
     clocks: list[ConfiguredClock] = []
     by_id: dict[str, ConfiguredClock] = {}
+    by_name: dict[str, ConfiguredClock] = {}
+    by_log_dir: dict[str, ConfiguredClock] = {}
+    excluded = {os.path.normcase(str(path.resolve())) for path in excluded_paths}
     try:
         candidates = sorted(
             resolved_dir.glob("*.properties"), key=lambda item: item.name.casefold()
@@ -211,9 +347,18 @@ def discover_clock_configurations(
         issues.append(ConfigurationIssue(resolved_dir, str(exc)))
 
     for path in candidates:
+        if os.path.normcase(str(path.resolve())) in excluded:
+            continue
         if logger is not None:
             logger.event(CONFIG_DISCOVERED, configuration_path=path)
         try:
+            values = load_properties(path)
+            if migrate_legacy and (
+                _SHARED_KEYS.intersection(values)
+                or Path(values.get("logDir", "")).name.casefold()
+                == LEARNING_PATH_DIRECTORY_NAME.casefold()
+            ):
+                migrate_legacy_clock_configuration(path, logger=logger)
             clock = load_clock_configuration(path)
         except (ConfigurationError, OSError) as exc:
             issues.append(ConfigurationIssue(path, str(exc)))
@@ -234,7 +379,33 @@ def discover_clock_configurations(
                     clock_id=clock.clock_id,
                 )
             continue
+        name_key = clock.learning_path_name.casefold()
+        log_dir_key = os.path.normcase(str(clock.log_dir.resolve()))
+        if name_key in by_name:
+            message = f"duplicate learning-path-name {clock.learning_path_name!r}"
+            issues.append(ConfigurationIssue(path, message))
+            if logger is not None:
+                logger.event(
+                    CONFIG_DUPLICATE_SOURCE,
+                    configuration_path=path,
+                    duplicate_kind="learning_path_name",
+                    duplicate_value=clock.learning_path_name,
+                )
+            continue
+        if log_dir_key in by_log_dir:
+            message = f"duplicate canonical logDir {clock.log_dir}"
+            issues.append(ConfigurationIssue(path, message))
+            if logger is not None:
+                logger.event(
+                    CONFIG_DUPLICATE_SOURCE,
+                    configuration_path=path,
+                    duplicate_kind="log_dir",
+                    duplicate_value=clock.log_dir,
+                )
+            continue
         by_id[clock.clock_id] = clock
+        by_name[name_key] = clock
+        by_log_dir[log_dir_key] = clock
         clocks.append(clock)
         if logger is not None:
             logger.event(

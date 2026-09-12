@@ -98,15 +98,15 @@ Lifecycle mapping:
 - `readme-assets`: generate README SVG visuals for the desktop UI and Obsidian dashboard.
 - `api`: run the FastAPI readiness surface, Swagger UI, ReDoc, and runtime OpenAPI schema.
 - `openapi`: regenerate tracked `docs\openapi.json` from the FastAPI application.
-- `launcherpad`: start the source LauncherPad as an independent no-console process using the project `.venv` and `D:\LearningPath` by default.
-- `launcherpad-register`: create or update the current user's Start Menu shortcut with the LearningClock icon and request **Pin to Start**. Windows may require the pin to be completed manually; `--no-pin` registers without requesting it.
+- `launcherpad`: start the source LauncherPad as an independent no-console process using the project `.venv` and `D:\LearningClock\props` by default.
+- `launcherpad-register`: create or update the current user's Start Menu shortcut, synchronize an existing taskbar pin with the same paths, and request **Pin to Start**. Windows may require the pin to be completed manually; `--no-pin` skips only the new pin request.
 - `unittest-csv`: run the isolated CSV unit test file.
 - `unittest-csv-file`: run the CSV regression suite against a properties-selected or explicitly supplied CSV.
 - `csv-test`: run a focused CSV regression selector through the local fixture properties.
 - `package`: build package artifacts into `build\dist` and remove source-tree package metadata.
 - `install`: install runtime and development requirements into `.venv` without installing the local project in editable mode.
 - `deploy`: export Diavgeia content to the local vault.
-- `release`: copy the production icon and complete runtime Python package to `D:\LearningPath\Tools\LearningClock`.
+- `release`: deploy modules to `D:\LearningClock\Lib`, the icon to `assets`, and ensure `props` and `logs` exist.
 - `seq-dashboard`: install or update the LearningClock Seq workspace and Operations dashboard.
 
 ## Production Release
@@ -127,13 +127,16 @@ scripts\release.cmd
 
 The release target copies these files:
 
-- `launcher\Learning-Clock.ico` -> `D:\LearningPath\Tools\LearningClock\Learning-Clock.ico`
-- every `src\learningclock\*.py` -> `D:\LearningPath\Tools\LearningClock\learningclock\`
+- `launcher\Learning-Clock.ico` -> `D:\LearningClock\assets\Learning-Clock.ico`
+- every `src\learningclock\*.py` -> `D:\LearningClock\Lib\learningclock\`
+- the pure-Python logging dependency -> `D:\LearningClock\Lib\protepo\`
 - the default `clock.properties` only when the deployed copy does not already exist
 
 The v6.0 release no longer deploys VBS. Install the built wheel to obtain the
-single no-console `learningclock-gui.exe` entry point. Release also exports the
-shared dashboard component beside every configured LearningPath CSV folder.
+single no-console `learningclock-gui.exe` entry point. Release exports the central
+dashboard to `D:\DiavgeiaVault\Learning-Clock-Dashboard.md` and the Dataview
+implementation under `D:\DiavgeiaVault\Engineering\LearningClock\views`; clock
+directories receive no copies.
 
 To release to a different folder:
 

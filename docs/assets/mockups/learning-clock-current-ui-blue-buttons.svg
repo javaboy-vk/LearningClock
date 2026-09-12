@@ -82,7 +82,7 @@
               <rect x="38" y="470" width="365" height="37" fill="#069bff" stroke="#8c8c8c" stroke-width="1.4"/>
               <line x1="40" y1="472" x2="401" y2="472" stroke="#ffffff" stroke-width="1"/>
               <line x1="40" y1="505" x2="401" y2="505" stroke="#777777" stroke-width="1"/>
-              <text x="45" y="496" fill="#ffffff" font-size="18" font-weight="700">Update Diavgeia</text>
+              <text x="45" y="496" fill="#ffffff" font-size="18" font-weight="700">Update Documentation</text>
               <text x="470" y="496" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">00:00:00</text>
             </g>
             <g>

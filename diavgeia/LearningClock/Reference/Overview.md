@@ -6,7 +6,7 @@ references that can span more than one controlled product baseline.
 - [Documentation Versioning](../Documentation%20Versioning.md)
 - [Developer Commands](../Developer-Commands.md)
 - [How to add a new timer](../How-to-add-a-new-timer.md)
-- [Learning Clock Dashboard](../Learning-Clock-Dashboard.md)
+- [Learning Clock Dashboard](/Learning-Clock-Dashboard.md)
 - [LearningClock 6.0 controlled baseline](../6.0/Overview.md)
 
 Release-specific architecture, configuration, implementation, diagrams, and

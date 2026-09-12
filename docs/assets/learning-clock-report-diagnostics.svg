@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-label="LearningClock skipped and invalid report inputs popup with linked files and CSV rows">
+  <rect width="900" height="560" rx="8" fill="#f2f2f2" stroke="#8c8c8c" stroke-width="2"/>
+  <rect x="1" y="1" width="898" height="42" rx="7" fill="#fafafa"/>
+  <rect x="1" y="34" width="898" height="9" fill="#fafafa"/>
+  <circle cx="23" cy="22" r="13" fill="#069bff"/>
+  <path d="M23 11 A11 11 0 0 1 34 22 H23 Z" fill="#FF6600"/>
+  <line x1="23" y1="22" x2="23" y2="14" stroke="#ffffff" stroke-width="2"/>
+  <line x1="23" y1="22" x2="29" y2="25" stroke="#ffffff" stroke-width="2"/>
+  <text x="45" y="27" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="14">Skipped and Invalid Report Inputs</text>
+  <text x="865" y="27" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="20">×</text>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="32" y="73" fill="#111111" font-size="18" font-weight="700">4 skipped or invalid inputs</text>
+    <text x="32" y="96" fill="#333333" font-size="12">This report scan is read-only and does not rewrite CSV data.</text>
+    <text x="32" y="113" fill="#333333" font-size="12">Each blue link identifies the source file and CSV row used by the scan.</text>
+    <rect x="32" y="126" width="812" height="78" rx="3" fill="#ffffff" stroke="#b8c8d8"/><text x="45" y="148" fill="#111111" font-size="13" font-weight="700">1. Atlas Study: Skipped row 29 with an invalid date in Atlas Study.</text><text x="45" y="170" fill="#0067c0" font-size="12" text-decoration="underline">D:\SampleVault\Learning\Atlas Study\LearningPath\learning_time_log.csv — row 29</text><text x="45" y="190" fill="#4f5f6f" font-size="11">Type: row · Reason: invalid date at row 29 · Column: date · Value: &#x27;&#x27;</text><rect x="32" y="217" width="812" height="78" rx="3" fill="#ffffff" stroke="#b8c8d8"/><text x="45" y="239" fill="#111111" font-size="13" font-weight="700">2. Atlas Study: Skipped row 30 with an invalid date in Atlas Study.</text><text x="45" y="261" fill="#0067c0" font-size="12" text-decoration="underline">D:\SampleVault\Learning\Atlas Study\LearningPath\learning_time_log.csv — row 30</text><text x="45" y="281" fill="#4f5f6f" font-size="11">Type: row · Reason: invalid date at row 30 · Column: date · Value: &#x27;&#x27;</text><rect x="32" y="308" width="812" height="78" rx="3" fill="#ffffff" stroke="#b8c8d8"/><text x="45" y="330" fill="#111111" font-size="13" font-weight="700">3. Atlas Study: Skipped row 31 with an invalid date in Atlas Study.</text><text x="45" y="352" fill="#0067c0" font-size="12" text-decoration="underline">D:\SampleVault\Learning\Atlas Study\LearningPath\learning_time_log.csv — row 31</text><text x="45" y="372" fill="#4f5f6f" font-size="11">Type: row · Reason: invalid date at row 31 · Column: date · Value: &#x27;&#x27;</text><rect x="32" y="399" width="812" height="78" rx="3" fill="#ffffff" stroke="#b8c8d8"/><text x="45" y="421" fill="#111111" font-size="13" font-weight="700">4. Archived Course: No time log yet for Archived Course.</text><text x="45" y="443" fill="#0067c0" font-size="12" text-decoration="underline">D:\SampleVault\Learning\Archived Course\LearningPath\learning_time_log.csv</text><text x="45" y="463" fill="#4f5f6f" font-size="11">Type: CSV · Reason: time log missing</text>
+  </g>
+  <rect x="802" y="507" width="66" height="30" rx="3" fill="#eeeeee" stroke="#8c8c8c"/>
+  <text x="835" y="527" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="12" text-anchor="middle">Close</text>
+</svg>

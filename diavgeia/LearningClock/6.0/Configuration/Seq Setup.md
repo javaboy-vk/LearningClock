@@ -1,8 +1,8 @@
 # LearningClock 6.0 Seq Setup
 
 **Product Release:** 6.0  
-**Document Revision:** R5
-**Document Version:** 6.0.R5
+**Document Revision:** R6
+**Document Version:** 6.0.R6
 
 Seq is optional operational telemetry for LearningClock. Local diagnostic files
 and CSV persistence continue when Seq is unavailable. Never commit an API key,
@@ -57,8 +57,9 @@ $env:LEARNINGCLOCK_SEQ_API_KEY = "<session-only ingestion key>"
 
 If no specific values exist, LearningClock falls back to `SEQ_URL` and
 `SEQ_API_KEY`. Clock delivery failures spool to
-`learning_clock_seq_offline.clef` beside that clock's diagnostic log;
-LauncherPad uses `launcherpad_seq_offline.clef` in its diagnostics directory.
+`D:\LearningClock\logs\<clock-id>\learning_clock_seq_offline.clef` beside that
+clock's diagnostic log. LauncherPad uses
+`D:\LearningClock\logs\launcherpad_seq_offline.clef`.
 
 ## Verify
 

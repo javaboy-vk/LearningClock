@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - LauncherPad Developer Command Tests
 # Author    : javaboy-vk
 # Date      : 2026-09-01
-# Version   : v1.0.0
+# Version   : v1.1.0
 # Purpose:
 #   Verifies detached source startup and current-user Start Menu registration
 #   command construction without launching a GUI or changing the live Start Menu.
@@ -106,7 +106,9 @@ def test_registration_script_uses_current_user_start_menu_and_product_icon():
     script = dev.REGISTER_LAUNCHERPAD_SCRIPT.read_text(encoding="utf-8")
 
     assert '[Environment]::GetFolderPath("Programs")' in script
-    assert "CreateShortcut($shortcutPath)" in script
+    assert "Set-LauncherPadShortcut -Path $shortcutPath" in script
     assert '$shortcut.IconLocation = "$resolvedIcon,0"' in script
+    assert '"Microsoft\\Internet Explorer\\Quick Launch\\User Pinned\\TaskBar"' in script
+    assert "Set-LauncherPadShortcut -Path $taskbarShortcutPath" in script
     assert "SHChangeNotify" in script
     assert '"Pin to Start"' in script

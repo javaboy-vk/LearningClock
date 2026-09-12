@@ -3,15 +3,17 @@
 # Artifact  : LearningClock - README Visual Asset Generator
 # Author    : javaboy-vk
 # Date      : 2026-06-09
-# Version   : v6.1.0
+# Version   : v6.3.0
 # Purpose:
-#   Generates stable SVG visuals used by README.md to show LauncherPad, the app
-#   UI, the in-app progress panel, and Obsidian dashboard output.
+#   Generates stable SVG visuals used by README.md to show LauncherPad, its
+#   report diagnostics, the app UI, progress, and Obsidian dashboard output.
 #
 # Generation call tree:
 #   main()
 #   |-- generate_launcherpad_svg()
 #   |   `-- render representative configured-clock controls
+#   |-- generate_report_diagnostics_svg()
+#   |   `-- render linked source-file and CSV-row diagnostics
 #   |-- generate_ui_svg()
 #   |   |-- read ACTIVITIES from learningclock.csv_store
 #   |   |-- render one representative timer row per activity
@@ -25,7 +27,7 @@
 #   |   `-- return a complete dashboard SVG string
 #   |-- generate_progress_svg()
 #   |   `-- return the in-app View Progress dashboard visual
-#   `-- write the LauncherPad, UI, Progress, and Obsidian dashboard SVG assets
+#   `-- write all LauncherPad, UI, Progress, and Obsidian dashboard SVG assets
 #
 # Import note:
 #   This script is a direct repo utility, not an installed console entry point.
@@ -52,6 +54,7 @@ from learningclock.csv_store import ACTIVITY_TO_FIELD, ACTIVITIES, parse_duratio
 
 ASSET_DIR = ROOT / "docs" / "assets"
 LAUNCHERPAD_SVG = ASSET_DIR / "learning-clock-launcherpad.svg"
+REPORT_DIAGNOSTICS_SVG = ASSET_DIR / "learning-clock-report-diagnostics.svg"
 UI_SVG = ASSET_DIR / "learning-clock-ui.svg"
 DASHBOARD_SVG = ASSET_DIR / "learning-clock-dashboard.svg"
 PROGRESS_SVG = ASSET_DIR / "learning-clock-progress.svg"
@@ -82,47 +85,140 @@ def format_duration(seconds: int) -> str:
     return f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
 
 
+def public_activity_label(activity: str) -> str:
+    """Return a neutral public label for documentation screenshots."""
+
+    if ACTIVITY_TO_FIELD.get(activity) == "update_diavgeia":
+        return "Update Documentation"
+    return activity
+
+
 # Source documentation:
 #   What it does: Renders the LauncherPad window and representative configured clocks.
-#   Why it exists: README readers need to see the primary v6.0 entry point before the clock UI.
+#   Why it exists: README readers need to see creation, launch, and reporting in the primary UI.
 #   Designed use: main writes this deterministic SVG beside the other README visuals.
 def generate_launcherpad_svg() -> str:
     controls = [
-        ("Python Engineering Lab", "#069bff"),
-        ("DIAS", "#069bff"),
-        ("AIXtreme", "#069bff"),
-        ("Performance Engineering — Running", "#FF6600"),
-        ("MAGPAI", "#069bff"),
-        ("LearningClock QA", "#069bff"),
+        ("Atlas Study", "#069bff"),
+        ("Bluebird Research", "#069bff"),
+        ("Cedar Notes", "#069bff"),
+        ("Northstar Lab — Running", "#FF6600"),
+        ("Orchard Learning", "#069bff"),
+        ("Summit Skills", "#069bff"),
     ]
     buttons = []
     for index, (label, background) in enumerate(controls):
         column = index % 3
         row = index // 3
         x = 38 + column * 274
-        y = 124 + row * 74
+        y = 118 + row * 62
         buttons.append(
-            f'<rect x="{x}" y="{y}" width="252" height="54" rx="3" '
+            f'<rect x="{x}" y="{y}" width="252" height="46" rx="3" '
             f'fill="{background}" stroke="#8c8c8c"/>'
             f'<line x1="{x + 2}" y1="{y + 2}" x2="{x + 250}" y2="{y + 2}" '
             f'stroke="#ffffff" stroke-opacity=".8"/>'
-            f'<text x="{x + 126}" y="{y + 33}" fill="#ffffff" font-size="15" '
+            f'<text x="{x + 126}" y="{y + 29}" fill="#ffffff" font-size="14" '
             f'font-weight="700" text-anchor="middle">{text(label)}</text>'
         )
     return f"""<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="330" viewBox="0 0 900 330" role="img" aria-label="LearningClock LauncherPad with configured clock controls">
-  <rect width="900" height="330" rx="8" fill="#d7d7d7" stroke="#8c8c8c" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" role="img" aria-label="LearningClock LauncherPad with clock creation and category report">
+  <rect width="900" height="620" rx="8" fill="#d7d7d7" stroke="#8c8c8c" stroke-width="2"/>
   <rect x="1" y="1" width="898" height="42" rx="7" fill="#fafafa"/>
   <rect x="1" y="34" width="898" height="9" fill="#fafafa"/>
   <circle cx="23" cy="22" r="13" fill="#069bff"/>
   <path d="M23 11 A11 11 0 0 1 34 22 H23 Z" fill="#FF6600"/>
   <line x1="23" y1="22" x2="23" y2="14" stroke="#ffffff" stroke-width="2"/>
   <line x1="23" y1="22" x2="29" y2="25" stroke="#ffffff" stroke-width="2"/>
-  <text x="45" y="27" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="14">LearningClock LauncherPad 1.0</text>
+  <text x="45" y="27" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="14">LearningClock LauncherPad 2.0</text>
   <text x="865" y="27" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="20">×</text>
-  <text x="30" y="88" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="23" font-weight="700">LearningClock LauncherPad 1.0</text>
+  <text x="30" y="82" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="23" font-weight="700">LearningClock LauncherPad 2.0</text>
+  <rect x="700" y="58" width="166" height="38" rx="4" fill="#069bff"/>
+  <text x="783" y="82" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle">Create New Clock</text>
   <g font-family="Segoe UI, Arial, sans-serif">{"".join(buttons)}</g>
-  <text x="30" y="295" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="14">6 configured clocks</text>
+  <rect x="28" y="246" width="844" height="320" rx="8" fill="#f8fbff" stroke="#a9c5df"/>
+  <text x="45" y="276" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Time by category across all clocks</text>
+  <text x="45" y="308" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="13">Period:  This week   Inclusive range: 2026-09-07 through 2026-09-11</text>
+  <line x1="50" y1="494" x2="850" y2="494" stroke="#8aa9c4"/>
+  <g fill="#007ACC">
+    <rect x="62" y="390" width="46" height="104"/><rect x="142" y="430" width="46" height="64"/>
+    <rect x="222" y="410" width="46" height="84"/><rect x="302" y="450" width="46" height="44"/>
+    <rect x="382" y="440" width="46" height="54"/><rect x="462" y="360" width="46" height="134"/>
+    <rect x="542" y="330" width="46" height="164"/><rect x="622" y="375" width="46" height="119"/>
+    <rect x="702" y="425" width="46" height="69"/><rect x="782" y="455" width="46" height="39"/>
+  </g>
+  <g fill="#222222" font-family="Segoe UI, Arial, sans-serif" font-size="10" text-anchor="middle">
+    <text x="85" y="512">Reading</text><text x="165" y="512">Book Listening</text>
+    <text x="245" y="512">Outlining</text><text x="325" y="512">Active Recall</text>
+    <text x="405" y="512">Sandbox</text><text x="485" y="512">AI Architecture</text>
+    <text x="565" y="512">AI Engineering</text><text x="645" y="512">Classical Eng.</text>
+    <text x="725" y="512">Documentation</text><text x="805" y="512">Promote</text>
+  </g>
+  <text x="45" y="548" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="13">Total: 18:45:00 · 6 clocks · 24 session rows · </text>
+  <text x="385" y="548" fill="#0067c0" font-family="Segoe UI, Arial, sans-serif" font-size="13" text-decoration="underline">4 skipped/invalid inputs</text>
+  <text x="30" y="598" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="14">6 configured clocks</text>
+</svg>
+"""
+
+
+# Report diagnostics screenshot:
+#   What it does: Renders the popup opened from LauncherPad's skipped/invalid link.
+#   Why it exists: README readers need to see the exact file, row, column, value, and reason.
+#   Designed use: main writes this deterministic SVG beside the LauncherPad overview.
+def generate_report_diagnostics_svg() -> str:
+    issues = [
+        (
+            "1. Atlas Study: Skipped row 29 with an invalid date in Atlas Study.",
+            r"D:\SampleVault\Learning\Atlas Study\LearningPath\learning_time_log.csv — row 29",
+            "Type: row · Reason: invalid date at row 29 · Column: date · Value: ''",
+        ),
+        (
+            "2. Atlas Study: Skipped row 30 with an invalid date in Atlas Study.",
+            r"D:\SampleVault\Learning\Atlas Study\LearningPath\learning_time_log.csv — row 30",
+            "Type: row · Reason: invalid date at row 30 · Column: date · Value: ''",
+        ),
+        (
+            "3. Atlas Study: Skipped row 31 with an invalid date in Atlas Study.",
+            r"D:\SampleVault\Learning\Atlas Study\LearningPath\learning_time_log.csv — row 31",
+            "Type: row · Reason: invalid date at row 31 · Column: date · Value: ''",
+        ),
+        (
+            "4. Archived Course: No time log yet for Archived Course.",
+            r"D:\SampleVault\Learning\Archived Course\LearningPath\learning_time_log.csv",
+            "Type: CSV · Reason: time log missing",
+        ),
+    ]
+    cards: list[str] = []
+    for index, (title, path, details) in enumerate(issues):
+        y = 126 + index * 91
+        cards.append(
+            f'<rect x="32" y="{y}" width="812" height="78" rx="3" '
+            f'fill="#ffffff" stroke="#b8c8d8"/>'
+            f'<text x="45" y="{y + 22}" fill="#111111" font-size="13" '
+            f'font-weight="700">{text(title)}</text>'
+            f'<text x="45" y="{y + 44}" fill="#0067c0" font-size="12" '
+            f'text-decoration="underline">{text(path)}</text>'
+            f'<text x="45" y="{y + 64}" fill="#4f5f6f" font-size="11">'
+            f'{text(details)}</text>'
+        )
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-label="LearningClock skipped and invalid report inputs popup with linked files and CSV rows">
+  <rect width="900" height="560" rx="8" fill="#f2f2f2" stroke="#8c8c8c" stroke-width="2"/>
+  <rect x="1" y="1" width="898" height="42" rx="7" fill="#fafafa"/>
+  <rect x="1" y="34" width="898" height="9" fill="#fafafa"/>
+  <circle cx="23" cy="22" r="13" fill="#069bff"/>
+  <path d="M23 11 A11 11 0 0 1 34 22 H23 Z" fill="#FF6600"/>
+  <line x1="23" y1="22" x2="23" y2="14" stroke="#ffffff" stroke-width="2"/>
+  <line x1="23" y1="22" x2="29" y2="25" stroke="#ffffff" stroke-width="2"/>
+  <text x="45" y="27" fill="#333333" font-family="Segoe UI, Arial, sans-serif" font-size="14">Skipped and Invalid Report Inputs</text>
+  <text x="865" y="27" fill="#555555" font-family="Segoe UI, Arial, sans-serif" font-size="20">×</text>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="32" y="73" fill="#111111" font-size="18" font-weight="700">4 skipped or invalid inputs</text>
+    <text x="32" y="96" fill="#333333" font-size="12">This report scan is read-only and does not rewrite CSV data.</text>
+    <text x="32" y="113" fill="#333333" font-size="12">Each blue link identifies the source file and CSV row used by the scan.</text>
+    {"".join(cards)}
+  </g>
+  <rect x="802" y="507" width="66" height="30" rx="3" fill="#eeeeee" stroke="#8c8c8c"/>
+  <text x="835" y="527" fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="12" text-anchor="middle">Close</text>
 </svg>
 """
 
@@ -260,7 +356,7 @@ def generate_ui_svg() -> str:
               <rect x="38" y="{y}" width="{button_width}" height="37" fill="{button_background}" stroke="#8c8c8c" stroke-width="1.4"/>
               <line x1="40" y1="{y + 2}" x2="{38 + button_width - 2}" y2="{y + 2}" stroke="#ffffff" stroke-width="1"/>
               <line x1="40" y1="{y + 35}" x2="{38 + button_width - 2}" y2="{y + 35}" stroke="#777777" stroke-width="1"/>
-              <text x="45" y="{y + 26}" fill="#ffffff" font-size="18" font-weight="700">{text(activity)}</text>
+              <text x="45" y="{y + 26}" fill="#ffffff" font-size="18" font-weight="700">{text(public_activity_label(activity))}</text>
               <text x="{timer_x}" y="{y + 26}" fill="#050505" font-size="24" font-family="Consolas, Cascadia Mono, Courier New, monospace">{status}</text>
             </g>"""
         )
@@ -336,7 +432,7 @@ def generate_dashboard_svg() -> str:
             <rect x="{x:.1f}" y="{y}" width="{bar_width:.1f}" height="{bar_height}" rx="8" fill="{colors[index]}"/>
             <text x="{x + bar_width / 2:.1f}" y="{y + 24}" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">{format_duration(seconds)}</text>"""
         )
-        labels.append(dashboard_label_svg(activity, x + bar_width / 2, 350))
+        labels.append(dashboard_label_svg(public_activity_label(activity), x + bar_width / 2, 350))
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="LearningClock Obsidian dashboard bar chart">
@@ -383,7 +479,7 @@ def generate_progress_svg() -> str:
         button_background = "#FF6600" if activity == active_activity else "#069bff"
         timer_rows.append(
             f'<rect x="12" y="{y}" width="278" height="31" fill="{button_background}" stroke="#8c8c8c"/>'
-            f'<text x="18" y="{y + 21}" fill="#ffffff" font-size="16" font-weight="700">{text(activity)}</text>'
+            f'<text x="18" y="{y + 21}" fill="#ffffff" font-size="16" font-weight="700">{text(public_activity_label(activity))}</text>'
             f'<text x="322" y="{y + 21}" fill="#050505" font-family="Consolas, Cascadia Mono, Courier New, monospace" font-size="16">00:00:00</text>'
         )
 
@@ -398,7 +494,9 @@ def generate_progress_svg() -> str:
             f'<rect x="{x:.1f}" y="{y}" width="{bar_width:.1f}" height="{bar_height}" fill="#007ACC"/>'
             f'<text x="{x + bar_width / 2:.1f}" y="{y + 5}" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" text-anchor="middle" dominant-baseline="hanging">{format_duration(seconds)}</text>'
         )
-        labels.append(dashboard_label_svg(activity, x + bar_width / 2, baseline + 18))
+        labels.append(
+            dashboard_label_svg(public_activity_label(activity), x + bar_width / 2, baseline + 18)
+        )
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="LearningClock in-app View Progress dashboard">
@@ -447,10 +545,12 @@ def generate_progress_svg() -> str:
 def main() -> int:
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
     LAUNCHERPAD_SVG.write_text(generate_launcherpad_svg(), encoding="utf-8")
+    REPORT_DIAGNOSTICS_SVG.write_text(generate_report_diagnostics_svg(), encoding="utf-8")
     UI_SVG.write_text(generate_ui_svg(), encoding="utf-8")
     DASHBOARD_SVG.write_text(generate_dashboard_svg(), encoding="utf-8")
     PROGRESS_SVG.write_text(generate_progress_svg(), encoding="utf-8")
     print(f"wrote {LAUNCHERPAD_SVG.relative_to(ROOT)}")
+    print(f"wrote {REPORT_DIAGNOSTICS_SVG.relative_to(ROOT)}")
     print(f"wrote {UI_SVG.relative_to(ROOT)}")
     print(f"wrote {DASHBOARD_SVG.relative_to(ROOT)}")
     print(f"wrote {PROGRESS_SVG.relative_to(ROOT)}")

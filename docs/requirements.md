@@ -8,6 +8,7 @@ LearningClock is developed and tested as a Windows-friendly Python project.
 - Python `>=3.11`
 - Command Prompt or PowerShell
 - Project virtual environment at `.venv`
+- Tkinter plus Python's standard-library `calendar` module; the LauncherPad report uses Canvas and adds no chart/date dependency
 - FastAPI for the HTTP/OpenAPI application
 - Uvicorn for serving the HTTP API
 - Internal `protepo-log` 0.1.1 distribution, imported as `protepo.log`

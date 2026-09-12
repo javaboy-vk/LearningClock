@@ -3,7 +3,7 @@
 # Artifact  : LearningClock - Tkinter Application
 # Author    : javaboy-vk
 # Date      : 2026-06-06
-# Version   : v6.0.5
+# Version   : v6.0.7
 # Purpose:
 #   Provides the Tkinter UI, timer state, manual entry workflow, semantic
 #   application events, and shutdown lifecycle for LearningClock.
@@ -94,6 +94,7 @@ import re
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
+from dataclasses import replace
 from datetime import date, datetime
 from pathlib import Path
 from tkinter import messagebox
@@ -111,9 +112,12 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(script_dir.parent))
 
 from learningclock.configuration import (
+    DEFAULT_CONFIGURATION_DIR,
+    LEARNING_PATH_DIRECTORY_NAME,
     ConfigurationError,
     legacy_clock_configuration,
     load_clock_configuration,
+    logs_directory,
 )
 from learningclock.events import (
     ApplicationEvents,
@@ -370,6 +374,7 @@ class LearningClock:
         log_dir=None,
         debug_break_on_click=False,
         debug_break_on_close=False,
+        diagnostic_log_file=None,
         loggers=None,
     ):
         self.root = root  # Tk root window owned by this app.
@@ -392,6 +397,7 @@ class LearningClock:
         self.store = CsvStore(
             log_dir or Path.cwd(),
             self.learning_path_name,
+            diagnostic_log_file=diagnostic_log_file,
             loggers=loggers,
         )  # Configure CSV persistence.
         self.loggers = self.store.loggers  # Share semantic application loggers.
@@ -1806,6 +1812,21 @@ class LearningClock:
 
 
 # Source documentation:
+#   What it does: Resolves one clock's central diagnostics directory.
+#   Why it exists: Clock logs must be separated by identity and kept outside CSV storage.
+#   Designed use: main calls it after configuration resolution and before file logging starts.
+def clock_diagnostics_directory(
+    configuration_path: Path | None, clock_id: str
+) -> Path:
+    configuration_dir = (
+        configuration_path.parent
+        if configuration_path is not None
+        else DEFAULT_CONFIGURATION_DIR
+    )
+    return logs_directory(configuration_dir) / clock_id
+
+
+# Source documentation:
 #   What it does: Resolves one clock, enforces singleton ownership, and runs its Tk event loop.
 #   Why it exists: Configuration, telemetry, duplicate rejection, UI, and cleanup require order.
 #   Designed use: desktop.main invokes configured child mode; configuration errors return 2,
@@ -1818,6 +1839,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.config is not None:
             configured_clock = load_clock_configuration(args.config)
+            configured_clock = replace(
+                configured_clock,
+                log_dir=configured_clock.log_dir / LEARNING_PATH_DIRECTORY_NAME,
+            )
         else:
             resolved_log_dir = Path(args.log_dir or Path.cwd())
             configured_clock = legacy_clock_configuration(
@@ -1890,9 +1915,11 @@ def main(argv: list[str] | None = None) -> int:
 
     # From this point onward, this process is the sole configured-clock persistence writer.
     shutdown_observability()
+    clock_log_dir = clock_diagnostics_directory(args.config, configured_clock.clock_id)
+    diagnostic_log_file = clock_log_dir / DIAGNOSTIC_LOG_FILE_NAME
     loggers = configure_observability(
-        configured_clock.log_dir / DIAGNOSTIC_LOG_FILE_NAME,
-        seq_spool_path=configured_clock.log_dir / "learning_clock_seq_offline.clef",
+        diagnostic_log_file,
+        seq_spool_path=clock_log_dir / "learning_clock_seq_offline.clef",
     )
     guard.set_logger(loggers.instance_guard)
     try:
@@ -1908,6 +1935,7 @@ def main(argv: list[str] | None = None) -> int:
                 learning_path_name=configured_clock.learning_path_name,
                 clock_id=configured_clock.clock_id,
                 log_dir=configured_clock.log_dir,
+                diagnostic_log_file=diagnostic_log_file,
                 debug_break_on_click=args.debug_break_on_click,
                 debug_break_on_close=args.debug_break_on_close,
                 loggers=loggers,

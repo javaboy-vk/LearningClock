@@ -3,10 +3,11 @@
 # Artifact  : LearningClock - Current-User Start Menu Registration
 # Author    : javaboy-vk
 # Date      : 2026-09-01
-# Version   : v1.0.0
+# Version   : v1.1.0
 # Purpose:
-#   Creates or updates the current user's LearningClock LauncherPad shortcut and
-#   requests a Start pin when the Windows shell exposes that supported action.
+#   Creates or updates the current user's LearningClock LauncherPad shortcuts,
+#   synchronizes an existing taskbar pin, and requests a Start pin when the
+#   Windows shell exposes that supported action.
 # =============================================================================
 
 [CmdletBinding()]
@@ -40,14 +41,28 @@ if ([string]::IsNullOrWhiteSpace($programsPath)) {
 $shortcutName = "LearningClock LauncherPad.lnk"
 $shortcutPath = Join-Path $programsPath $shortcutName
 $wshShell = New-Object -ComObject WScript.Shell
-$shortcut = $wshShell.CreateShortcut($shortcutPath)
-$shortcut.TargetPath = $resolvedTarget
-$shortcut.Arguments = $ShortcutArguments
-$shortcut.WorkingDirectory = $resolvedWorkingDirectory
-$shortcut.IconLocation = "$resolvedIcon,0"
-$shortcut.Description = "Open LearningClock LauncherPad"
-$shortcut.WindowStyle = 1
-$shortcut.Save()
+
+function Set-LauncherPadShortcut {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $shortcut = $wshShell.CreateShortcut($Path)
+    $shortcut.TargetPath = $resolvedTarget
+    $shortcut.Arguments = $ShortcutArguments
+    $shortcut.WorkingDirectory = $resolvedWorkingDirectory
+    $shortcut.IconLocation = "$resolvedIcon,0"
+    $shortcut.Description = "Open LearningClock LauncherPad"
+    $shortcut.WindowStyle = 1
+    $shortcut.Save()
+}
+
+Set-LauncherPadShortcut -Path $shortcutPath
+
+$taskbarPins = Join-Path $env:APPDATA "Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
+$taskbarShortcutPath = Join-Path $taskbarPins $shortcutName
+if (Test-Path -LiteralPath $taskbarShortcutPath) {
+    Set-LauncherPadShortcut -Path $taskbarShortcutPath
+    Write-Output "LauncherPad taskbar shortcut synchronized: $taskbarShortcutPath"
+}
 
 Add-Type -TypeDefinition @"
 using System;
